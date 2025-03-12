@@ -135,6 +135,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+thought_kit_env/
 
 # Spyder project settings
 .spyderproject
