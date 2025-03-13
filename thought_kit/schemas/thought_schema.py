@@ -14,6 +14,20 @@ class ThoughtSeed(BaseModel):
     temperature: float = Field(..., description="Temperature for generation (0-1)", ge=0.0, le=1.0)
     type: str = Field(..., description="Type of thought to generate, provided by the user")
 
+    class Config:
+        """Pydantic config"""
+        json_schema_extra = {
+            "example": {
+                "prompt": {
+                    "system_prompt": "You are an analytical assistant that provides factual information about climate change.",
+                    "user_prompt": "What are the key data points about global warming trends?"
+                },
+                "model": "gpt-4o",
+                "temperature": 0.7,
+                "type": "analytical"
+            }
+        }
+
 
 class ThoughtConfig(BaseModel):
     """Configuration details about how this Thought should be handled. Optional because the user may create a thought directly."""
@@ -29,6 +43,17 @@ class ThoughtConfig(BaseModel):
     persistent: bool = Field(
         False, description="Whether or not to anchor this Thought"
     )
+
+    class Config:
+        """Pydantic config"""
+        json_schema_extra = {
+            "example": {
+                "modality": "TEXT",
+                "depth": 3,
+                "interactivity": "VIEW",
+                "persistent": False
+            }
+        }
 
 
 class Thought(BaseModel):
@@ -107,7 +132,7 @@ class Thought(BaseModel):
                 "score": {
                     "weight": 0.75,
                     "saliency": 0.6
-                },
+                }
             }
         }
 
