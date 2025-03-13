@@ -37,7 +37,6 @@ from .memory_schema import (
 
 from .user_event_schema import (
     UserEvent,
-    UserEventType,
     SimpleUserEventInput,
     user_event_to_json,
     json_to_user_event,

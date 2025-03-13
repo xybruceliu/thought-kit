@@ -13,6 +13,8 @@ from .schemas import (
     Memory,
     SimpleMemoryInput,
     Prompt,
+    UserEvent,
+    SimpleUserEventInput,
     thought_to_json,
     json_to_thought,
     thought_seed_to_json,
@@ -24,7 +26,11 @@ from .schemas import (
     json_to_prompt,
     memory_to_json,
     json_to_memory,
-    simple_json_to_memory
+    simple_json_to_memory,
+    user_event_to_json,
+    json_to_user_event,
+    create_user_event_from_simple_input,
+    simple_json_to_user_event
 )
 
 from .utils import (

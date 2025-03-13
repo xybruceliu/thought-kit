@@ -7,17 +7,12 @@ from .common_schema import Timestamps, Content
 from ..utils.llm_api import get_embedding_sync
 
 
-class UserEventType(str, Literal["IDLE", "NEW_INPUT", "TIME_INTERVAL", "INTERRUPT"]):
-    """Type of user event."""
-    pass
-
-
 class UserEvent(BaseModel):
     """Schema for a user event in the thought-kit system."""
     id: str = Field(..., description="Unique identifier for this user event")
     timestamps: Timestamps = Field(default_factory=Timestamps, description="Timestamp information")
     content: Content = Field(..., description="Content of the user event")
-    type: UserEventType = Field(..., description="Type of user event")
+    type: Literal["IDLE", "NEW_INPUT", "TIME_INTERVAL", "INTERRUPT"] = Field(..., description="Type of user event")
     duration: Optional[float] = Field(None, description="Duration of the event in seconds, if applicable")
 
     class Config:
@@ -42,7 +37,7 @@ class UserEvent(BaseModel):
 class SimpleUserEventInput(BaseModel):
     """Simple input schema for creating user events."""
     text: str = Field(..., description="Text content of the user event")
-    type: UserEventType = Field(..., description="Type of user event")
+    type: Literal["IDLE", "NEW_INPUT", "TIME_INTERVAL", "INTERRUPT"] = Field(..., description="Type of user event")
     duration: Optional[float] = Field(None, description="Duration of the event in seconds, if applicable")
 
     class Config:
