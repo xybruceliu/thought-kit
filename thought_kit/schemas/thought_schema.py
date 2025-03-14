@@ -13,6 +13,7 @@ class ThoughtSeed(BaseModel):
     model: Literal["gpt-4o", "gpt-4o-mini"] = Field(..., description="Model to use for generating the thought")
     temperature: float = Field(..., description="Temperature for generation (0-1)", ge=0.0, le=1.0)
     type: str = Field(..., description="Type of thought to generate, provided by the user")
+    max_tokens: int = Field(50, description="Maximum number of tokens to generate in the thought content.", ge=1)
 
     class Config:
         """Pydantic config"""
@@ -24,7 +25,8 @@ class ThoughtSeed(BaseModel):
                 },
                 "model": "gpt-4o",
                 "temperature": 0.7,
-                "type": "analytical"
+                "type": "analytical",
+                "max_tokens": 50
             }
         }
 
@@ -112,7 +114,8 @@ class Thought(BaseModel):
                     },
                     "model": "gpt-4o",
                     "temperature": 0.7,
-                    "type": "analytical"
+                    "type": "analytical",
+                    "max_tokens": 50
                 },
                 "trigger_event": {
                     "id": "event_789abc",
