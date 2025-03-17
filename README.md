@@ -1,5 +1,29 @@
 # ThoughtKit 💭
+
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
 A modular Python toolkit for generating, manipulating, and articulating AI thoughts as an interactive modality in human-AI interaction.
+
+## Contents
+
+- [Overview](#overview)
+- [Installation](#installation)
+- [Core Components](#core-components)
+- [Thought Generation](#thought-generation)
+- [Thought Operations](#thought-operations)
+- [Examples](#examples)
+- [Development Status](#development-status)
+- [License](#license)
+
+## Overview
+
+ThoughtKit enables AI systems to generate, process, and express thoughts in response to user interactions. It provides a structured way to represent AI thinking processes, making them more transparent and interactive.
+
+Key capabilities:
+- Generate AI thoughts with configurable depth, length, and modality
+- Perform operations on thoughts (liking, filtering, etc.)
+- Incorporate memory and context into thought generation
+- Transform thoughts between different modalities
 
 ## Installation
 
@@ -16,13 +40,8 @@ cd thought-kit
 # Install package
 pip install -e .
 
-# Install spaCy model
+# Install spaCy model (required for text processing)
 python -m spacy download en_core_web_sm
-```
-
-### Install via pip (🚧 Work in progress)
-```bash
-pip install thought-kit
 ```
 
 ### API Key Setup
@@ -35,51 +54,32 @@ import os
 os.environ["OPENAI_API_KEY"] = "your-api-key-here"
 ```
 
-## Project Structure
+## Core Components
 
-ThoughtKit follows a layered architecture design:
+### Schemas
+- **Thought**: Core data model with content, configuration, and metadata
+- **Event**: Represents user interactions that trigger thoughts
+- **Memory**: Long and short-term context structures
 
-### Core Components
+### Modules
+- **ThoughtGenerator**: Creates thoughts based on events and context
+- **ThoughtOperator**: Performs operations on thoughts
+- **ThoughtArticulator**: Transforms thoughts between modalities
 
-1. **Schemas** (`thought_kit/schemas/`)
-   - Define data models using Pydantic
-   - Provide validation and type safety
-   - Include models for Thoughts, Events, Memory, etc.
+### Utilities
+- **LLM API**: OpenAI API integration
+- **Conversion**: JSON serialization/deserialization
+- **Text Processing**: Text analysis and manipulation
 
-2. **Modules** (`thought_kit/modules/`)
-   - Implement core functionality
-   - `ThoughtGenerator`: Creates thoughts based on events and context
-   - `ThoughtArticulator`: Transforms thoughts into different modalities
-   - `ThoughtOperator`: Performs operations on thoughts (filtering, ranking, etc.)
+## Thought Generation
 
-3. **Utilities** (`thought_kit/utils/`)
-   - Provide helper functions and tools
-   - LLM API integration
-   - JSON conversion
-
-### API Layer
-
-The API layer (`thought_kit/api.py`) serves as a facade over the underlying implementation:
-
-- **Simplifies interaction** with the complex subsystem
-- **Handles JSON conversion** between the API boundary and internal objects
-- **Coordinates** between different modules
-- **Provides a stable interface** that shields users from implementation changes
-
-This separation of concerns allows:
-- Users to work with a simple, consistent interface
-- Developers to modify internal implementations without breaking client code
-- Clear boundaries between JSON (for external use) and typed objects (for internal use)
-
-## Getting Started
-
-### Using the API
+Generate thoughts in response to events with configurable parameters:
 
 ```python
 import asyncio
-from thought_kit import api
+from thought_kit import thoughtkit
 
-async def main():
+async def generate():
     # Create input data
     input_data = {
         "event": {
@@ -87,36 +87,142 @@ async def main():
             "type": "USER_INPUT",
             "duration": -1
         },
-        "thought_seed": {
+        "seed": {
             "prompt": {
                 "system_prompt": "You are a thoughtful AI assistant.",
-                "user_prompt": "What are some potential impacts of AI on society?"
+                "user_prompt": "Generate a thought about the user's research topic."
             },
             "model": "gpt-4o-mini",
             "temperature": 0.7,
             "type": "reflective",
             "max_tokens": 100
         },
-        "thought_config": {
+        "config": {
             "modality": "TEXT",
-            "depth": 3,
-            "length": 5,
+            "depth": 3,  # 1-5 scale (shallow to deep)
+            "length": 5,  # Max words
             "interactivity": "COMMENT",
             "persistent": False,
-            "weight": 0.8
+            "weight": 0.8  # Importance (0-1)
         }
     }
     
-    # Generate thought (returns JSON string)
-    thought_json = await api.generate_thought(input_data)
-    print(f"Generated thought: {thought_json[:100]}...")
+    # Generate thought
+    thought = await thoughtkit.generate(input_data, return_json_str=False)
+    print(f"Thought: {thought['content']['text']}")
     
-    # Or get a Thought object
-    thought = await api.generate_thought(input_data, return_json=False)
-    print(f"Thought content: {thought.content.text}")
+    # Get JSON representation
+    thought_json = await thoughtkit.generate(input_data)
+    print(f"JSON: {thought_json[:50]}...")
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(generate())
 ```
 
-See more examples in the `thought_kit/examples/` directory.
+## Thought Operations
+
+ThoughtKit provides a simple API for performing operations on thoughts.
+
+### Basic Usage
+
+```python
+from thought_kit import thoughtkit
+
+# Get available operations
+operations = thoughtkit.available_operations()
+print(f"Available operations: {operations}")
+
+# Using JSON input
+operation_input = {
+    "operation": "like",
+    "thoughts": [thought],
+    "options": {
+        "increment": 0.2
+    }
+}
+updated_thought = thoughtkit.operate(operation_input, return_json_str=False)
+```
+
+### Operating on Multiple Thoughts
+
+```python
+# Create input data for multiple thoughts
+operation_input = {
+    "operation": "like",
+    "thoughts": [thought1, thought2, thought3],
+    "options": {
+        "increment": 0.1
+    }
+}
+
+# Process multiple thoughts at once
+updated_thoughts = thoughtkit.operate(operation_input, return_json_str=False)
+```
+
+### Using JSON String Input
+
+```python
+import json
+
+# Create JSON string input
+json_input = json.dumps({
+    "operation": "like",
+    "thoughts": [thought.dict()],
+    "memory": memory.dict(),  # Optional
+    "options": {
+        "increment": 0.3
+    }
+})
+
+# Process using JSON string
+updated_thought = thoughtkit.operate(json_input, return_json_str=False)
+```
+
+### Available Operations
+
+Currently, ThoughtKit includes the following operations:
+
+- **like**: Increases a thought's weight by a specified increment (default: 0.1). Weights are rounded to 2 decimal places and capped at 1.0.
+
+### Custom Operations
+
+Create a plugin file in `thought_kit/modules/ThoughtOperator/plugins/`:
+
+```python
+# my_plugin.py
+from thought_kit.schemas import Thought, Memory
+from typing import List, Optional
+
+def my_operation(thoughts: List[Thought], memory: Optional[Memory] = None, **options) -> List[Thought]:
+    # Implement your operation logic here
+    return thoughts
+```
+
+The operation will be automatically discovered and loaded when the ThoughtKit API is initialized.
+
+### Advanced Usage
+
+If you need more control, you can still use the ThoughtOperator directly:
+
+```python
+from thought_kit.modules.ThoughtOperator import ThoughtOperator
+
+# Create operator and register plugins
+operator = ThoughtOperator()
+operator.load_operations()
+
+# Run operations on a thought
+updated_thought = operator.operate("like", thought)
+```
+
+## Examples
+
+See the `thought_kit/examples/` directory for more examples:
+
+- `simple_thought_generation.py`: Basic thought generation with memory context
+- `simple_thought_operation.py`: Using ThoughtOperator to perform operations on thoughts
+
+## License
+
+This project is licensed under the Apache License, Version 2.0 - see the [LICENSE](LICENSE) file for details.
 

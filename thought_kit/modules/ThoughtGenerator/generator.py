@@ -30,21 +30,21 @@ class ThoughtGenerator:
         """Initialize the ThoughtGenerator."""
         pass
         
-    async def generate_thought(
+    async def generate(
         self,
         event_input: SimpleEventInput,
-        thought_seed: ThoughtSeed,
-        thought_config: ThoughtConfig,
+        seed: ThoughtSeed,
+        config: ThoughtConfig,
         memory: Optional[Memory] = None,
         previous_thoughts: Optional[List[Thought]] = None
     ) -> Thought:
         """
-        Generate a thought based on event input, thought seed, thought config, memory, and previous thoughts.
+        Generate a thought based on event input, seed, config, memory, and previous thoughts.
         
         Args:
             event_input: SimpleEventInput containing basic event information
-            thought_seed: Seed data for thought generation
-            thought_config: Configuration for thought generation
+            seed: Seed data for thought generation
+            config: Configuration for thought generation
             memory: Optional memory context
             previous_thoughts: Optional list of previous thoughts
 
@@ -57,10 +57,10 @@ class ThoughtGenerator:
             previous_thoughts = []
         
         # Convert SimpleEventInput to Event
-        event = await create_event_from_simple_input(event_input)
+        trigger_event = await create_event_from_simple_input(event_input)
                 
         # Generate the thought content
-        thought_content, saliency = await self._generate_content(event, thought_seed, thought_config, memory, previous_thoughts)
+        thought_content, saliency = await self._generate_content(trigger_event, seed, config, memory, previous_thoughts)
         
         # Create the thought object
         cur_timestamp=datetime.now()
@@ -74,13 +74,13 @@ class ThoughtGenerator:
                 text=thought_content,
                 embedding=await get_embedding(thought_content)
             ),
-            config=thought_config,
-            seed=thought_seed,
-            trigger_event=event,
+            config=config,
+            seed=seed,
+            trigger_event=trigger_event,
             references=[],
             user_comments=[],
             score=Score(
-                weight=thought_config.weight,
+                weight=config.weight,
                 saliency=saliency
             ),
         )
@@ -89,9 +89,9 @@ class ThoughtGenerator:
         
     async def _generate_content(
         self,
-        event: Event,
-        thought_seed: ThoughtSeed,
-        thought_config: ThoughtConfig,
+        trigger_event: Event,
+        seed: ThoughtSeed,
+        config: ThoughtConfig,
         memory: Optional[Memory] = None,
         previous_thoughts: Optional[List[Thought]] = None
     ) -> tuple[str, float]:
@@ -99,41 +99,43 @@ class ThoughtGenerator:
         Generate the content for a thought based on the provided inputs.
         
         Args:
-            event: The event that triggered this thought
-            thought_seed: The seed data for generating the thought
-            thought_config: Configuration for the thought
+            trigger_event: Event that triggered the thought
+            seed: Seed data for thought generation
+            config: Configuration for thought generation
             memory: Optional memory context
             previous_thoughts: Optional list of previous thoughts
             
         Returns:
-            A tuple containing the generated thought content as a string and the saliency score
+            Tuple of (thought_content, saliency)
         """
-        # Get the system and user prompts from the thought seed
-        system_prompt = thought_seed.prompt.system_prompt
-        user_prompt = thought_seed.prompt.user_prompt
+        # Extract prompts from thought seed
+        system_prompt = seed.prompt.system_prompt
+        user_prompt = seed.prompt.user_prompt
+        
+        # Get depth description
+        depth_description = get_depth_description(config.depth)
         
         # Build context sections
         context_sections = []
         
         # Event context section
-        event_section = [
+        event_lines = [
             "## Event (what triggered the thought)",
-            f"Type: {event.type}",
-            f"Event Content: \"{event.content.text}\"",
+            f"Type: {trigger_event.type}",
+            f"Event Content: \"{trigger_event.content.text}\"",
             ""
         ]
-        context_sections.append("\n".join(event_section))
+        context_sections.append("\n".join(event_lines))
         
         # Thought configuration context section
-        depth_description = get_depth_description(thought_config.depth)
-        config_section = [
+        config_lines = [
             "## Thought Configuration (additional specifications for the thought)",
-            f"Modality: {thought_config.modality}",
-            f"Depth: {thought_config.depth} - {depth_description}",
-            f"Length: Maximum {thought_config.length} words",
+            f"Modality: {config.modality}",
+            f"Depth: {config.depth} - {depth_description}",
+            f"Length: Maximum {config.length} words",
             ""
         ]
-        context_sections.append("\n".join(config_section))
+        context_sections.append("\n".join(config_lines))
         
         # Memory context section
         if memory:
@@ -200,7 +202,7 @@ class ThoughtGenerator:
    - 5: Very Deeply - Carefully and systematically analyze and scrutinize the content, paying close attention to argument quality and details.
 
 5. Respect the LENGTH constraint:
-   - Keep your thought to a maximum of {thought_config.length} words
+   - Keep your thought to a maximum of {config.length} words
 
 6. Prioritization rules:
    - User prompt instructions ALWAYS take precedence over context information
@@ -234,9 +236,9 @@ Respond with a JSON object containing:
         response = await get_completion(
             system_prompt=system_prompt,
             user_prompt=final_user_prompt,
-            model=thought_seed.model,
-            temperature=thought_seed.temperature,
-            max_tokens=thought_seed.max_tokens,
+            model=seed.model,
+            temperature=seed.temperature,
+            max_tokens=seed.max_tokens,
             response_format="json_object"
         )
         

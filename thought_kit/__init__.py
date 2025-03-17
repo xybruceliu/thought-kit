@@ -15,8 +15,12 @@ from .schemas import (
     Event
 )
 
-# Import main API class
-from .api import ThoughtKit
+# Import modules
+from .modules import (
+    ThoughtGenerator,
+    ThoughtOperator,
+    ThoughtArticulator
+)
 
 # Import utility functions
 from .utils import (
@@ -27,5 +31,9 @@ from .utils import (
     from_json
 )
 
-# Create an API instance for easier use
-api = ThoughtKit()
+
+# Import main API class
+from .api import ThoughtKitAPI
+
+# Create an instance for easier use
+thoughtkit = ThoughtKitAPI()  

@@ -19,17 +19,23 @@ class DateTimeEncoder(json.JSONEncoder):
             return obj.isoformat()
         return super().default(obj)
 
-def to_json(model: BaseModel, as_string: bool = True) -> Union[str, Dict[str, Any]]:
+def to_json(model: Union[BaseModel, List[BaseModel]], as_string: bool = True) -> Union[str, Dict[str, Any], List[Dict[str, Any]]]:
     """
-    Convert any Pydantic model to JSON.
+    Convert any Pydantic model or list of models to JSON.
     
     Args:
-        model: The Pydantic model to convert
-        as_string: Whether to return a JSON string (True) or dict (False)
+        model: The Pydantic model or list of models to convert
+        as_string: Whether to return a JSON string (True) or dict/list of dicts (False)
         
     Returns:
-        The model as JSON string or dict
+        The model(s) as JSON string or dict/list of dicts
     """
+    # Handle list of models
+    if isinstance(model, list):
+        json_list = [item.model_dump() for item in model]
+        return json.dumps(json_list, cls=DateTimeEncoder) if as_string else json_list
+    
+    # Handle single model
     json_dict = model.model_dump()
     return json.dumps(json_dict, cls=DateTimeEncoder) if as_string else json_dict
 

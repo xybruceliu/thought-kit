@@ -3,9 +3,10 @@ Simple example of generating a thought using the ThoughtKit API.
 """
 
 import asyncio
-from thought_kit import api
+from thought_kit import thoughtkit
 
 async def main():
+    
     # Create input data
     input_data = {
         "event": {
@@ -13,17 +14,17 @@ async def main():
             "type": "USER_INPUT",
             "duration": -1
         },
-        "thought_seed": {
+        "seed": {
             "prompt": {
                 "system_prompt": "You are a thoughtful AI assistant.",
-                "user_prompt": "Genrate a thought that is an interpretation of the user's input."
+                "user_prompt": "Generate a thought that is an interpretation of the user's input."
             },
             "model": "gpt-4o-mini",
             "temperature": 0.7,
             "type": "interpretative",
             "max_tokens": 100
         },
-        "thought_config": {
+        "config": {
             "modality": "TEXT",
             "depth": 3,
             "length": 3,
@@ -102,13 +103,13 @@ async def main():
     }
     
     # Generate thought (returns JSON string)
-    thought_json = await api.generate_thought(input_data)
+    thought_json = await thoughtkit.generate(input_data)
     # print(f"Generated thought (JSON):\n{thought_json}\n")
     
     # Or get a Thought object
-    thought = await api.generate_thought(input_data, return_json=False)
-    print(f"💭 Thought content: {thought.content.text}")
-    print(f"💭 Thought saliency: {thought.score.saliency}")
+    thought = await thoughtkit.generate(input_data, return_json_str=False)
+    print(f"💭 Thought content: {thought['content']['text']}")
+    print(f"💭 Thought saliency: {thought['score']['saliency']}")
 
 if __name__ == "__main__":
     asyncio.run(main()) 
