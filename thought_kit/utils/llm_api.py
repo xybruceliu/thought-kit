@@ -77,7 +77,7 @@ async def get_completion(
             
             response = client.chat.completions.create(**completion_args)
             
-            result = {"text": response.choices[0].message.content}
+            result = response.choices[0].message.content
             return result
             
         except APIError as e:
@@ -98,7 +98,7 @@ async def get_completion(
 
 
 # Async version of the embedding function
-async def get_embedding_async(
+async def get_embedding(
     text: str,
     model: str = "text-embedding-3-small",
     max_retries: int = 3
@@ -143,51 +143,3 @@ async def get_embedding_async(
             raise LLMAPIError(f"Unexpected error: {str(e)}")
     
     raise LLMAPIError("Max retries exceeded")
-
-# Synchronous version of the embedding function
-def get_embedding_sync(
-    text: str,
-    model: str = "text-embedding-3-small",
-    max_retries: int = 3
-) -> List[float]:
-    """Get text embedding from OpenAI API synchronously.
-    
-    Args:
-        text: Text to get embedding for
-        model: Model to use (default: text-embedding-3-small)
-        max_retries: Maximum number of retry attempts (default: 3)
-        
-    Returns:
-        List of embedding values
-        
-    Raises:
-        LLMAPIError: If API call fails after retries or other errors occur
-    """
-    if not text.strip():
-        raise ValueError("Empty text provided for embedding")
-        
-    client = get_client()
-    for attempt in range(max_retries):
-        try:
-            response = client.embeddings.create(
-                model=model,
-                input=text
-            )
-            return response.data[0].embedding
-            
-        except APIError as e:
-            if e.status_code == 429:  # Rate limit error
-                if attempt < max_retries - 1:
-                    wait_time = 2 ** attempt  # Exponential backoff
-                    logger.warning(f"Rate limit hit, retrying in {wait_time} seconds...")
-                    # Use time.sleep instead of asyncio.sleep for synchronous code
-                    time.sleep(wait_time)
-                    continue
-            logger.error(f"OpenAI API error: {str(e)}")
-            raise LLMAPIError(f"OpenAI API error: {str(e)}")
-            
-        except Exception as e:
-            logger.error(f"Unexpected error: {str(e)}")
-            raise LLMAPIError(f"Unexpected error: {str(e)}")
-    
-    raise LLMAPIError("Max retries exceeded") 

@@ -10,6 +10,6 @@ setup(
         "spacy>=3.0.0",
     ],
     description="A modular toolkit for generating, manipulating, and articulating AI thoughts as an interactive modality in human-AI interaction",
-    author="ThoughtKit Team",
+    author="Bruce Liu",
     python_requires=">=3.8",
 )

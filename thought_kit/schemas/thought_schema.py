@@ -2,17 +2,19 @@ from typing import List, Literal, Union, Dict, Any, Optional
 from pydantic import BaseModel, Field, field_validator
 import json
 import uuid
+from datetime import datetime
 
 from .common_schema import Timestamps, Content, Score, Prompt
-from .user_event_schema import UserEvent
+from .event_schema import Event
+from thought_kit.utils.llm_api import get_embedding
 
 
 class ThoughtSeed(BaseModel):
-    """Configuration for generating a thought. Optional because the user may create a thought directly."""
+    """Seed for generating a thought. This is used to generate a thought from a prompt. This is fixed after the thought is generated."""
     prompt: Prompt = Field(..., description="Prompt configuration for generating the thought")
     model: Literal["gpt-4o", "gpt-4o-mini"] = Field(..., description="Model to use for generating the thought")
     temperature: float = Field(..., description="Temperature for generation (0-1)", ge=0.0, le=1.0)
-    type: str = Field(..., description="Type of thought to generate, provided by the user")
+    type: str = Field(..., description="Self-defined type of thought to generate, provided by the user")
     max_tokens: int = Field(50, description="Maximum number of tokens to generate in the thought content.", ge=1)
 
     class Config:
@@ -25,25 +27,31 @@ class ThoughtSeed(BaseModel):
                 },
                 "model": "gpt-4o",
                 "temperature": 0.7,
-                "type": "analytical",
+                "type": "interpretation",
                 "max_tokens": 50
             }
         }
 
 
 class ThoughtConfig(BaseModel):
-    """Configuration details about how this Thought should be handled. Optional because the user may create a thought directly."""
+    """Configuration details about how this Thought should be handled. This can be updated after the thought is generated."""
     modality: Literal["TEXT", "EMOJI", "VISUAL"] = Field(
         "TEXT", description="Modality of the thought content."
     )
     depth: int = Field(
-        1, description="Numeric handle (1-5) for how detailed/abstract the thought is.", ge=1, le=5
+        1, description="Numeric handle (1-5) for how granular the thought is. 1 is the most abstract, 5 is the most concrete.", ge=1, le=5
+    )
+    length: int = Field(
+        5, description="Maximum number of words the thought content should contain.", ge=1
     )
     interactivity: Literal["VIEW", "COMMENT", "EDIT"] = Field(
         "VIEW", description="Level of interactivity allowed for this thought."
     )
     persistent: bool = Field(
         False, description="Whether or not to anchor this Thought"
+    )
+    weight: float = Field(
+        0.5, description="User-defined weight (0-1) for the thought", ge=0.0, le=1.0
     )
 
     class Config:
@@ -52,8 +60,10 @@ class ThoughtConfig(BaseModel):
             "example": {
                 "modality": "TEXT",
                 "depth": 3,
+                "length": 5,
                 "interactivity": "VIEW",
-                "persistent": False
+                "persistent": False,
+                "weight": 0.8
             }
         }
 
@@ -70,17 +80,19 @@ class Thought(BaseModel):
     )
     
     seed: Optional[ThoughtSeed] = Field(
-        None, description="Configuration used to generate this thought, if applicable."
+        None, description="Seed used to generate this thought."
     )
 
-    trigger_event: Optional[UserEvent] = Field(None, description="User event that triggered this thought, if applicable")
+    trigger_event: Event = Field(
+        default_factory=Event, description="Event that triggered this thought."
+    )
     
     references: List[str] = Field(
-        default_factory=list, description="Array of external references (e.g. memory IDs)."
+        default_factory=list, description="Array of references to the events and memories that may be relevant to this thought. Could happen after the thought is generated."
     )
     
     user_comments: List[str] = Field(
-        default_factory=list, description="Array of user-supplied strings (feedback, notes)."
+        default_factory=list, description="Array of user-supplied strings (emoji reactions, feedback, notes, etc.)"
     )
 
     score: Score = Field(
@@ -104,12 +116,14 @@ class Thought(BaseModel):
                 "config": {
                     "modality": "TEXT",
                     "depth": 3,
+                    "length": 50,
                     "interactivity": "VIEW",
-                    "persistent": False
+                    "persistent": False,
+                    "weight": 0.8
                 },
                 "seed": {
                     "prompt": {
-                        "system_prompt": "You are an analytical assistant that provides factual information about climate change.",
+                        "system_prompt": "You are an assisant that is continuously generating thoughts during an interaction with a user.",
                         "user_prompt": "What are the key data points about global warming trends?"
                     },
                     "model": "gpt-4o",
@@ -123,7 +137,7 @@ class Thought(BaseModel):
                         "created": "2023-10-15T14:29:50",
                         "updated": "2023-10-15T14:29:50"
                     },
-                    "type": "NEW_INPUT",
+                    "type": "USER_INPUT",
                     "content": {
                         "text": "User asked about climate change data",
                         "embedding": [0.2, 0.3, 0.4, 0.5]
@@ -141,11 +155,11 @@ class Thought(BaseModel):
 
 
 class SimpleThoughtInput(BaseModel):
-    """Simple input schema for creating thoughts directly."""
+    """Simple input schema for easily creating thoughts."""
     text: str = Field(..., description="Text content of the thought")
-    modality: Literal["TEXT", "EMOJI", "VISUAL"] = Field("TEXT", description="Modality of the thought content")
-    interactivity: Literal["VIEW", "COMMENT", "EDIT"] = Field("VIEW", description="Level of interactivity allowed")
-    weight: float = Field(0.5, description="Importance weight (0-1)", ge=0.0, le=1.0)
+    modality: Optional[Literal["TEXT", "EMOJI", "VISUAL"]] = Field("TEXT", description="Modality of the thought content")
+    interactivity: Optional[Literal["VIEW", "COMMENT", "EDIT"]] = Field("VIEW", description="Level of interactivity allowed")
+    weight: Optional[float] = Field(0.5, description="Importance weight (0-1)", ge=0.0, le=1.0)
     
     class Config:
         """Pydantic config"""
@@ -159,152 +173,50 @@ class SimpleThoughtInput(BaseModel):
         }
 
 
-# JSON Conversion Utilities
-
-def thought_to_json(thought: Thought, as_string: bool = True) -> Union[str, Dict[str, Any]]:
+async def create_thought_from_simple_input(
+    input_data: SimpleThoughtInput, compute_embedding: bool = True
+) -> Thought:
     """
-    Convert a Thought object to a JSON string or dictionary.
-    
+    Create a Thought object from simple input data.
+    Async because it uses the LLM to compute embeddings.
+
     Args:
-        thought: The Thought object to convert
-        as_string: Whether to return a JSON string (True) or a dictionary (False)
+        input_data: SimpleThoughtInput object
+        compute_embedding: Whether to compute embedding for the thought content
         
     Returns:
-        A JSON string or dictionary representation of the Thought
+        A fully-formed Thought object
     """
-    if as_string:
-        return thought.model_dump_json(indent=2)
-    return thought.model_dump()
 
-
-def json_to_thought(input_data: Union[str, Dict[str, Any]]) -> Thought:
-    """
-    Convert a JSON string or dictionary to a Thought object.
+    simple_input = SimpleThoughtInput.model_validate(input_data)
     
-    Args:
-        input_data: Either a JSON string or dictionary with thought fields
-        
-    Returns:
-        A Thought object
-    """
-    if isinstance(input_data, str):
-        data = json.loads(input_data)
-    else:
-        data = input_data
-        
-    return Thought.model_validate(data)
-
-
-def thought_seed_to_json(thought_seed: ThoughtSeed, as_string: bool = True) -> Union[str, Dict[str, Any]]:
-    """
-    Convert a ThoughtSeed object to a JSON string or dictionary.
+    # Create content with embedding if requested
+    embedding = None
+    if compute_embedding:
+        embedding = await get_embedding(simple_input.text)
     
-    Args:
-        thought_seed: The ThoughtSeed object to convert
-        as_string: Whether to return a JSON string (True) or a dictionary (False)
-        
-    Returns:
-        A JSON string or dictionary representation of the ThoughtSeed
-    """
-    if as_string:
-        return thought_seed.model_dump_json(indent=2)
-    return thought_seed.model_dump()
-
-
-def json_to_thought_seed(input_data: Union[str, Dict[str, Any]]) -> ThoughtSeed:
-    """
-    Convert a JSON string or dictionary to a ThoughtSeed object.
-    
-    Args:
-        input_data: Either a JSON string or dictionary with thought seed fields
-        
-    Returns:
-        A ThoughtSeed object
-    """
-    if isinstance(input_data, str):
-        data = json.loads(input_data)
-    else:
-        data = input_data
-        
-    return ThoughtSeed.model_validate(data)
-
-
-def create_thought_from_simple_input(simple_input: SimpleThoughtInput, compute_embedding: bool = True) -> Thought:
-    """
-    Create a Thought object from a SimpleThoughtInput.
-    
-    Args:
-        simple_input: SimpleThoughtInput object with basic thought information
-        compute_embedding: Whether to compute embeddings for the text content (default: True)
-        
-    Returns:
-        A Thought object with properly structured fields
-    """
-    from ..utils.llm_api import get_embedding_sync
-    
-    # Get embedding for the text content if requested
-    embedding = get_embedding_sync(simple_input.text) if compute_embedding and simple_input.text.strip() else None
-    
-    # Create thought with default values for optional fields
-    return Thought(
+    # Create the Thought object
+    cur_timestamp=datetime.now()
+    thought = Thought(
         id=f"thought_{uuid.uuid4().hex[:8]}",
-        timestamps=Timestamps(),
+        timestamps=Timestamps(
+            created=cur_timestamp,
+            updated=cur_timestamp
+        ),
         content=Content(
             text=simple_input.text,
             embedding=embedding
         ),
         config=ThoughtConfig(
             modality=simple_input.modality,
-            depth=3,  # Default depth
+            depth=3,
+            length=5,
             interactivity=simple_input.interactivity,
-            persistent=False  # Default not persistent
-        ),
-        seed=None,  # No seed for directly created thoughts
-        trigger_event=None,  # No trigger event for directly created thoughts
-        references=[],  # Empty references
-        user_comments=[],  # Empty user comments
-        score=Score(
-            weight=simple_input.weight,
-            saliency=0.0  # Default saliency
+            persistent=False,
+            weight=simple_input.weight
         )
     )
-
-
-def json_to_simple_thought_input(input_data: Union[str, Dict[str, Any]]) -> SimpleThoughtInput:
-    """
-    Convert a JSON string or dictionary to a SimpleThoughtInput object.
     
-    Args:
-        input_data: Either a JSON string or dictionary with simple thought fields
-        
-    Returns:
-        A SimpleThoughtInput object
-    """
-    if isinstance(input_data, str):
-        data = json.loads(input_data)
-    else:
-        data = input_data
-        
-    return SimpleThoughtInput.model_validate(data)
-
-
-def simple_json_to_thought(input_data: Union[str, Dict[str, Any]], compute_embedding: bool = True) -> Thought:
-    """
-    Convert a simple JSON string or dictionary to a Thought object.
-    
-    Args:
-        input_data: Either a JSON string or dictionary with simple thought fields
-        compute_embedding: Whether to compute embeddings for the text content (default: True)
-        
-    Returns:
-        A Thought object with properly structured fields
-    """
-    if isinstance(input_data, str):
-        data = json.loads(input_data)
-    else:
-        data = input_data
-        
-    simple_input = SimpleThoughtInput(**data)
-    return create_thought_from_simple_input(simple_input, compute_embedding)
+    return thought
 
 
