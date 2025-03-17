@@ -118,6 +118,7 @@ class ThoughtKitAPI:
                 - operation: Name of the operation to perform
                 - thoughts: List of thoughts to operate on
                 - memory (optional): Memory context
+                - options (optional): Additional options for the operation
             return_json_str: Whether to return JSON (True) or Dict (False)
             **kwargs: Additional arguments to pass to the operation
             
@@ -154,10 +155,16 @@ class ThoughtKitAPI:
         # Process optional components
         memory = None
         if "memory" in data:
-            memory = from_json(data["memory"], Memory)            
+            memory = from_json(data["memory"], Memory)
+            
+        # Extract options if provided
+        options = data.get("options", {})
+        
+        # Merge options with kwargs
+        operation_kwargs = {**options, **kwargs}
             
         # Run the operation on each thought
-        updated_thoughts = self.operator.operate(operation, thoughts, memory=memory, **kwargs)
+        updated_thoughts = self.operator.operate(operation, thoughts, memory=memory, **operation_kwargs)
             
         # Return the result in the requested format
         # Use the improved to_json function that can handle lists
