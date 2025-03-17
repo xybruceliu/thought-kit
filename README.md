@@ -183,6 +183,8 @@ updated_thought = thoughtkit.operate(json_input, return_json_str=False)
 Currently, ThoughtKit includes the following operations:
 
 - **like**: Increases a thought's weight by a specified amount (default: 0.1). Weights are rounded to 2 decimal places and capped at 1.0.
+- **dislike**: Decreases a thought's weight by a specified amount (default: 0.1). Weights are rounded to 2 decimal places and have a minimum of 0.0.
+- **react**: Adds a user reaction (text, emoji, etc.) to a thought's comments and increases its weight by a specified amount (default: 0.1).
 
 ### Custom Operations
 
