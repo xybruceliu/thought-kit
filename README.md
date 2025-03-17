@@ -63,7 +63,7 @@ os.environ["OPENAI_API_KEY"] = "your-api-key-here"
 
 ### Modules
 - **ThoughtGenerator**: Creates thoughts based on events and context
-- **ThoughtOperator**: Performs operations on thoughts
+- **ThoughtOperator**: Performs operations on thoughts (like, etc.)
 - **ThoughtArticulator**: Transforms thoughts between modalities
 
 ### Utilities
@@ -186,10 +186,10 @@ Currently, ThoughtKit includes the following operations:
 
 ### Custom Operations
 
-Create a plugin file in `thought_kit/modules/ThoughtOperator/plugins/`:
+Create an operation file in `thought_kit/modules/operations/`:
 
 ```python
-# my_plugin.py
+# my_operation.py
 from thought_kit.schemas import Thought, Memory
 from typing import List, Optional
 
@@ -205,9 +205,9 @@ The operation will be automatically discovered and loaded when the ThoughtKit AP
 If you need more control, you can still use the ThoughtOperator directly:
 
 ```python
-from thought_kit.modules.ThoughtOperator import ThoughtOperator
+from thought_kit.modules.operator import ThoughtOperator
 
-# Create operator and register plugins
+# Create operator and register operations
 operator = ThoughtOperator()
 operator.load_operations()
 
@@ -219,8 +219,9 @@ updated_thought = operator.operate("like", thought)
 
 See the `thought_kit/examples/` directory for more examples:
 
-- `simple_thought_generation.py`: Basic thought generation with memory context
-- `simple_thought_operation.py`: Using ThoughtOperator to perform operations on thoughts
+- `api_thought_generation.py`: Basic thought generation with memory context
+- `api_thought_operation.py`: Using ThoughtOperator to like thoughts with weight management
+- `api_thought_articulation.py`: Articulating thoughts into coherent responses
 
 ## License
 

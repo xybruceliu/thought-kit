@@ -7,8 +7,9 @@ making it easier to generate, manipulate, and articulate thoughts.
 
 import json
 from typing import Dict, List, Union, Any, Optional
-from thought_kit.modules.ThoughtGenerator import ThoughtGenerator
-from thought_kit.modules.ThoughtOperator import ThoughtOperator
+from thought_kit.modules.generator import ThoughtGenerator
+from thought_kit.modules.operator import ThoughtOperator
+from thought_kit.modules.articulator import ThoughtArticulator
 from thought_kit.schemas import Thought, ThoughtSeed, ThoughtConfig, Event, Memory
 from thought_kit.schemas.event_schema import SimpleEventInput
 from thought_kit.utils import to_json, from_json
@@ -29,6 +30,7 @@ class ThoughtKitAPI:
         """Initialize the ThoughtKit API with its core components."""
         self.generator = ThoughtGenerator()
         self.operator = ThoughtOperator()
+        self.articulator = ThoughtArticulator()
         # Register default operations for the operator
         self.operator.load_operations()
         print("🔧 Registered operations: ", self.operator.available_operations())
@@ -170,6 +172,70 @@ class ThoughtKitAPI:
         # Use the improved to_json function that can handle lists
         return to_json(updated_thoughts, as_string=return_json_str)
         
+    async def articulate(
+        self,
+        input_data: Union[str, Dict[str, Any]],
+        **kwargs
+    ) -> str:
+        """
+        Articulate thoughts into a coherent response.
+        
+        Args:
+            input_data: A JSON string or dictionary containing:
+                - thoughts: List of thoughts to articulate
+                - memory (optional): Memory context
+                - model (optional): LLM model to use (default: gpt-4o)
+                - temperature (optional): Temperature for LLM (default: 0.7)
+                - max_tokens (optional): Max tokens for response (default: 500)
+            **kwargs: Additional arguments to pass to the articulator
+            
+        Returns:
+            The articulated response as a string
+            
+        Raises:
+            ValueError: If required data is missing
+        """
+        # Process input data (JSON string or dictionary)
+        if isinstance(input_data, str):
+            try:
+                data = json.loads(input_data)
+            except json.JSONDecodeError:
+                raise ValueError("Invalid JSON string provided")
+        else:
+            data = input_data
+            
+        # Extract and validate components
+        thoughts_data = data.get("thoughts")
+        if not thoughts_data:
+            raise ValueError("Thoughts are required in input_data")
+            
+        # Convert thoughts to Thought objects
+        thoughts = []
+        if isinstance(thoughts_data, list):
+            for thought_data in thoughts_data:
+                thoughts.append(from_json(thought_data, Thought))
+        
+        # Process optional components
+        memory = None
+        if "memory" in data:
+            memory = from_json(data["memory"], Memory)
+            
+        # Extract articulation parameters
+        model = data.get("model", "gpt-4o")
+        temperature = data.get("temperature", 0.7)
+        max_tokens = data.get("max_tokens", 500)
+        
+        # Articulate the thoughts
+        response = await self.articulator.articulate(
+            thoughts=thoughts,
+            memory=memory,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            **kwargs
+        )
+        
+        return response
 
     def available_operations(self) -> List[str]:
         """

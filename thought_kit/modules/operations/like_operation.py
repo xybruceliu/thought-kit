@@ -1,5 +1,5 @@
 """
-Plugin for liking a thought by increasing its weight.
+Operation for liking a thought by increasing its weight.
 """
 
 from thought_kit.schemas import Thought, Memory
