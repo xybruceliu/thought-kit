@@ -90,7 +90,7 @@ class ThoughtOperator:
                     
                     # Find functions that could be operations
                     for name, obj in inspect.getmembers(mod, inspect.isfunction):
-                        # Check if the function takes a Thought as its first parameter
+                        # Check if the function takes a List[Thought] as its first parameter
                         sig = inspect.signature(obj)
                         params = list(sig.parameters.values())
                         if params and params[0].annotation == List[Thought]:

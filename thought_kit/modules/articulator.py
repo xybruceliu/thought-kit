@@ -51,7 +51,12 @@ class ThoughtArticulator:
         thought_lines = ["## Selected Thoughts (ordered by importance)"]
         for i, thought in enumerate(sorted_thoughts, 1):
             saliency = thought.score.saliency
-            thought_lines.append(f"{i}. [Saliency: {saliency:.2f}] \"{thought.content.text}\"")
+            user_comments = thought.user_comments
+            if user_comments:
+                user_comments_str = ", ".join(user_comments)
+                thought_lines.append(f"{i}. [Saliency: {saliency:.2f}] \"{thought.content.text}\" (User comments: {user_comments_str})")
+            else:
+                thought_lines.append(f"{i}. [Saliency: {saliency:.2f}] \"{thought.content.text}\"")
         thought_lines.append("")
         context_sections.append("\n".join(thought_lines))
         
@@ -95,11 +100,12 @@ Just create a direct, natural response using the provided thoughts as your found
 Compose a natural, coherent response using the provided thoughts as your foundation. 
 Consider the following guidelines:
 1. Prioritize thoughts with higher saliency values when crafting your response
-2. Maintain the key insights and perspectives from the thoughts
-3. Create a cohesive flow rather than listing thoughts in sequence
-4. Use a natural, conversational tone
-5. Do not mention that you are using "thoughts" or that this is an articulation process
-6. If memory context is provided, ensure your response is consistent with it
+2. If user comments are provided, consider them when crafting your response
+3. Maintain the key insights and perspectives from the thoughts
+4. Create a cohesive flow rather than listing thoughts in sequence
+5. Use a natural, conversational tone
+6. Do not mention that you are using "thoughts" or that this is an articulation process
+7. If memory context is provided, ensure your response is consistent with it
 
 <Response Format>
 Provide your response directly, as if you are responding to the user.

@@ -44,7 +44,7 @@ async def main():
         "operation": "like",
         "thoughts": [thought],
         "options": {
-            "increment": 0.2  # Increase weight by 0.2 instead of default 0.1
+            "amount": 0.2  # Increase weight by 0.2 instead of default 0.1
         }
     }
     
@@ -61,11 +61,11 @@ async def main():
     print(f"Updated weight: {updated_thought['config']['weight']}")
     
     # Demonstrate multiple operations
-    # Let's like it again with the default increment (0.1)
+    # Let's like it again with the default amount (0.1)
     operation_input = {
-        "operation": "like",
+        "operation": "dislike",
         "thoughts": [updated_thought],
-        # No options specified, will use default increment of 0.1
+        # No options specified, will use default amount of 0.1
     }
     
     result = thoughtkit.operate(operation_input, return_json_str=False)
@@ -79,15 +79,14 @@ async def main():
         "operation": "like",
         "thoughts": [final_thought],
         "options": {
-            "increment": 0.5  # Try to increase by 0.5
+            "amount": 0.5  # Try to increase by 0.5
         }
     }
     
     result = thoughtkit.operate(operation_input, return_json_str=False)
     capped_thought = result[0]
     
-    print(f"Weight after attempting large increment: {capped_thought['config']['weight']}")
-    print(f"Note that weight is capped at 1.0")
+    print(f"Weight after attempting large amount: {capped_thought['config']['weight']}")
 
 if __name__ == "__main__":
     asyncio.run(main())

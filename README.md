@@ -137,7 +137,7 @@ operation_input = {
     "operation": "like",
     "thoughts": [thought],
     "options": {
-        "increment": 0.2
+        "amount": 0.2
     }
 }
 updated_thought = thoughtkit.operate(operation_input, return_json_str=False)
@@ -151,7 +151,7 @@ operation_input = {
     "operation": "like",
     "thoughts": [thought1, thought2, thought3],
     "options": {
-        "increment": 0.1
+        "amount": 0.1
     }
 }
 
@@ -170,7 +170,7 @@ json_input = json.dumps({
     "thoughts": [thought.dict()],
     "memory": memory.dict(),  # Optional
     "options": {
-        "increment": 0.3
+        "amount": 0.3
     }
 })
 
@@ -182,7 +182,7 @@ updated_thought = thoughtkit.operate(json_input, return_json_str=False)
 
 Currently, ThoughtKit includes the following operations:
 
-- **like**: Increases a thought's weight by a specified increment (default: 0.1). Weights are rounded to 2 decimal places and capped at 1.0.
+- **like**: Increases a thought's weight by a specified amount (default: 0.1). Weights are rounded to 2 decimal places and capped at 1.0.
 
 ### Custom Operations
 
