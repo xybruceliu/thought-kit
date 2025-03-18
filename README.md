@@ -202,20 +202,6 @@ def my_operation(thoughts: List[Thought], memory: Optional[Memory] = None, **opt
 
 The operation will be automatically discovered and loaded when the ThoughtKit API is initialized.
 
-### Advanced Usage
-
-If you need more control, you can still use the ThoughtOperator directly:
-
-```python
-from thought_kit.modules.operator import ThoughtOperator
-
-# Create operator and register operations
-operator = ThoughtOperator()
-operator.load_operations()
-
-# Run operations on a thought
-updated_thought = operator.operate("like", thought)
-```
 
 ## Examples
 
