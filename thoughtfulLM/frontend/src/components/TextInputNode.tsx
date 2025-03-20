@@ -38,7 +38,7 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data }) => {
   return (
     <Box
       bg="white"
-      borderRadius="lg"
+      borderRadius="2xl"
       boxShadow="sm"
       width="450px"
       transition="all 0.2s"
@@ -51,6 +51,7 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data }) => {
         minHeight="150px"
         resize="none"
         border="none"
+        borderRadius="2xl"
         _focus={{
           boxShadow: "md",
           outline: "none"
