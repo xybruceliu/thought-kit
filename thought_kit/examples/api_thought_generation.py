@@ -11,7 +11,7 @@ async def main():
     input_data = {
         "event": {
             "text": "I'm researching the impact of AI on society. I'm interested in the potential benefits and risks.",
-            "type": "USER_INPUT",
+            "type": "WORD_COUNT_CHANGE",
             "duration": -1
         },
         "seed": {
@@ -30,86 +30,62 @@ async def main():
             "length": 3,
             "interactivity": "COMMENT",
             "persistent": False,
-            "weight": 0.8
+            "weight": 0.5
         },
         "memory": {
-            "long_term": [
-                {
-                    "id": "memory_12345",
-                    "timestamp": {
-                        "created": "2023-10-15T14:30:00",
-                        "updated": "2023-10-15T14:30:00"
-                    },
-                    "type": "LONG_TERM",
-                    "content": {
-                        "text": "The user is a researcher studying AI ethics and societal impacts.",
-                        "embedding": []
-                    }
-                }
-            ],
-            "short_term": [
-                {
-                    "id": "memory_67890",
-                    "timestamp": {
-                        "created": "2023-10-15T14:35:00",
-                        "updated": "2023-10-15T14:35:00"
-                    },
-                    "type": "SHORT_TERM",
-                    "content": {
-                        "text": "The user recently mentioned concerns about AI automation replacing jobs.",
-                        "embedding": []
-                    }
-                }
-            ]
+            "chunks": [],
+            "embeddings": []
+        }
+    }
+
+    # Generate a thought
+    thought = await thoughtkit.generate(input_data)
+    
+    # Print the thought
+    print("Generated thought:")
+    print(f"ID: {thought['id']}")
+    print(f"Content: {thought['content']['text']}")
+    print(f"Created: {thought['timestamps']['created']}")
+
+    # Create a different input to show streaming
+    stream_input_data = {
+        "event": {
+            "text": "What are the most pressing ethical concerns with large language models?",
+            "type": "WORD_COUNT_CHANGE",
+            "duration": -1
         },
-        "thoughts": [
-            {
-                "id": "thought_abcdef",
-                "timestamps": {
-                    "created": "2023-10-15T14:40:00",
-                    "updated": "2023-10-15T14:40:00"
-                },
-                "content": {
-                    "text": "AI's societal impact requires careful ethical consideration.",
-                    "embedding": []
-                },
-                "config": {
-                    "modality": "TEXT",
-                    "depth": 3,
-                    "length": 8,
-                    "interactivity": "COMMENT",
-                    "persistent": False,
-                    "weight": 0.8
-                },
-                "trigger_event": {
-                    "id": "event_123456",
-                    "timestamps": {
-                        "created": "2023-10-15T14:39:00",
-                        "updated": "2023-10-15T14:39:00"
-                    },
-                    "type": "USER_INPUT",
-                    "content": {
-                        "text": "I'm interested in AI ethics research.",
-                        "embedding": []
-                    },
-                    "duration": -1
-                },
-                "score": {
-                    "weight": 0.8,
-                    "saliency": 0.7
-                }
-            }
-        ]
+        "seed": {
+            "prompt": {
+                "system_prompt": "You are a thoughtful AI assistant with expertise in AI ethics.",
+                "user_prompt": "Generate a critical thought about the user's query."
+            },
+            "model": "gpt-4o-mini",
+            "temperature": 0.7,
+            "type": "analytical",
+            "max_tokens": 150
+        },
+        "config": {
+            "modality": "TEXT",
+            "depth": 4,
+            "length": 5,
+            "interactivity": "COMMENT",
+            "persistent": False,
+            "weight": 0.7
+        },
+        "memory": {
+            "chunks": [],
+            "embeddings": []
+        }
     }
     
-    # Generate thought (returns JSON string)
-    thought_json = await thoughtkit.generate(input_data)
-    # print(f"Generated thought (JSON):\n{thought_json}\n")
+    # Generate thought with streaming
+    print("\nGenerating thought with streaming:")
+    async for chunk in thoughtkit.generate_stream(stream_input_data):
+        # In a real application, you would parse and handle the chunks
+        # Here we just print them for demonstration
+        print(f"Received chunk: {chunk}")
     
-    # Or get a Thought object
-    thought = await thoughtkit.generate(input_data, return_json_str=False)
-    print(f"💭 Thought content: {thought['content']['text']}")
-    print(f"💭 Thought saliency: {thought['score']['saliency']}")
+    print("\nStreaming complete")
 
 if __name__ == "__main__":
     asyncio.run(main()) 

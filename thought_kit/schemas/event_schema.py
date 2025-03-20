@@ -13,7 +13,7 @@ class Event(BaseModel):
     id: str = Field(..., description="Unique identifier for this event")
     timestamps: Timestamps = Field(default_factory=Timestamps, description="Timestamp information")
     content: Content = Field(..., description="Content of the event")
-    type: Literal["IDLE", "USER_INPUT", "TIME_INTERVAL", "INTERRUPT", "DIRECT_CREATION"] = Field(..., description="Type of event")
+    type: Literal["CLICK", "IDLE_TIME", "WORD_COUNT_CHANGE", "SENTENCE_END", "NAMED_ENTITY"] = Field(..., description="Type of event that triggers thought generation")
     duration: Optional[float] = Field(None, description="Duration of the event in seconds, if applicable")
 
     class Config:
@@ -25,9 +25,9 @@ class Event(BaseModel):
                     "created": "2023-10-15T14:30:00",
                     "updated": "2023-10-15T14:30:00"
                 },
-                "type": "USER_INPUT",
+                "type": "WORD_COUNT_CHANGE",
                 "content": {
-                    "text": "User asked about climate change data",
+                    "text": "User added several new words to their input",
                     "embedding": [0.1, 0.2, 0.3, 0.4]
                 },
                 "duration": None
@@ -38,15 +38,15 @@ class Event(BaseModel):
 class SimpleEventInput(BaseModel):
     """Simple input schema for creating events."""
     text: str = Field(..., description="Text content of the event")
-    type: Literal["IDLE", "USER_INPUT", "TIME_INTERVAL", "INTERRUPT"] = Field(..., description="Type of event")
+    type: Literal["CLICK", "IDLE_TIME", "WORD_COUNT_CHANGE", "SENTENCE_END", "NAMED_ENTITY"] = Field(..., description="Type of event that triggers thought generation")
     duration: Optional[float] = Field(None, description="Duration of the event in seconds, if applicable")
 
     class Config:
         """Pydantic config"""
         json_schema_extra = {
             "example": {
-                "text": "User asked about climate change data",
-                "type": "USER_INPUT",
+                "text": "User completed a sentence with punctuation",
+                "type": "SENTENCE_END",
                 "duration": None
             }
         }

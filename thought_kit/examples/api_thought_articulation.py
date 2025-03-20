@@ -10,7 +10,7 @@ async def main():
     thought1_input = {
         "event": {
             "text": "Tell me about the importance of exercise.",
-            "type": "USER_INPUT",
+            "type": "WORD_COUNT_CHANGE",
             "duration": -1
         },
         "seed": {
@@ -36,7 +36,7 @@ async def main():
     thought2_input = {
         "event": {
             "text": "Tell me about the importance of exercise.",
-            "type": "USER_INPUT",
+            "type": "WORD_COUNT_CHANGE",
             "duration": -1
         },
         "seed": {
@@ -62,7 +62,7 @@ async def main():
     thought3_input = {
         "event": {
             "text": "Tell me about the importance of exercise.",
-            "type": "USER_INPUT",
+            "type": "WORD_COUNT_CHANGE",
             "duration": -1
         },
         "seed": {

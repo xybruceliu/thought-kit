@@ -84,7 +84,7 @@ async def generate():
     input_data = {
         "event": {
             "text": "I'm researching the impact of AI on society.",
-            "type": "USER_INPUT",
+            "type": "WORD_COUNT_CHANGE",
             "duration": -1
         },
         "seed": {

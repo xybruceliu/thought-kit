@@ -137,9 +137,9 @@ class Thought(BaseModel):
                         "created": "2023-10-15T14:29:50",
                         "updated": "2023-10-15T14:29:50"
                     },
-                    "type": "USER_INPUT",
+                    "type": "WORD_COUNT_CHANGE",
                     "content": {
-                        "text": "User asked about climate change data",
+                        "text": "User added several words about climate change data",
                         "embedding": [0.2, 0.3, 0.4, 0.5]
                     },
                     "duration": 2.5
