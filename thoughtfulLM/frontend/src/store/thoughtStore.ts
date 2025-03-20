@@ -6,12 +6,10 @@ import { Node } from 'reactflow';
 import { getRandomInt } from '../utils';
 import { 
   Thought, 
-  ThoughtContent, 
   ThoughtConfig, 
-  Timestamps, 
-  TriggerType
 } from '../types/thought';
 import { Event, EventType } from '../types/event';
+import { Timestamps } from '../types/common';
 
 // ReactFlow node for thought bubble visualization
 export interface ThoughtNode extends Node {

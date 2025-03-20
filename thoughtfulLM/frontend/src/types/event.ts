@@ -1,7 +1,7 @@
 // Type definitions for event-related data
 // This file contains TypeScript types that mirror the backend's event_schema.py
 
-import { Timestamps } from './thought';
+import { Timestamps } from './common';
 
 // Content of an event
 export interface EventContent {
