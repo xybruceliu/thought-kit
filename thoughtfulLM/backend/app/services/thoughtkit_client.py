@@ -37,12 +37,12 @@ class ThoughtKitClient:
             The generated thought as a dictionary
         """
         try:
-            result = await self.api.generate(data, return_json_str=False)
+            result = await self.api.generate(data, return_json_str=False, return_model=True)
             return result
         except Exception as e:
             raise Exception(f"Error generating thought: {str(e)}")
     
-    def operate_on_thought(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    async def operate_on_thought(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Perform an operation on thoughts using the ThoughtKit API.
         
@@ -53,7 +53,7 @@ class ThoughtKitClient:
             The result of the operation as a dictionary
         """
         try:
-            result = self.api.operate(data, return_json_str=False)
+            result = await self.api.operate(data, return_json_str=False, return_model=True)
             return result
         except Exception as e:
             raise Exception(f"Error performing operation: {str(e)}")

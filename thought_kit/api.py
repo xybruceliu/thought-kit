@@ -39,7 +39,8 @@ class ThoughtKitAPI:
     async def generate(
         self, 
         input_data: Union[str, Dict[str, Any]],
-        return_json_str: bool = True
+        return_json_str: bool = True,
+        return_model: bool = False
     ) -> Union[Dict[str, Any], str, Thought]:
         """
         Generate a thought based on provided input data.
@@ -52,9 +53,9 @@ class ThoughtKitAPI:
                 - memory (optional): Memory context
                 - thoughts (optional): Previous thoughts for context
             return_json_str: Whether to return JSON (True) or a Thought object (False)
-            
+            return_model: Whether to return the original model instead of a dict
         Returns:
-            The generated thought as JSON string or Dict
+            The generated thought as JSON string or Dict or original model
         """
         # Process input data
         if isinstance(input_data, str):
@@ -103,13 +104,14 @@ class ThoughtKitAPI:
         )
         
         # Return the thought in the requested format
-        return to_json(thought, as_string=return_json_str)
+        return to_json(thought, as_string=return_json_str, return_model=return_model)
         
           
-    def operate(
+    async def operate(
         self, 
         input_data: Union[str, Dict[str, Any]],
         return_json_str: bool = True,
+        return_model: bool = False,
         **kwargs
     ) -> Union[Dict[str, Any], str, Thought, List[Thought]]:
         """
@@ -122,10 +124,11 @@ class ThoughtKitAPI:
                 - memory (optional): Memory context
                 - options (optional): Additional options for the operation
             return_json_str: Whether to return JSON (True) or Dict (False)
+            return_model: Whether to return the original model instead of a dict
             **kwargs: Additional arguments to pass to the operation
             
         Returns:
-            The modified thought(s) as JSON string or Dict
+            The modified thought(s) as JSON string or Dict or original model
             
         Raises:
             ValueError: If the operation is not registered or required data is missing
@@ -170,7 +173,7 @@ class ThoughtKitAPI:
             
         # Return the result in the requested format
         # Use the improved to_json function that can handle lists
-        return to_json(updated_thoughts, as_string=return_json_str)
+        return to_json(updated_thoughts, as_string=return_json_str, return_model=return_model)
         
     async def articulate(
         self,
