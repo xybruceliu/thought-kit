@@ -67,11 +67,11 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
       transform: scale(0.95);
     }
     60% {
-      opacity: 1;
+      opacity: 0.5;
       transform: scale(1);
     }
     100% {
-      opacity: 1;
+      opacity: 0.7;
       border-radius: ${blobVariants[startVariantIndex]};
       
     }
@@ -114,6 +114,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
         cursor="grab"
         // Enhanced physics effect for dragging with more pronounced spring and delay
         style={{
+            opacity:0.7,
           transition: isDragging 
             ? 'none' 
             : 'transform 0.8s cubic-bezier(0.19, 1.69, 0.42, 0.9) 0.1s',

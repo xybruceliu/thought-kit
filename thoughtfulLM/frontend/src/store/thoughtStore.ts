@@ -2,7 +2,7 @@
 // This file will handle global state management for the application
 
 import { create } from 'zustand';
-import { Node } from 'reactflow';
+import { Node, Position, XYPosition } from 'reactflow';
 import { generateRandomThought, getRandomInt } from '../utils';
 import { 
   Thought, 
@@ -15,10 +15,7 @@ import { Timestamps } from '../types/common';
 export interface ThoughtNode extends Node {
   id: string;
   type: 'thoughtBubble';
-  position: {
-    x: number;
-    y: number;
-  };
+  position: XYPosition;
   data: {
     content: string;
     thought: Thought;
@@ -37,7 +34,7 @@ interface ThoughtState {
   lastGenerationTimestamp: number;
   idleTimeThreshold: number; // in milliseconds
   wordCountChangeThreshold: number;
-  sentenceWordThreshold: number; // New threshold
+  sentenceWordThreshold: number; // Threshold for sentence word count
 
   // Thoughts and nodes
   thoughts: Thought[];
@@ -45,22 +42,20 @@ interface ThoughtState {
 
   // Actions
   updateInput: (newInput: string) => void;
-  generateThoughtAtPosition: (triggerType: EventType, position?: { x: number, y: number }, relatedText?: string) => Thought;
+  generateThoughtAtPosition: (triggerType: EventType, position?: XYPosition) => Thought;
+  updateThoughtNodePosition: (nodeId: string, position: XYPosition) => void;
   removeThought: (thoughtId: string) => void;
+  
+  // Trigger checks
   checkIdleTrigger: () => boolean;
   checkWordCountTrigger: () => boolean;
   checkSentenceEndTrigger: (input: string) => boolean;
-  setLastGenerationTimestamp: () => void;
 }
 
-// Temporary function to create a Thought without connection to the backend
-// Currently, this is just a placeholder to allow the app to run, filled with random values
-// TODO: Update this to use the backend API later
-const createThoughtTemp = (triggerType: EventType): Thought => {
+// Create a Thought object
+const createThought = (triggerType: EventType): Thought => {
   const now = new Date().toISOString();
   const id = `thought_${Date.now()}`;
-
-  // use utils to generate a random thought content
   const content = generateRandomThought();
   
   return {
@@ -100,10 +95,9 @@ const createThoughtTemp = (triggerType: EventType): Thought => {
   };
 };
 
-// Create a ThoughtNode from a Thought at a specific position or randomly
-  const createThoughtNode = (thought: Thought, position?: { x: number, y: number }): ThoughtNode => {
+// Create a ThoughtNode from a Thought
+const createThoughtNode = (thought: Thought, position?: XYPosition): ThoughtNode => {
   // Use provided position or generate random position
-  // TODO: A more sophisticated algorithm will be used to position the thought node
   const x = position?.x ?? getRandomInt(100, 700);
   const y = position?.y ?? getRandomInt(100, 500);
   
@@ -129,8 +123,8 @@ export const useThoughtStore = create<ThoughtState>((set, get) => ({
   // Trigger tracking
   lastGenerationTimestamp: Date.now(),
   idleTimeThreshold: 10000, // 10 seconds
-  wordCountChangeThreshold: 7, // Threshold for word count change
-  sentenceWordThreshold: 3, // Threshold for sentence word count that could trigger a thought by punctuation
+  wordCountChangeThreshold: 7, // Words added/removed to trigger
+  sentenceWordThreshold: 3, // Words in a sentence to trigger
   
   // Thoughts and nodes
   thoughts: [],
@@ -144,10 +138,10 @@ export const useThoughtStore = create<ThoughtState>((set, get) => ({
     }));
   },
   
-  // Unified thought generation function
-  generateThoughtAtPosition: (triggerType: EventType, position?: { x: number, y: number }) => {
-    const state = get();
-    const thought = createThoughtTemp(triggerType);
+  // Generate a thought at a specific position
+  generateThoughtAtPosition: (triggerType: EventType, position?: XYPosition) => {
+    // Create thought and node
+    const thought = createThought(triggerType);
     const thoughtNode = createThoughtNode(thought, position);
     
     // Update state
@@ -161,6 +155,16 @@ export const useThoughtStore = create<ThoughtState>((set, get) => ({
     return thought;
   },
   
+  // Update a thought node's position
+  updateThoughtNodePosition: (nodeId: string, position: XYPosition) => {
+    set((state) => ({
+      thoughtNodes: state.thoughtNodes.map(node => 
+        node.id === nodeId ? { ...node, position } : node
+      )
+    }));
+  },
+  
+  // Remove a thought and its node
   removeThought: (thoughtId: string) => {
     set((state) => ({
       thoughts: state.thoughts.filter(t => t.id !== thoughtId),
@@ -168,12 +172,14 @@ export const useThoughtStore = create<ThoughtState>((set, get) => ({
     }));
   },
   
+  // Check if idle time trigger condition is met
   checkIdleTrigger: () => {
     const state = get();
     const now = Date.now();
     return (now - state.lastGenerationTimestamp) > state.idleTimeThreshold;
   },
   
+  // Check if word count change trigger condition is met
   checkWordCountTrigger: () => {
     const state = get();
     const currentWordCount = state.currentInput.split(/\s+/).filter(Boolean).length;
@@ -182,6 +188,7 @@ export const useThoughtStore = create<ThoughtState>((set, get) => ({
     return Math.abs(currentWordCount - lastWordCount) >= state.wordCountChangeThreshold;
   },
   
+  // Check if sentence end trigger condition is met
   checkSentenceEndTrigger: (input: string) => {
     const state = get();
     // Check if the last character is a sentence-ending punctuation
@@ -197,11 +204,5 @@ export const useThoughtStore = create<ThoughtState>((set, get) => ({
       .filter(Boolean);
     
     return wordsSinceLastGeneration.length >= state.sentenceWordThreshold;
-  },
-  
-  setLastGenerationTimestamp: () => {
-    set({
-      lastGenerationTimestamp: Date.now()
-    });
   },
 })); 

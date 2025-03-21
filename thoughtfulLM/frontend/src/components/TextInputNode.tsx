@@ -1,6 +1,7 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useCallback, useRef, useEffect } from 'react';
 import { NodeProps } from 'reactflow';
 import { Box, Textarea } from '@chakra-ui/react';
+import { useTextInput } from '../hooks';
 
 type TextInputNodeProps = NodeProps<{
   value?: string;
@@ -8,18 +9,20 @@ type TextInputNodeProps = NodeProps<{
 }>;
 
 const TextInputNode: React.FC<TextInputNodeProps> = ({ data }) => {
-  const [text, setText] = useState(data.value || '');
+  const { text, handleTextChange } = useTextInput();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleChange = useCallback(
     (event: React.ChangeEvent<HTMLTextAreaElement>) => {
       const newValue = event.target.value;
-      setText(newValue);
+      handleTextChange(newValue);
+      
+      // Also call the original onChange if provided
       if (data.onChange) {
         data.onChange(newValue);
       }
     },
-    [data]
+    [data, handleTextChange]
   );
 
   // Auto-resize functionality
