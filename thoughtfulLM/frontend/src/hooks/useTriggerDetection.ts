@@ -9,7 +9,6 @@ import { EventType } from '../types/event';
 export const useTriggerDetection = () => {
   const { 
     currentInput,
-    previousInput,
     lastActivityTimestamp,
     idleTimeThreshold,
     wordCountAtLastGeneration,
@@ -53,18 +52,13 @@ export const useTriggerDetection = () => {
     
     if (!isPunctuation) return false;
     
-    // Check if this punctuation follows at least N words
-    const textSinceLastGeneration = input.slice(previousInput.length);
-    const wordsSinceLastGeneration = textSinceLastGeneration
-      .split(/\s+/)
-      .filter(Boolean);
-    
-    if (wordsSinceLastGeneration.length >= sentenceWordThreshold) {
+    const currentWordCount = input.split(/\s+/).filter(Boolean).length;
+    if (currentWordCount - wordCountAtLastGeneration >= sentenceWordThreshold) {
       console.log(`Trigger: Sentence end > ${sentenceWordThreshold} words 💬`);
       return true;
     }
     return false;
-  }, [previousInput, sentenceWordThreshold]);
+  }, [currentInput, wordCountAtLastGeneration, sentenceWordThreshold]);
 
   // Function to check all triggers and generate a thought if any is triggered
   const checkTriggersAndGenerate = useCallback((newText: string) => {

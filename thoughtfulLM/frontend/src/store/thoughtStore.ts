@@ -27,7 +27,6 @@ export interface ThoughtNode extends Node {
 interface ThoughtState {
   // Input tracking
   currentInput: string;
-  previousInput: string;
   wordCountAtLastGeneration: number;
 
   // Trigger tracking
@@ -113,7 +112,6 @@ const createThoughtNode = (thought: Thought, position?: XYPosition): ThoughtNode
 export const useThoughtStore = create<ThoughtState>((set, get) => ({
   // Input tracking
   currentInput: "",
-  previousInput: "",
   wordCountAtLastGeneration: 0,
   
   // Trigger tracking
@@ -141,7 +139,6 @@ export const useThoughtStore = create<ThoughtState>((set, get) => ({
       }
       
       return {
-        previousInput: state.currentInput,
         currentInput: newInput,
         // Reset idle trigger flag when user types
         lastActivityTimestamp: Date.now(),
