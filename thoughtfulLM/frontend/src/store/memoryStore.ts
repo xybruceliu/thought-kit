@@ -14,7 +14,6 @@ interface MemoryState {
   removeMemoryItem: (id: string) => void;
   clearMemory: (type?: 'LONG_TERM' | 'SHORT_TERM') => void;
   getMemoryByType: (type: 'LONG_TERM' | 'SHORT_TERM') => MemoryItem[];
-  getRelevantMemory: (searchText: string, limit?: number) => MemoryItem[];
 }
 
 // Create a new memory item
@@ -109,24 +108,5 @@ export const useMemoryStore = create<MemoryState>((set, get) => ({
   getMemoryByType: (type: 'LONG_TERM' | 'SHORT_TERM') => {
     const state = get();
     return type === 'LONG_TERM' ? state.memory.long_term : state.memory.short_term;
-  },
-  
-  // Get relevant memory items based on text similarity
-  // This is a simplified implementation - in a real app, you'd use embedding similarity
-  getRelevantMemory: (searchText: string, limit = 5) => {
-    const state = get();
-    const allMemory = [...state.memory.long_term, ...state.memory.short_term];
-    
-    // Simple relevance matching - in a real app, you'd use vector similarity
-    const searchLower = searchText.toLowerCase();
-    
-    // Sort by simple text matching (more sophisticated methods would be used in production)
-    const sortedMemory = allMemory.sort((a, b) => {
-      const aRelevance = a.content.text.toLowerCase().includes(searchLower) ? 1 : 0;
-      const bRelevance = b.content.text.toLowerCase().includes(searchLower) ? 1 : 0;
-      return bRelevance - aRelevance;
-    });
-    
-    return sortedMemory.slice(0, limit);
   },
 })); 

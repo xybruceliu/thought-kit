@@ -157,7 +157,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
           cursor: "grabbing",
         }}
         _hover={{
-          boxShadow: `0 0 12px 8px ${colors[colorIndex]}40`,
+          boxShadow: `0 0 15px 8px ${colors[colorIndex]}40`,
         }}
       >
         <Text
