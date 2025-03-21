@@ -1,60 +1,92 @@
 """
-Example of thought operation using the ThoughtKit API.
+Simple example of operating on a thought using the ThoughtKit API.
 """
 
 import asyncio
 from thought_kit import thoughtkit
 
 async def main():
-    # Create event input data
-    input_data = {
+    # First, create a simple thought using the API
+    thought_input = {
         "event": {
-            "text": "Can you help me analyze the potential societal impacts of artificial general intelligence?",
-            "type": "WORD_COUNT_CHANGE",
+            "text": "User is discussing AI ethics.",
+            "type": "IDLE_TIME",
             "duration": -1
-        }
-    }
-    
-    # Generate some thoughts
-    thoughts = []
-    for i in range(3):
-        thought = await thoughtkit.generate({
-            "event": input_data["event"],
-            "seed": {
-                "prompt": {
-                    "system_prompt": "You are a thoughtful AI assistant.",
-                    "user_prompt": f"Generate thought {i+1} about the user's query."
-                },
-                "model": "gpt-4o-mini",
-                "temperature": 0.7,
-                "type": "analytical",
-                "max_tokens": 50
+        },
+        "seed": {
+            "prompt": {
+                "system_prompt": "You are a thoughtful AI assistant.",
+                "user_prompt": "Generate a thought about AI ethics."
             },
-            "config": {
-                "modality": "TEXT",
-                "depth": i+1,  # Varying depth levels
-                "length": 5,
-                "interactivity": "VIEW",
-                "persistent": False,
-                "weight": 0.7
-            }
-        })
-        thoughts.append(thought)
-        print(f"Generated thought {i+1}: {thought['content']['text']}")
-    
-    # Perform an operation (grouping)
-    operation_data = {
-        "operation": "group",
-        "thoughts": thoughts,
-        "options": {
-            "criterion": "semantic_similarity",
-            "threshold": 0.5
+            "model": "gpt-4o-mini",
+            "temperature": 0.7,
+            "type": "reflective",
+            "max_tokens": 50
+        },
+        "config": {
+            "modality": "TEXT",
+            "depth": 3,
+            "length": 10,
+            "interactivity": "COMMENT",
+            "persistent": False,
+            "weight": 0.5
         }
     }
     
-    result = await thoughtkit.operate(operation_data)
-    print("\nOperation result:")
-    print(result)
+    # Generate a thought using the API
+    thought = await thoughtkit.generate(thought_input, return_json_str=False)
     
+    print(f"Original thought: {thought['content']['text']}")
+    print(f"Original weight: {thought['config']['weight']}")
+    
+    # Create input data for the operation
+    operation_input = {
+        "operation": "like",
+        "thoughts": [thought],
+        "options": {
+            "amount": 0.2  # Increase weight by 0.2 instead of default 0.1
+        }
+    }
+    
+    # Perform the operation (returns JSON by default)
+    result_json = thoughtkit.operate(operation_input)
+    print(f"Operation result (JSON): {result_json[:50]}...")
+    
+    # Or get the result as a Python object
+    result = thoughtkit.operate(operation_input, return_json_str=False)
+    
+    # Since result is a list (even for a single thought), get the first item
+    updated_thought = result[0]
+    print(f"Updated thought: {updated_thought['content']['text']}")
+    print(f"Updated weight: {updated_thought['config']['weight']}")
+    
+    # Demonstrate multiple operations
+    # Let's like it again with the default amount (0.1)
+    operation_input = {
+        "operation": "dislike",
+        "thoughts": [updated_thought],
+        # No options specified, will use default amount of 0.1
+    }
+    
+    result = thoughtkit.operate(operation_input, return_json_str=False)
+    final_thought = result[0]
+    
+    print(f"Final weight after second like: {final_thought['config']['weight']}")
+    
+    # Demonstrate weight capping at 1.0
+    # Let's try to increase it by a large amount
+    operation_input = {
+        "operation": "like",
+        "thoughts": [final_thought],
+        "options": {
+            "amount": 0.5  # Try to increase by 0.5
+        }
+    }
+    
+    result = thoughtkit.operate(operation_input, return_json_str=False)
+    capped_thought = result[0]
+    
+    print(f"Weight after attempting large amount: {capped_thought['config']['weight']}")
+
 if __name__ == "__main__":
     asyncio.run(main())

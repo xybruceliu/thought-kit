@@ -1,29 +1,29 @@
-"""Text splitting utilities using spaCy."""
+"""Text splitting utilities using regular expressions instead of spaCy."""
 from typing import List
-import spacy
-from spacy.language import Language
+import re
 
 class SentenceSplitter:
-    """Split text into sentences using spaCy's sentencizer component."""
+    """Split text into sentences using regular expressions."""
     
-    def __init__(self, model_name: str = "en_core_web_sm"):
-        """Initialize the spaCy-based sentence splitter.
+    def __init__(self, model_name: str = None):
+        """Initialize the regex-based sentence splitter.
         
         Args:
-            model_name: Name of the spaCy model to use (default: en_core_web_sm)
+            model_name: Not used, kept for API compatibility
         """
-        try:
-            self.nlp = spacy.load(model_name, disable=["tagger", "parser", "ner", "lemmatizer", "attribute_ruler"])
-        except OSError:
-            # If the model is not found, download a lightweight pipeline with just the sentencizer
-            self.nlp = spacy.blank("en")
+        # Common abbreviations to avoid splitting at periods in them
+        self.abbreviations = {
+            'mr.', 'mrs.', 'ms.', 'dr.', 'prof.', 'sr.', 'jr.', 'e.g.', 'i.e.',
+            'etc.', 'vs.', 'fig.', 'st.', 'ave.', 'no.', 'inc.', 'ltd.', 'co.'
+        }
         
-        # Make sure the sentencizer is added to the pipeline
-        if "sentencizer" not in self.nlp.pipe_names:
-            sentencizer = self.nlp.add_pipe("sentencizer")
-    
+        # Pattern for sentence splitting
+        # This handles periods, question marks, and exclamation points as sentence boundaries
+        # But excludes common abbreviations
+        self.sentence_pattern = re.compile(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?|\!)\s')
+        
     def split_sentences(self, text: str) -> List[str]:
-        """Split text into sentences using spaCy.
+        """Split text into sentences using regex.
         
         Args:
             text: Text to split
@@ -34,8 +34,33 @@ class SentenceSplitter:
         if not text:
             return []
         
-        doc = self.nlp(text)
-        return [sent.text.strip() for sent in doc.sents]
+        # Lower the text to check for abbreviations
+        lower_text = text.lower()
+        
+        # Replace abbreviations temporarily to avoid splitting at them
+        for abbr in self.abbreviations:
+            if abbr in lower_text:
+                # Create a unique replacement that won't interfere with sentence splitting
+                # We use the index to make it unique
+                replacement = f"__ABBR{abbr}__"
+                # Replace only in the lower_text to find positions
+                positions = [(m.start(), m.end()) for m in re.finditer(re.escape(abbr), lower_text)]
+                
+                # Replace in the original text preserving case
+                for start, end in reversed(positions):  # Reverse to avoid offset issues
+                    text = text[:start] + replacement + text[end:]
+        
+        # Split the text into sentences
+        sentences = self.sentence_pattern.split(text)
+        
+        # Restore abbreviations
+        for abbr in self.abbreviations:
+            replacement = f"__ABBR{abbr}__"
+            for i, sentence in enumerate(sentences):
+                sentences[i] = sentence.replace(replacement, abbr)
+        
+        # Clean up and return
+        return [sent.strip() for sent in sentences if sent.strip()]
     
     def split_paragraphs(self, text: str) -> List[str]:
         """Split text into paragraphs based on double newlines.

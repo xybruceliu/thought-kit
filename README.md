@@ -39,9 +39,6 @@ cd thought-kit
 
 # Install package
 pip install -e .
-
-# Install spaCy model (required for text processing)
-python -m spacy download en_core_web_sm
 ```
 
 ### API Key Setup
@@ -69,7 +66,7 @@ os.environ["OPENAI_API_KEY"] = "your-api-key-here"
 ### Utilities
 - **LLM API**: OpenAI API integration
 - **Conversion**: JSON serialization/deserialization
-- **Text Processing**: Text analysis and manipulation
+- **Text Processing**: Simple text analysis and manipulation with regex-based sentence splitting
 
 ## Thought Generation
 

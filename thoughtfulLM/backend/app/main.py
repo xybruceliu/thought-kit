@@ -1,17 +1,22 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes import thoughts
+from app.config import settings
+
+# Set OpenAI API key in environment
+import os
+os.environ["OPENAI_API_KEY"] = settings.OPENAI_API_KEY or ""
 
 app = FastAPI(
-    title="ThoughtfulLM API",
-    description="API for ThoughtKit functionality",
-    version="0.1.0"
+    title=settings.API_TITLE,
+    description=settings.API_DESCRIPTION,
+    version=settings.API_VERSION,
 )
 
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # React app's default port
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -22,4 +27,4 @@ async def root():
     return {"message": "Welcome to ThoughtfulLM API"}
 
 # Include routers
-app.include_router(thoughts.router) 
+app.include_router(thoughts.router, prefix=settings.API_PREFIX) 
