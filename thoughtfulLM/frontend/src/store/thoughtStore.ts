@@ -129,13 +129,26 @@ export const useThoughtStore = create<ThoughtState>((set, get) => ({
   
   // Actions
   updateInput: (newInput: string) => {
-    set((state) => ({
-      previousInput: state.currentInput,
-      currentInput: newInput,
-      // Reset idle trigger flag when user types
-      lastActivityTimestamp: Date.now(),
-      idleTriggerFired: false,
-    }));
+    set((state) => {
+      const currentWordCount = newInput.split(/\s+/).filter(Boolean).length;
+      const previousWordCount = state.currentInput.split(/\s+/).filter(Boolean).length;
+      
+      // Reset wordCountAtLastGeneration if word count decreases significantly
+      // This prevents requiring too many words to trigger the next thought
+      let updatedWordCountAtLastGeneration = state.wordCountAtLastGeneration;
+      if (currentWordCount < previousWordCount) {
+        updatedWordCountAtLastGeneration = currentWordCount;
+      }
+      
+      return {
+        previousInput: state.currentInput,
+        currentInput: newInput,
+        // Reset idle trigger flag when user types
+        lastActivityTimestamp: Date.now(),
+        idleTriggerFired: false,
+        wordCountAtLastGeneration: updatedWordCountAtLastGeneration
+      };
+    });
   },
   
   // Generate a thought at a specific position

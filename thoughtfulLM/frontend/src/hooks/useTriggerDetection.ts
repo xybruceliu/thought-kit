@@ -16,7 +16,7 @@ export const useTriggerDetection = () => {
     wordCountChangeThreshold,
     sentenceWordThreshold,
     idleTriggerFired,
-    generateThoughtAtPosition
+    generateThoughtAtPosition,
   } = useThoughtStore();
 
   // Check if idle time trigger condition is met
@@ -37,9 +37,9 @@ export const useTriggerDetection = () => {
   // Check if word count change trigger condition is met
   const checkWordCountTrigger = useCallback(() => {
     const currentWordCount = currentInput.split(/\s+/).filter(Boolean).length;
-    
-    if (Math.abs(currentWordCount - wordCountAtLastGeneration) >= wordCountChangeThreshold) {
-      console.log(`Trigger: Word count change > ${wordCountChangeThreshold} ✍️`);
+    // Only trigger when word count has increased by the threshold
+    if (currentWordCount - wordCountAtLastGeneration >= wordCountChangeThreshold) {
+      console.log(`Trigger: Word count increase > ${wordCountChangeThreshold} ✍️`);
       return true;
     }
     return false;
