@@ -31,10 +31,11 @@ interface ThoughtState {
   wordCountAtLastGeneration: number;
 
   // Trigger tracking
-  lastGenerationTimestamp: number;
+  lastActivityTimestamp: number;
   idleTimeThreshold: number; // in milliseconds
   wordCountChangeThreshold: number;
   sentenceWordThreshold: number; // Threshold for sentence word count
+  idleTriggerFired: boolean; // Flag to track if idle trigger has fired
 
   // Thoughts and nodes
   thoughts: Thought[];
@@ -45,11 +46,6 @@ interface ThoughtState {
   generateThoughtAtPosition: (triggerType: EventType, position?: XYPosition) => Thought;
   updateThoughtNodePosition: (nodeId: string, position: XYPosition) => void;
   removeThought: (thoughtId: string) => void;
-  
-  // Trigger checks
-  checkIdleTrigger: () => boolean;
-  checkWordCountTrigger: () => boolean;
-  checkSentenceEndTrigger: (input: string) => boolean;
 }
 
 // Create a Thought object
@@ -121,10 +117,11 @@ export const useThoughtStore = create<ThoughtState>((set, get) => ({
   wordCountAtLastGeneration: 0,
   
   // Trigger tracking
-  lastGenerationTimestamp: Date.now(),
+  lastActivityTimestamp: Date.now(),
   idleTimeThreshold: 10000, // 10 seconds
   wordCountChangeThreshold: 7, // Words added/removed to trigger
   sentenceWordThreshold: 3, // Words in a sentence to trigger
+  idleTriggerFired: false, // Initially not fired
   
   // Thoughts and nodes
   thoughts: [],
@@ -135,6 +132,9 @@ export const useThoughtStore = create<ThoughtState>((set, get) => ({
     set((state) => ({
       previousInput: state.currentInput,
       currentInput: newInput,
+      // Reset idle trigger flag when user types
+      lastActivityTimestamp: Date.now(),
+      idleTriggerFired: false,
     }));
   },
   
@@ -149,7 +149,9 @@ export const useThoughtStore = create<ThoughtState>((set, get) => ({
       thoughts: [...state.thoughts, thought],
       thoughtNodes: [...state.thoughtNodes, thoughtNode],
       wordCountAtLastGeneration: state.currentInput.split(/\s+/).filter(Boolean).length,
-      lastGenerationTimestamp: Date.now(),
+      lastActivityTimestamp: Date.now(),
+      // If this is an idle trigger, mark it as fired
+      idleTriggerFired: triggerType === 'IDLE_TIME' ? true : state.idleTriggerFired,
     }));
     
     return thought;
@@ -170,39 +172,5 @@ export const useThoughtStore = create<ThoughtState>((set, get) => ({
       thoughts: state.thoughts.filter(t => t.id !== thoughtId),
       thoughtNodes: state.thoughtNodes.filter(n => n.id !== thoughtId),
     }));
-  },
-  
-  // Check if idle time trigger condition is met
-  checkIdleTrigger: () => {
-    const state = get();
-    const now = Date.now();
-    return (now - state.lastGenerationTimestamp) > state.idleTimeThreshold;
-  },
-  
-  // Check if word count change trigger condition is met
-  checkWordCountTrigger: () => {
-    const state = get();
-    const currentWordCount = state.currentInput.split(/\s+/).filter(Boolean).length;
-    const lastWordCount = state.wordCountAtLastGeneration;
-    
-    return Math.abs(currentWordCount - lastWordCount) >= state.wordCountChangeThreshold;
-  },
-  
-  // Check if sentence end trigger condition is met
-  checkSentenceEndTrigger: (input: string) => {
-    const state = get();
-    // Check if the last character is a sentence-ending punctuation
-    const lastChar = input.trim().slice(-1);
-    const isPunctuation = ['.', '!', '?'].includes(lastChar);
-    
-    if (!isPunctuation) return false;
-    
-    // Check if this punctuation follows at least N words
-    const textSinceLastGeneration = input.slice(state.previousInput.length);
-    const wordsSinceLastGeneration = textSinceLastGeneration
-      .split(/\s+/)
-      .filter(Boolean);
-    
-    return wordsSinceLastGeneration.length >= state.sentenceWordThreshold;
-  },
+  }
 })); 
