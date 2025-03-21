@@ -99,7 +99,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
   
   useEffect(() => {
     // Generate a random duration when the component mounts
-    const duration = 7 + Math.random() * 5;
+    const duration = 5 + Math.random() * 5;
     setAnimationDuration(`${duration}s`);
     
     // Set isNew to false after the entrance animation completes

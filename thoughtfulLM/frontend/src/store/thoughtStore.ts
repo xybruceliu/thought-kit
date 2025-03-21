@@ -24,7 +24,7 @@ export interface ThoughtNode extends Node {
 }
 
 // Define the store state
-interface ThoughtState {
+interface ThoughtStoreState {
   // Input tracking
   currentInput: string;
   wordCountAtLastGeneration: number;
@@ -51,6 +51,8 @@ interface ThoughtState {
 }
 
 // Create a Thought object
+// Temporary function to create a thought randomly for testing purposes
+// TODO: Replace with actual API call to create a thought
 const createThought = (triggerType: EventType): Thought => {
   const now = new Date().toISOString();
   const id = `thought_${Date.now()}`;
@@ -67,7 +69,7 @@ const createThought = (triggerType: EventType): Thought => {
       length: getRandomInt(2, 5),
       interactivity: 'VIEW',
       persistent: false,
-      weight: Math.random(),
+      weight: 0.0,
     },
     timestamps: {
       created: now,
@@ -87,8 +89,8 @@ const createThought = (triggerType: EventType): Thought => {
     references: [],
     user_comments: [],
     score: {
-      weight: Math.random(),
-      saliency: Math.random() * 0.7 + 0.3, // Random value between 0.3 and 1.0
+      weight: 0.0,
+      saliency: Math.random() * 0.3 + 0.7, // Random value between 0.7 and 1.0
     }
   };
 };
@@ -112,7 +114,7 @@ const createThoughtNode = (thought: Thought, position?: XYPosition): ThoughtNode
 };
 
 // Create the store
-export const useThoughtStore = create<ThoughtState>((set, get) => ({
+export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
   // Input tracking
   currentInput: "",
   wordCountAtLastGeneration: 0,
