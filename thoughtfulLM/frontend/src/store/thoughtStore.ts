@@ -39,12 +39,15 @@ interface ThoughtState {
   // Thoughts and nodes
   thoughts: Thought[];
   thoughtNodes: ThoughtNode[];
+  maxThoughtCount: number; // Maximum number of thoughts to display
+  removingThoughtIds: string[]; // Track thoughts being removed for animation
 
   // Actions
   updateInput: (newInput: string) => void;
   generateThoughtAtPosition: (triggerType: EventType, position?: XYPosition) => Thought;
   updateThoughtNodePosition: (nodeId: string, position: XYPosition) => void;
   removeThought: (thoughtId: string) => void;
+  setMaxThoughtCount: (count: number) => void;
 }
 
 // Create a Thought object
@@ -117,13 +120,15 @@ export const useThoughtStore = create<ThoughtState>((set, get) => ({
   // Trigger tracking
   lastActivityTimestamp: Date.now(),
   idleTimeThreshold: 10000, // 10 seconds
-  wordCountChangeThreshold: 7, // Words added/removed to trigger
-  sentenceWordThreshold: 3, // Words in a sentence to trigger
+  wordCountChangeThreshold: 6, // Words added/removed to trigger
+  sentenceWordThreshold: 2, // Words in a sentence to trigger
   idleTriggerFired: false, // Initially not fired
   
   // Thoughts and nodes
   thoughts: [],
   thoughtNodes: [],
+  maxThoughtCount: 5, // Maximum number of thoughts to display
+  removingThoughtIds: [], // Initially empty
   
   // Actions
   updateInput: (newInput: string) => {
@@ -152,9 +157,32 @@ export const useThoughtStore = create<ThoughtState>((set, get) => ({
   generateThoughtAtPosition: (triggerType: EventType, position?: XYPosition) => {
     // Create thought and node
     const thought = createThought(triggerType);
+    
+    // Reference to the store functions
+    const { thoughts, thoughtNodes, maxThoughtCount, removeThought, removingThoughtIds } = get();
+    
+    // Check if we'll exceed the maximum thought count (accounting for nodes already being removed)
+    const activeThoughtCount = thoughts.length - removingThoughtIds.length;
+    
+    if (activeThoughtCount >= maxThoughtCount) {
+      // Sort thoughts by saliency (lowest first), excluding those already being removed
+      const availableThoughts = thoughts.filter(t => !removingThoughtIds.includes(t.id));
+      const sortedThoughts = [...availableThoughts].sort((a, b) => 
+        (a.score?.saliency || 0) - (b.score?.saliency || 0)
+      );
+      
+      // Get the least salient thought
+      const leastSalientThought = sortedThoughts[0];
+      
+      // Remove the least salient thought using the existing function
+      console.log(`❗️ Removing least salient thought: ${leastSalientThought.id}`);
+      removeThought(leastSalientThought.id);
+    }
+    
+    // Now create and add the new thought node
     const thoughtNode = createThoughtNode(thought, position);
     
-    // Update state
+    // Update state with just the new thought (since we already removed the least salient one if needed)
     set((state) => ({
       thoughts: [...state.thoughts, thought],
       thoughtNodes: [...state.thoughtNodes, thoughtNode],
@@ -178,9 +206,28 @@ export const useThoughtStore = create<ThoughtState>((set, get) => ({
   
   // Remove a thought and its node
   removeThought: (thoughtId: string) => {
+    // First mark the thought as removing (for animation)
     set((state) => ({
-      thoughts: state.thoughts.filter(t => t.id !== thoughtId),
-      thoughtNodes: state.thoughtNodes.filter(n => n.id !== thoughtId),
+      removingThoughtIds: [...state.removingThoughtIds, thoughtId],
+      thoughtNodes: state.thoughtNodes.map(node => 
+        node.id === thoughtId ? { ...node, data: { ...node.data, isRemoving: true } } : node
+      )
+    }));
+    
+    // After animation delay, actually remove the thought
+    setTimeout(() => {
+      set((state) => ({
+        thoughts: state.thoughts.filter(t => t.id !== thoughtId),
+        thoughtNodes: state.thoughtNodes.filter(n => n.id !== thoughtId),
+        removingThoughtIds: state.removingThoughtIds.filter(id => id !== thoughtId)
+      }));
+    }, 500); // Match the duration of the exit animation
+  },
+  
+  // Set maxThoughtCount
+  setMaxThoughtCount: (count: number) => {
+    set((state) => ({
+      maxThoughtCount: count,
     }));
   }
 })); 

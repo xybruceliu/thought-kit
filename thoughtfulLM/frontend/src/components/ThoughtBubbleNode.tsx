@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { NodeProps, Handle, Position } from 'reactflow';
 import { Box, Text, keyframes } from '@chakra-ui/react';
 
 type ThoughtBubbleNodeProps = NodeProps<{
   content: string;
   blobVariant?: number;
+  isRemoving?: boolean;
 }>;
 
 
@@ -43,7 +44,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
     }
     25% { 
       border-radius: ${blobVariants[midVariantIndex]};
-      transform: scale(1.03);
+      transform: scale(1.05);
     }
     50% { 
       border-radius: ${blobVariants[endVariantIndex]};
@@ -51,7 +52,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
     }
     75% { 
       border-radius: ${blobVariants[midVariantIndex]};
-      transform: scale(0.97);
+      transform: scale(0.95);
     }
     100% { 
       border-radius: ${blobVariants[startVariantIndex]};
@@ -77,10 +78,24 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
     }
   `;
 
+  // Exit animation - fade out and shrink
+  const exitAnimation = keyframes`
+    0% {
+      opacity: 0.7;
+      transform: scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+  `;
+
   // Random animation duration for more natural movement
   const [animationDuration, setAnimationDuration] = useState("7s");
   const [isNew, setIsNew] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
+  const prevIsRemovingRef = useRef(data.isRemoving);
   
   useEffect(() => {
     // Generate a random duration when the component mounts
@@ -92,6 +107,17 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
     return () => clearTimeout(timer);
   }, []);
 
+  // Effect to handle removal animation
+  useEffect(() => {
+    // If isRemoving prop changed from false to true, trigger exit animation
+    if (data.isRemoving && !prevIsRemovingRef.current) {
+      setIsExiting(true);
+    }
+    
+    // Update ref for next comparison
+    prevIsRemovingRef.current = data.isRemoving;
+  }, [data.isRemoving]);
+
   return (
     <div 
       style={{ position: 'relative' }}
@@ -102,7 +128,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
       <Box
         bg="white"
         borderRadius={blobVariants[startVariantIndex]}
-        boxShadow={`0 0 10px 5px ${colors[colorIndex]}20`}
+        boxShadow={`0 0 12px 6px ${colors[colorIndex]}20`}
         minWidth="100px"
         maxWidth="200px"
         height="auto"
@@ -114,22 +140,24 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
         cursor="grab"
         // Enhanced physics effect for dragging with more pronounced spring and delay
         style={{
-            opacity:0.7,
+            opacity: isExiting ? 0 : 0.7,
           transition: isDragging 
             ? 'none' 
             : 'transform 0.8s cubic-bezier(0.19, 1.69, 0.42, 0.9) 0.1s',
           willChange: 'transform',
         }}
         animation={
-          isNew 
-            ? `${entranceAnimation} 1s ease-out forwards` 
-            : `${morphAnimation} ${animationDuration} ease-in-out infinite`
+          isExiting
+            ? `${exitAnimation} 1s ease-out forwards`
+            : isNew 
+              ? `${entranceAnimation} 1s ease-out forwards` 
+              : `${morphAnimation} ${animationDuration} ease-in-out infinite`
         }
         _active={{
           cursor: "grabbing",
         }}
         _hover={{
-          boxShadow: `0 0 10px 8px ${colors[colorIndex]}40`,
+          boxShadow: `0 0 12px 8px ${colors[colorIndex]}40`,
         }}
       >
         <Text

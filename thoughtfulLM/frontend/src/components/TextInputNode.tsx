@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useEffect } from 'react';
-import { NodeProps } from 'reactflow';
+import { NodeProps, useReactFlow } from 'reactflow';
 import { Box, Textarea } from '@chakra-ui/react';
 import { useTextInput } from '../hooks';
 
@@ -8,21 +8,26 @@ type TextInputNodeProps = NodeProps<{
   onChange?: (value: string) => void;
 }>;
 
-const TextInputNode: React.FC<TextInputNodeProps> = ({ data }) => {
+const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
   const { text, handleTextChange } = useTextInput();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const reactFlowInstance = useReactFlow();
 
   const handleChange = useCallback(
     (event: React.ChangeEvent<HTMLTextAreaElement>) => {
       const newValue = event.target.value;
-      handleTextChange(newValue);
+      const textInputNode = reactFlowInstance.getNode(id);
+      if (textInputNode) {
+        handleTextChange(newValue, textInputNode);
+      }
+   
       
       // Also call the original onChange if provided
       if (data.onChange) {
         data.onChange(newValue);
       }
     },
-    [data, handleTextChange]
+    [data, handleTextChange, id, reactFlowInstance]
   );
 
   // Auto-resize functionality
@@ -43,7 +48,7 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data }) => {
       bg="white"
       borderRadius="2xl"
       boxShadow="sm"
-      width="450px"
+      width="500px"
       transition="all 0.2s"
     >
       <Textarea
@@ -51,7 +56,7 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data }) => {
         value={text}
         onChange={handleChange}
         placeholder="Ask anything"
-        minHeight="150px"
+        minHeight="200px"
         resize="none"
         border="none"
         borderRadius="2xl"

@@ -1,6 +1,8 @@
 import { useCallback } from 'react';
 import { useThoughtStore } from '../store/thoughtStore';
 import { EventType } from '../types/event';
+import { XYPosition, Node as ReactFlowNode } from 'reactflow';
+import { calculateThoughtNodePosition, positioningStrategies } from '../utils';
 
 /**
  * Custom hook that handles thought trigger detection logic
@@ -15,13 +17,14 @@ export const useTriggerDetection = () => {
     wordCountChangeThreshold,
     sentenceWordThreshold,
     idleTriggerFired,
+    thoughtNodes,
     generateThoughtAtPosition,
   } = useThoughtStore();
 
   // Check if idle time trigger condition is met
   const checkIdleTrigger = useCallback(() => {
-    // Only trigger if we haven't already fired an idle trigger
-    if (idleTriggerFired) {
+    // Only trigger if we haven't already fired an idle trigger and there is input text
+    if (idleTriggerFired || !currentInput.trim()) {
       return false;
     }
     
@@ -31,7 +34,7 @@ export const useTriggerDetection = () => {
       return true;
     }
     return false;
-  }, [idleTriggerFired, lastActivityTimestamp, idleTimeThreshold]);
+  }, [idleTriggerFired, currentInput, lastActivityTimestamp, idleTimeThreshold]);
 
   // Check if word count change trigger condition is met
   const checkWordCountTrigger = useCallback(() => {
@@ -60,23 +63,46 @@ export const useTriggerDetection = () => {
     return false;
   }, [currentInput, wordCountAtLastGeneration, sentenceWordThreshold]);
 
+
+  // TESTING: Check if user has typed "t". This is only for testing purposes
+  const checkTTrigger = useCallback(() => {
+    if (currentInput.includes('*')) {
+      console.log(`TESTING Trigger: User typed "*" 🔍`);
+      return true;
+    }
+    return false;
+  }, [currentInput]);
+
   // Function to check all triggers and generate a thought if any is triggered
-  const checkTriggersAndGenerate = useCallback((newText: string) => {
+  const checkTriggersAndGenerate = useCallback((newText: string, textInputNode: ReactFlowNode) => {
+    // You can change the strategy here - defaulting to aboveInput
+    const position = calculateThoughtNodePosition(
+      textInputNode, 
+      thoughtNodes, 
+      positioningStrategies.aboveInput
+    );
+    
     // Check for sentence end trigger
     if (checkSentenceEndTrigger(newText)) {
-      generateThoughtAtPosition('SENTENCE_END');
+      generateThoughtAtPosition('SENTENCE_END', position);
       return true;
     }
     
     // Check for word count trigger
     if (checkWordCountTrigger()) {
-      generateThoughtAtPosition('WORD_COUNT_CHANGE');
+      generateThoughtAtPosition('WORD_COUNT_CHANGE', position);
       return true;
     }
 
     // Check for idle trigger
     if (checkIdleTrigger()) {
-      generateThoughtAtPosition('IDLE_TIME');
+      generateThoughtAtPosition('IDLE_TIME', position);
+      return true;
+    }
+
+    // TESTING: Check if user has typed "t"
+    if (checkTTrigger()) {
+      generateThoughtAtPosition('IDLE_TIME', position);
       return true;
     }
 
@@ -85,13 +111,16 @@ export const useTriggerDetection = () => {
     checkSentenceEndTrigger,
     checkWordCountTrigger,
     checkIdleTrigger,
-    generateThoughtAtPosition
+    checkTTrigger,
+    generateThoughtAtPosition,
+    thoughtNodes
   ]);
 
   return {
     checkIdleTrigger,
     checkWordCountTrigger,
     checkSentenceEndTrigger,
+    checkTTrigger,
     checkTriggersAndGenerate
   };
 }; 
