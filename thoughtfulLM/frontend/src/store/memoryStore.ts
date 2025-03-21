@@ -23,7 +23,7 @@ const createMemoryItem = (text: string, type: 'LONG_TERM' | 'SHORT_TERM'): Memor
   
   return {
     id: `memory_${Date.now()}`,
-    timestamp: {
+    timestamps: {
       created: now,
       updated: now,
     },

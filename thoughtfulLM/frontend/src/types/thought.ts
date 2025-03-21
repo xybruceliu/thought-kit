@@ -1,7 +1,7 @@
 // Type definitions for thought-related data
 // This file contains TypeScript types that mirror the backend schemas
 
-import { Prompt, Timestamps, Content } from './common';
+import { Prompt, Timestamps, Content, Score } from './common';
 import { Event, EventType } from './event';
 
 
@@ -23,7 +23,10 @@ export interface Thought {
   config: ThoughtConfig;
   timestamps: Timestamps;
   triggerEvent: Event;
-  // We're omitting some fields from the backend schema for frontend simplicity
+  seed?: ThoughtSeed;
+  references: string[];
+  user_comments: string[];
+  score: Score;
 }
 
 export interface ThoughtSeed {

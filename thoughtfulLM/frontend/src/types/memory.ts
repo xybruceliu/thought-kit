@@ -6,7 +6,7 @@ import { Content, Timestamps } from './common';
 // Memory item - represents a single piece of information to remember
 export interface MemoryItem {
   id: string;
-  timestamp: Timestamps;
+  timestamps: Timestamps;
   type: 'LONG_TERM' | 'SHORT_TERM';
   content: Content;
 }
