@@ -9,9 +9,7 @@ from datetime import datetime
 import asyncio
 
 # Import schemas from thought_kit
-from thought_kit.schemas.thought_schema import Thought, ThoughtConfig
-from thought_kit.schemas.event_schema import Event
-from thought_kit.schemas.common_schema import Content, Timestamps
+from thought_kit.schemas.thought_schema import Thought
 
 # Define event types
 EventTypes = Literal["CLICK", "IDLE_TIME", "WORD_COUNT_CHANGE", "SENTENCE_END", "NAMED_ENTITY"]

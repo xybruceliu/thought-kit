@@ -22,7 +22,7 @@ async def main():
     config_data = {
         "modality": "TEXT",
         "depth": 3,
-        "length": 8,
+        "length": 3,
         "interactivity": "COMMENT",
         "persistent": False,
         "weight": 0.8

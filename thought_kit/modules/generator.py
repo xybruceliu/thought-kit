@@ -211,18 +211,10 @@ class ThoughtGenerator:
    - Avoid generating thoughts too similar to previous ones
 
 <Saliency Evaluation>
-Evaluate the thought's saliency (0-10) based on how it builds common ground with the user:
-- 0-3: Low contribution
-  • Minimal shared understanding
-  • Doesn't acknowledge user's perspective
-- 4-7: Medium contribution
-  • Aligns with user's mental model
-  • Bridges knowledge gaps
-  • Clarifies misunderstandings
-- 8-10: High contribution
-  • Significantly enhances mutual understanding
-  • Creates coherence between context and new information
-  • Establishes clear reference points for future communication
+Rate the saliency of the following thought on a scale from 0 to 10 (where 0 is the lowest and 10 is the highest) based on how much it could improve the interaction between the user and the system.
+Saliency is defined as the thought's potential to either:
+- Enhance shared understanding (aligning with common ground theory), or
+- Introduce useful new directions (e.g., creative ideas, problem-solving insights).
 
 <Response Format>
 Respond with a JSON object containing:

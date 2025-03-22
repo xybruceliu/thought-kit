@@ -1,3 +1,17 @@
+"""
+ThoughtfulLM Backend API Test Script
+
+This script tests the main API endpoints of the ThoughtfulLM backend.
+It has been updated to align with the current implementation of the API
+as defined in thought_models.py and thoughts.py.
+
+The script tests the following endpoints:
+- /thoughts/generate
+- /thoughts/operate
+- /thoughts/articulate
+- /memories/
+"""
+
 import asyncio
 import httpx
 import json
@@ -9,31 +23,10 @@ async def test_generate_thought():
     """Test the thought generation endpoint"""
     print("\n🔄 Testing thought generation...")
     
-    # Sample request data
+    # Sample request data - simplified to match the GenerationRequest model
     data = {
-        "event": {
-            "text": "I'm researching the impact of AI on society.",
-            "type": "WORD_COUNT_CHANGE",
-            "duration": -1
-        },
-        "seed": {
-            "prompt": {
-                "system_prompt": "You are a thoughtful AI assistant.",
-                "user_prompt": "Generate a thought about the user's research topic."
-            },
-            "model": "gpt-4o-mini",
-            "temperature": 0.7,
-            "type": "reflective",
-            "max_tokens": 100
-        },
-        "config": {
-            "modality": "TEXT",
-            "depth": 2,
-            "length": 10,
-            "interactivity": "COMMENT",
-            "persistent": False,
-            "weight": 0.8
-        }
+        "event_text": "I'm researching the impact of AI on society.",
+        "event_type": "WORD_COUNT_CHANGE"
     }
     
     async with httpx.AsyncClient(timeout=30.0) as client:
@@ -45,6 +38,7 @@ async def test_generate_thought():
                 print("✅ Thought generation successful!")
                 print(f"🔹 Thought ID: {result.get('id', 'Not found')}")
                 print(f"🔹 Content: {result.get('content', {}).get('text', 'Not found')}")
+                print(f"🔹 Seed Type: {result.get('seed', {}).get('type', 'Not found')}")
                 return result
             else:
                 print(f"❌ Thought generation failed with status {response.status_code}")
@@ -62,7 +56,8 @@ async def test_operate_on_thought(thought):
     
     print("\n🔄 Testing thought operation...")
     
-    # Sample request data
+    # Use the thought directly as returned from the generate endpoint
+    # The model now expects a simpler format that matches OperationRequest
     data = {
         "operation": "like",
         "thoughts": [thought],
@@ -103,12 +98,10 @@ async def test_articulate_thoughts(thought):
     
     print("\n🔄 Testing thought articulation...")
     
-    # Sample request data
+    # Simplified to match the ArticulationRequest model
+    # The model and temperature are set in the backend
     data = {
-        "thoughts": [thought],
-        "model": "gpt-4o-mini",
-        "temperature": 0.7,
-        "max_tokens": 200
+        "thoughts": [thought]
     }
     
     async with httpx.AsyncClient(timeout=30.0) as client:

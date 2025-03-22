@@ -10,7 +10,6 @@ import asyncio
 
 # Import schemas from thought_kit
 from thought_kit.schemas.memory_schema import Memory, MemoryItem, SimpleMemoryInput, create_memory_from_simple_input
-from thought_kit.schemas.common_schema import Content, Timestamps
 
 class MemoryStore:
     """

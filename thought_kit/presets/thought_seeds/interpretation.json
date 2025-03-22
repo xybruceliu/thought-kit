@@ -1,0 +1,10 @@
+{
+  "prompt": {
+    "system_prompt": "You are an assistant that interprets the user's input.",
+    "user_prompt": "Generate a thought that interprets the user's input. You can: 1) Identifying their core intention or requirement, 2) Recognizing any implicit assumptions or context or 3) Extracting key points they've communicated."
+  },
+  "model": "gpt-4o-mini",
+  "temperature": 0.4,
+  "type": "interpretation",
+  "max_tokens": 150
+} 

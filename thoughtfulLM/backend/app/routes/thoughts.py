@@ -1,9 +1,10 @@
 from fastapi import APIRouter, HTTPException, status
 from typing import Dict, Any, List, Optional
 from app.models.thought_models import GenerationRequest, OperationRequest, ArticulationRequest
-from thought_kit import thoughtkit
 from app.stores.thought_store import thought_store
-
+from app.stores.memory_store import memory_store
+from thought_kit import thoughtkit
+import random
 router = APIRouter(
     prefix="/thoughts",
     tags=["thoughts"],
@@ -24,16 +25,37 @@ async def generate_thought(request: GenerationRequest):
         The generated thought
     """
     try:
-        # Convert Pydantic model to dict
-        request_data = request.model_dump(exclude_none=True)
+        #See all the available thought seeds
+        available_seeds = thoughtkit.get_available_thought_seeds()
+        # randomly select one, TEMPORARY for TESTING
+        # TODO: Implement a way to select the best seed based on the event, probably prompt based?
+        seed_name = available_seeds[random.randint(0, len(available_seeds) - 1)]
         
-        # Generate thought using ThoughtKit directly
-        result = await thoughtkit.generate(request_data, return_json_str=False, return_model=True)
-        
-        # Add the thought to our store
-        thought_store.add_thought(result)
-        
+        # Create the input data dictionary
+        input_data = {
+            "event": {
+                "text": request.event_text,
+                "type": request.event_type,
+                "duration": -1
+            },
+            "seed": thoughtkit.load_thought_seed(seed_name),
+            "config": {
+                "modality": "TEXT",
+                "depth": 3,
+                "length": 5,
+                "interactivity": "EDIT",
+                "persistent": False,
+                "weight": 0.5
+            },
+            "memory": memory_store.get_all_memory(),
+            "thoughts": thought_store.get_all_thoughts()
+        }
+
+        # Use the single parameter format
+        result = await thoughtkit.generate(input_data, return_json_str=False, return_model=True)
+
         return result
+    
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
@@ -91,6 +113,11 @@ async def articulate_thoughts(request: ArticulationRequest):
     try:
         # Convert Pydantic model to dict
         request_data = request.model_dump(exclude_none=True)
+        
+        # Specify the model, temperature, and max tokens for the articulation
+        request_data["model"] = "gpt-4o"
+        request_data["temperature"] = 0.7
+        request_data["max_tokens"] = 500
         
         # Articulate thoughts using ThoughtKit directly
         result = await thoughtkit.articulate(request_data)

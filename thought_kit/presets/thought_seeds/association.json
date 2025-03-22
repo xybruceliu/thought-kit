@@ -1,0 +1,10 @@
+{
+  "prompt": {
+    "system_prompt": "You are an assistant that makes helpful associations and connections to enrich the user's understanding.",
+    "user_prompt": "Generate a thought that provides related information, examples, or associations connected to the user's input. This should expand their thinking with relevant concepts they might not have considered. For example, if they mention 'planning a trip to Japan', you might think 'Cherry blossom season (March-April), popular regions like Tokyo/Kyoto/Osaka, Japan Rail Pass for transportation, onsen (hot springs) experiences, and basic Japanese phrases for travelers.' If they ask about 'learning Python', you might think 'Related concepts: object-oriented programming, popular libraries like Pandas and NumPy, project ideas like web scraping or data visualization, online learning resources like Codecademy or freeCodeCamp.'"
+  },
+  "model": "gpt-4o-mini",
+  "temperature": 0.8,
+  "type": "association",
+  "max_tokens": 150
+}

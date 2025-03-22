@@ -1,9 +1,6 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, Literal
 
-# Import ThoughtKit schemas
-from thought_kit.schemas.memory_schema import MemoryItem
-from thought_kit.schemas.common_schema import Content
 
 class MemoryRequest(BaseModel):
     """Request model for adding a memory item"""

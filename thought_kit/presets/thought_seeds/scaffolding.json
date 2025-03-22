@@ -1,0 +1,10 @@
+{
+  "prompt": {
+    "system_prompt": "You are an assistant that helps identify important requirements and constraints to better tailor responses to users.",
+    "user_prompt": "Generate a thought that identifies potential requirements, constraints, or preferences that would help tailor a response to the user's needs. Think about what additional information would make your response more personalized and relevant. For example, if they ask about 'vacation recommendations', consider 'Key factors: budget range, preferred climate, travel timeframe, accessibility needs, interests (culture/adventure/relaxation), travel companions (solo/family/couple)'. If they request 'help writing an email', consider 'Important context: tone (formal/casual), recipient relationship, email purpose, desired length, key points to include, preferred writing style'. Frame these as a structured list of considerations that would significantly improve your ability to provide a tailored response. Focus on the most relevant factors for their specific request."
+  },
+  "model": "gpt-4o-mini",
+  "temperature": 0.5,
+  "type": "scaffolding",
+  "max_tokens": 150
+}

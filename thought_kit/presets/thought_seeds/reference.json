@@ -1,0 +1,10 @@
+{
+  "prompt": {
+    "system_prompt": "You are an assistant that identifies helpful references and resources related to user queries.",
+    "user_prompt": "Generate a thought that identifies specific references, resources, or contextual information that would be valuable for addressing the user's input. This could include: 1) Suggesting authoritative websites or platforms (e.g., 'The French embassy visa portal would have the most up-to-date requirements'), 2) Noting relevant user history or preferences if available (e.g., 'Based on their previous queries about budget travel, they might prefer economical options'), 3) Identifying specific tools or services (e.g., 'Google Flights or Kayak would be useful for comparing airfares to Japan'), or 4) Mentioning specialized communities or forums (e.g., 'The r/MachineLearning subreddit has excellent resources on this topic'). Focus on the most relevant and helpful references that directly address their needs."
+  },
+  "model": "gpt-4o-mini",
+  "temperature": 0.4,
+  "type": "reference",
+  "max_tokens": 150
+}
