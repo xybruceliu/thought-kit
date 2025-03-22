@@ -44,6 +44,10 @@ export interface AddMemoryRequest {
   text: string;
 }
 
+export interface MaxThoughtCountResponse {
+  message: string;
+}
+
 // API client class
 class ThoughtApi {
   // Generate a thought using the ThoughtKit API
@@ -84,6 +88,56 @@ class ThoughtApi {
       return response.data;
     } catch (error) {
       console.error('Error articulating thoughts:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  // Get all thoughts
+  async getAllThoughts(): Promise<Thought[]> {
+    try {
+      const response: AxiosResponse<Thought[]> = await axios.get(
+        `${BASE_URL}/thoughts/`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error getting all thoughts:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  // Get a thought by ID
+  async getThought(thoughtId: string): Promise<Thought> {
+    try {
+      const response: AxiosResponse<Thought> = await axios.get(
+        `${BASE_URL}/thoughts/${thoughtId}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error getting thought with ID ${thoughtId}:`, error);
+      throw this.handleError(error);
+    }
+  }
+
+  // Delete a thought by ID
+  async deleteThought(thoughtId: string): Promise<void> {
+    try {
+      await axios.delete(`${BASE_URL}/thoughts/${thoughtId}`);
+    } catch (error) {
+      console.error(`Error deleting thought with ID ${thoughtId}:`, error);
+      throw this.handleError(error);
+    }
+  }
+
+  // Set the maximum number of thoughts to store
+  async setMaxThoughtCount(maxCount: number): Promise<MaxThoughtCountResponse> {
+    try {
+      const response: AxiosResponse<MaxThoughtCountResponse> = await axios.post(
+        `${BASE_URL}/thoughts/max-count`,
+        maxCount
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error setting max thought count:', error);
       throw this.handleError(error);
     }
   }
