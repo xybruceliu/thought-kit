@@ -1,24 +1,24 @@
 // API service for ThoughtfulLM
 // This file will contain functions for interacting with the backend API
+//
+// NOTE: API Format Update
+// The backend expects a simplified format for generating thoughts:
+// - Only requires event_text and event_type
 
 import axios, { AxiosResponse } from 'axios';
 
 // Import types from the types directory
-import { Thought, ThoughtConfig, ThoughtSeed } from '../types/thought';
-import { SimpleEventInput, EventType } from '../types/event';
-import { Memory } from '../types/memory';
-import { Content, Prompt } from '../types/common';
+import { Thought } from '../types/thought';
+import { EventType } from '../types/event';
+import { Memory, MemoryItem } from '../types/memory';
 
 // Base API URL
 const BASE_URL = 'http://localhost:8000/api/v1';
 
 // Request types
 export interface GenerateThoughtRequest {
-  event: SimpleEventInput;
-  seed: ThoughtSeed;
-  config: ThoughtConfig;
-  memory?: Memory;
-  thoughts?: Thought[];
+  event_text: string;
+  event_type: EventType;
 }
 
 export interface OperateOnThoughtRequest {
@@ -33,13 +33,15 @@ export interface OperateOnThoughtRequest {
 export interface ArticulateThoughtsRequest {
   thoughts: Thought[];
   memory?: Memory;
-  model?: string;
-  temperature?: number;
-  max_tokens?: number;
 }
 
 export interface ArticulateThoughtsResponse {
   response: string;
+}
+
+export interface AddMemoryRequest {
+  type: 'LONG_TERM' | 'SHORT_TERM';
+  text: string;
 }
 
 // API client class
@@ -82,6 +84,30 @@ class ThoughtApi {
       return response.data;
     } catch (error) {
       console.error('Error articulating thoughts:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  // Add a memory
+  async addMemory(request: AddMemoryRequest): Promise<MemoryItem> {
+    try {
+      const response: AxiosResponse<MemoryItem> = await axios.post(
+        `${BASE_URL}/memories/`,
+        request
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error adding memory:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  // Clear all memories
+  async clearMemories(): Promise<void> {
+    try {
+      await axios.delete(`${BASE_URL}/memories/`);
+    } catch (error) {
+      console.error('Error clearing memories:', error);
       throw this.handleError(error);
     }
   }
