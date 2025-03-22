@@ -1,9 +1,8 @@
 from fastapi import APIRouter, HTTPException, status
 from typing import Dict, Any, List, Optional
-from app.models.thought_models import GenerationRequest, OperationRequest, ArticulationRequest, TriggerRequest
-from app.services.thoughtkit_client import thoughtkit_client
-from app.services.thought_store import thought_store
-from app.services.thought_generator import thought_generator
+from app.models.thought_models import GenerationRequest, OperationRequest, ArticulationRequest
+from thought_kit import thoughtkit
+from app.stores.thought_store import thought_store
 
 router = APIRouter(
     prefix="/thoughts",
@@ -28,8 +27,8 @@ async def generate_thought(request: GenerationRequest):
         # Convert Pydantic model to dict
         request_data = request.model_dump(exclude_none=True)
         
-        # Generate thought using ThoughtKit
-        result = await thoughtkit_client.generate_thought(request_data)
+        # Generate thought using ThoughtKit directly
+        result = await thoughtkit.generate(request_data, return_json_str=False, return_model=True)
         
         # Add the thought to our store
         thought_store.add_thought(result)
@@ -58,8 +57,8 @@ async def operate_on_thought(request: OperationRequest):
         # Convert Pydantic model to dict
         request_data = request.model_dump(exclude_none=True)
         
-        # Perform operation using ThoughtKit
-        result = await thoughtkit_client.operate_on_thought(request_data)
+        # Perform operation using ThoughtKit directly
+        result = await thoughtkit.operate(request_data, return_json_str=False, return_model=True)
         
         # Update or add thoughts to our store
         for thought in result if isinstance(result, list) else [result]:
@@ -84,7 +83,7 @@ async def articulate_thoughts(request: ArticulationRequest):
     
     Args:
         request: Parameters for articulation including thoughts to articulate,
-                and optional memory, model, temperature, and max_tokens
+                optional memory, and articulation options
     
     Returns:
         The articulated response
@@ -93,8 +92,9 @@ async def articulate_thoughts(request: ArticulationRequest):
         # Convert Pydantic model to dict
         request_data = request.model_dump(exclude_none=True)
         
-        # Articulate thoughts using ThoughtKit
-        result = await thoughtkit_client.articulate_thoughts(request_data)
+        # Articulate thoughts using ThoughtKit directly
+        result = await thoughtkit.articulate(request_data)
+        
         return {"response": result}
     except Exception as e:
         raise HTTPException(
@@ -102,35 +102,8 @@ async def articulate_thoughts(request: ArticulationRequest):
             detail=f"Failed to articulate thoughts: {str(e)}"
         )
 
-# New endpoints for thought store management
 
-@router.post("/trigger", status_code=status.HTTP_201_CREATED)
-async def trigger_thought(request: TriggerRequest):
-    """
-    Generate a thought based on a trigger event.
-    This endpoint uses the local thought generator to create thoughts based on events.
-    
-    Args:
-        request: Parameters for triggering a thought including event type and content
-    
-    Returns:
-        The generated thought
-    """
-    try:
-        # Generate a thought based on the trigger
-        thought = await thought_generator.generate_thought_from_event(
-            event_type=request.type,
-            event_text=request.text,
-            event_duration=request.duration
-        )
-        
-        return thought
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-            detail=f"Failed to trigger thought: {str(e)}"
-        )
-
+# Operations for the thought store
 @router.get("/", status_code=status.HTTP_200_OK)
 async def get_all_thoughts():
     """

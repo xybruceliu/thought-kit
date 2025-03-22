@@ -128,6 +128,43 @@ async def test_articulate_thoughts(thought):
             print(f"❌ Error: {e}")
             return None
 
+async def test_memory_operations():
+    """Test the memory endpoints"""
+    print("\n🔄 Testing memory operations...")
+    
+    # Test adding a memory
+    print("🔄 Testing add memory...")
+    memory_data = {
+        "type": "LONG_TERM",
+        "text": "The user is researching AI ethics and societal impacts."
+    }
+    
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        try:
+            # Add memory
+            response = await client.post(f"{BASE_URL}/memories/", json=memory_data)
+            
+            if response.status_code == 201:
+                result = response.json()
+                print("✅ Memory added successfully!")
+                print(f"🔹 Memory ID: {result.get('id', 'Not found')}")
+                print(f"🔹 Content: {result.get('content', {}).get('text', 'Not found')}")
+                
+                # Clear memories
+                print("🔄 Testing clear memories...")
+                response = await client.delete(f"{BASE_URL}/memories/")
+                
+                if response.status_code == 204:
+                    print("✅ Memories cleared successfully!")
+                else:
+                    print(f"❌ Failed to clear memories with status {response.status_code}")
+                    print(f"Error: {response.text}")
+            else:
+                print(f"❌ Failed to add memory with status {response.status_code}")
+                print(f"Error: {response.text}")
+        except Exception as e:
+            print(f"❌ Error: {e}")
+
 async def run_tests():
     """Run all tests in sequence"""
     print("🧪 Starting API tests...")
@@ -140,6 +177,9 @@ async def run_tests():
     
     # Test articulate
     await test_articulate_thoughts(thought)
+    
+    # Test memory operations
+    await test_memory_operations()
     
     print("\n🏁 Tests completed!")
 

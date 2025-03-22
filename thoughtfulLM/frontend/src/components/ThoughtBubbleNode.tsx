@@ -128,7 +128,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
       <Box
         bg="white"
         borderRadius={blobVariants[startVariantIndex]}
-        boxShadow={`0 0 12px 6px ${colors[colorIndex]}20`}
+        boxShadow={`0 0 15px 8px ${colors[colorIndex]}20`}
         minWidth="100px"
         maxWidth="200px"
         height="auto"
@@ -157,7 +157,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
           cursor: "grabbing",
         }}
         _hover={{
-          boxShadow: `0 0 15px 8px ${colors[colorIndex]}40`,
+          boxShadow: `0 0 17px 10px ${colors[colorIndex]}40`,
         }}
       >
         <Text

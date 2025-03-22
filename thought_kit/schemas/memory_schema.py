@@ -11,7 +11,7 @@ from ..utils.llm_api import get_embedding
 class MemoryItem(BaseModel):
     """Schema for a single memory item."""
     id: str = Field(..., description="Unique memory index or identifier")
-    timestamp: Timestamps = Field(default_factory=Timestamps, description="Timestamp information")
+    timestamps: Timestamps = Field(default_factory=Timestamps, description="Timestamp information")
     type: Literal["LONG_TERM", "SHORT_TERM"] = Field(..., description="Type of memory (long-term or short-term)")
     content: Content = Field(..., description="Content of the memory")
 
@@ -20,7 +20,7 @@ class MemoryItem(BaseModel):
         json_schema_extra = {
             "example": {
                 "id": "memory_abc123",
-                "timestamp": {
+                "timestamps": {
                     "created": "2023-10-15T14:30:00",
                     "updated": "2023-10-15T14:30:00"
                 },
@@ -51,7 +51,7 @@ class Memory(BaseModel):
                 "long_term": [
                     {
                         "id": "memory_abc123",
-                        "timestamp": {
+                        "timestamps": {
                             "created": "2023-10-15T14:30:00",
                             "updated": "2023-10-15T14:30:00"
                         },
@@ -121,7 +121,7 @@ async def create_memory_from_simple_input(
                 cur_timestamp = datetime.now().isoformat()
                 memory_item = MemoryItem(
                     id=f"memory_item_{uuid.uuid4().hex[:8]}",
-                    timestamp=Timestamps(
+                    timestamps=Timestamps(
                         created=cur_timestamp,
                         updated=cur_timestamp
                     ),
@@ -148,7 +148,7 @@ async def create_memory_from_simple_input(
                 
                 memory_item = MemoryItem(
                     id=f"memory_item_{uuid.uuid4().hex[:8]}",
-                    timestamp=Timestamps(
+                    timestamps=Timestamps(
                         created=datetime.now().isoformat(),
                         updated=datetime.now().isoformat()
                     ),

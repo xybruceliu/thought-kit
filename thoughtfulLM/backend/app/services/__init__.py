@@ -1,3 +1,3 @@
 """
-Utility functions for the ThoughtfulLM backend.
-""" 
+Services for the ThoughtfulLM backend.
+"""

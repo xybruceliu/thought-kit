@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import thoughts
+from app.routes import thoughts, memories
 from app.config import settings
 
 # Set OpenAI API key in environment
@@ -27,4 +27,5 @@ async def root():
     return {"message": "Welcome to ThoughtfulLM API"}
 
 # Include routers
-app.include_router(thoughts.router, prefix=settings.API_PREFIX) 
+app.include_router(thoughts.router, prefix=settings.API_PREFIX)
+app.include_router(memories.router, prefix=settings.API_PREFIX) 

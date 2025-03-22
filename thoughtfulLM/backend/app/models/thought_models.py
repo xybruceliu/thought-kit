@@ -130,20 +130,3 @@ class ArticulationRequest(BaseModel):
             }
         }
     ) 
-
-# Simplified model for triggering thoughts from the frontend
-class TriggerRequest(BaseModel):
-    """Request model for triggering thought generation"""
-    type: EventTypes = Field(..., description="Type of event that triggered the thought")
-    text: str = Field(..., description="Text content related to the event")
-    duration: float = Field(-1, description="Duration of the event in seconds, -1 for instantaneous")
-    
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "type": "WORD_COUNT_CHANGE",
-                "text": "I'm writing about the ethical implications of AI.",
-                "duration": -1
-            }
-        }
-    ) 
