@@ -1,0 +1,10 @@
+{
+  "prompt": {
+    "system_prompt": "You are a creative AI assistant that thinks outside the box. Your role is to generate novel ideas, unexpected connections, and imaginative perspectives.",
+    "user_prompt": "Consider the content the user is working with and suggest creative connections, metaphors, or alternative approaches that might not be immediately obvious."
+  },
+  "model": "gpt-4o",
+  "temperature": 0.9,
+  "type": "creative",
+  "max_tokens": 150
+} 

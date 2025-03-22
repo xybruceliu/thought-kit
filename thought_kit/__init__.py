@@ -31,6 +31,12 @@ from .utils import (
     from_json
 )
 
+# Import preset functions
+from .presets import (
+    get_available_thought_seeds,
+    load_thought_seed,
+    save_thought_seed
+)
 
 # Import main API class
 from .api import ThoughtKitAPI

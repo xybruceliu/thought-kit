@@ -1,0 +1,10 @@
+{
+  "prompt": {
+    "system_prompt": "You are a thoughtful AI assistant focused on deep reflection and consideration of all aspects of a topic. Your role is to generate contemplative insights that help users see new perspectives.",
+    "user_prompt": "Reflect on the content the user is working with, considering different perspectives, implications, and underlying assumptions."
+  },
+  "model": "gpt-4o",
+  "temperature": 0.7,
+  "type": "reflective",
+  "max_tokens": 150
+} 

@@ -13,6 +13,7 @@ from thought_kit.modules.articulator import ThoughtArticulator
 from thought_kit.schemas import Thought, ThoughtSeed, ThoughtConfig, Event, Memory
 from thought_kit.schemas.event_schema import SimpleEventInput
 from thought_kit.utils import to_json, from_json
+from thought_kit.presets import get_available_thought_seeds, load_thought_seed, save_thought_seed
 
 
 class ThoughtKitAPI:
@@ -248,4 +249,55 @@ class ThoughtKitAPI:
             List of operation names
         """
         return self.operator.available_operations()
+        
+    # Thought seed functionality
+    def get_available_thought_seeds(self) -> List[str]:
+        """
+        Get a list of available predefined thought seeds.
+        
+        Returns:
+            List of thought seed names (without .json extension)
+        """
+        return get_available_thought_seeds()
+        
+    def load_thought_seed(self, name: str) -> Optional[Dict[str, Any]]:
+        """
+        Load a predefined thought seed by name.
+        
+        Args:
+            name: Name of the thought seed (without .json extension)
+            
+        Returns:
+            Thought seed configuration as a dictionary, or None if not found
+            
+        Example:
+            reflective_seed = thoughtkit.load_thought_seed("reflective")
+        """
+        return load_thought_seed(name)
+        
+    def save_thought_seed(self, name: str, seed_data: Dict[str, Any]) -> bool:
+        """
+        Save a thought seed configuration to create a new preset.
+        
+        Args:
+            name: Name for the thought seed (without .json extension)
+            seed_data: Thought seed configuration as a dictionary
+            
+        Returns:
+            True if successful, False otherwise
+            
+        Example:
+            thoughtkit.save_thought_seed("my_custom_seed", {
+                "prompt": {
+                    "system_prompt": "Custom system prompt",
+                    "user_prompt": "Custom user prompt"
+                },
+                "model": "gpt-4o",
+                "temperature": 0.5,
+                "type": "custom",
+                "max_tokens": 100
+            })
+        """
+        return save_thought_seed(name, seed_data)
+
        

@@ -13,6 +13,11 @@ EventTypes = Literal["CLICK", "IDLE_TIME", "WORD_COUNT_CHANGE", "SENTENCE_END", 
 # Request models aligned with ThoughtKit API parameters
 class GenerationRequest(BaseModel):
     """Request model for generating thoughts"""
+    event_text: str = Field(..., description="Text of the event")
+    event_type: EventTypes = Field(..., description="Type of event")
+    event_duration: float = Field(..., description="Duration of the event")
+    
+
     event: SimpleEventInput = Field(..., description="Information about the user's current interaction")
     seed: ThoughtSeed = Field(..., description="Configuration for generating the thought")
     config: ThoughtConfig = Field(..., description="Configuration for how the thought should behave")
