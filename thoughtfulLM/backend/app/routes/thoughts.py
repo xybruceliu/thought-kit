@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException, status
-from typing import Dict, Any, List, Optional
 from app.models.thought_models import GenerationRequest, OperationRequest, ArticulationRequest
 from app.stores.thought_store import thought_store
 from app.stores.memory_store import memory_store
@@ -45,7 +44,7 @@ async def generate_thought(request: GenerationRequest):
                 "length": 5,
                 "interactivity": "EDIT",
                 "persistent": False,
-                "weight": 0.5
+                "weight": 0.5 # weight are initialized to 0.5, this is a parameter that can be changed by the user.
             },
             "memory": memory_store.get_all_memory(),
             "thoughts": thought_store.get_all_thoughts()

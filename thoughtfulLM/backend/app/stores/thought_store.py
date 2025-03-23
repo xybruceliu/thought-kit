@@ -37,10 +37,6 @@ class ThoughtStore:
         """
         # Store the thought in the dictionary
         self.thoughts[thought.id] = thought
-        
-        # If we have too many thoughts, remove the least salient one
-        if len(self.thoughts) > self.max_thought_count:
-            self._prune_least_salient_thought()
             
         return thought
     

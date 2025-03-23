@@ -81,7 +81,7 @@ export const useTriggerDetection = () => {
     return false;
   }, [currentInput]);
 
-  // Function to check all triggers and generate a thought if any is triggered
+  // Function to check all triggers and d
   const checkTriggersAndGenerate = useCallback(async (textInputNode: ReactFlowNode) => {
     // You can change the strategy here - defaulting to aboveInput
     const position = calculateThoughtNodePosition(

@@ -84,12 +84,35 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       // Create a thought node for visualization
       const thoughtNode = createThoughtNode(thoughtData, position);
       
-      // Update state with new thought and node
+      // Add the new thought and node to state
       set((state) => ({
         thoughts: [...state.thoughts, thoughtData],
         thoughtNodes: [...state.thoughtNodes, thoughtNode],
         isLoading: false
       }));
+      
+      // Check if we need to remove a thought (exceeded max count)
+      const { thoughts, removeThought } = get();
+      if (thoughts.length > get().maxThoughtCount) {
+        // Find non-persistent thoughts
+        const nonPersistentThoughts = thoughts.filter(t => !t.config.persistent);
+        
+        if (nonPersistentThoughts.length > 0) {
+          // Calculate combined score for each thought: (2 * weight + saliency)
+          const thoughtsWithScore = nonPersistentThoughts.map(t => ({
+            id: t.id,
+            combinedScore: (2 * t.score.weight) + (t.score.saliency || 0)
+          }));
+          
+          // Find the thought with the lowest score
+          const lowestScoreThought = thoughtsWithScore.reduce((lowest, current) => 
+            current.combinedScore < lowest.combinedScore ? current : lowest
+          );
+          
+          // Remove the lowest-scoring thought (this will call the backend API)
+          await removeThought(lowestScoreThought.id);
+        }
+      }
       
       return thoughtData;
     } catch (error) {

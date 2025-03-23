@@ -36,17 +36,9 @@ class MemoryStore:
         # Determine which memory type to add to
         if memory_item.type == "SHORT_TERM":
             self.memory.short_term.append(memory_item)
-            
-            # If we have too many short-term memories, remove the oldest one
-            if len(self.memory.short_term) > self.max_short_term_count:
-                self._prune_oldest_memory("SHORT_TERM")
                 
         elif memory_item.type == "LONG_TERM":
             self.memory.long_term.append(memory_item)
-            
-            # If we have too many long-term memories, remove the oldest one
-            if len(self.memory.long_term) > self.max_long_term_count:
-                self._prune_oldest_memory("LONG_TERM")
             
         return memory_item
     
