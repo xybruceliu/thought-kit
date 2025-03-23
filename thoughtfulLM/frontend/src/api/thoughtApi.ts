@@ -156,6 +156,22 @@ class ThoughtApi {
     }
   }
 
+  // Get memories by type
+  async getMemoriesByType(type?: 'LONG_TERM' | 'SHORT_TERM'): Promise<Memory | MemoryItem[]> {
+    try {
+      let url = `${BASE_URL}/memories/`;
+      if (type) {
+        url += `?memory_type=${type}`;
+      }
+      
+      const response: AxiosResponse<Memory | MemoryItem[]> = await axios.get(url);
+      return response.data;
+    } catch (error) {
+      console.error(`Error getting memories by type ${type || 'all'}:`, error);
+      throw this.handleError(error);
+    }
+  }
+
   // Clear all memories
   async clearMemories(): Promise<void> {
     try {

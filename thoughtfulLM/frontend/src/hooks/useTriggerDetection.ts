@@ -1,7 +1,8 @@
 import { useCallback } from 'react';
 import { useThoughtStore } from '../store/thoughtStore';
+import { useInputStore } from '../store/inputStore';
 import { EventType } from '../types/event';
-import { XYPosition, Node as ReactFlowNode } from 'reactflow';
+import { Node as ReactFlowNode } from 'reactflow';
 import { calculateThoughtNodePosition, positioningStrategies } from '../utils';
 
 /**
@@ -10,6 +11,11 @@ import { calculateThoughtNodePosition, positioningStrategies } from '../utils';
  */
 export const useTriggerDetection = () => {
   const { 
+    thoughtNodes,
+    generateThoughtAtPosition,
+  } = useThoughtStore();
+  
+  const {
     currentInput,
     lastActivityTimestamp,
     idleTimeThreshold,
@@ -17,9 +23,10 @@ export const useTriggerDetection = () => {
     wordCountChangeThreshold,
     sentenceWordThreshold,
     idleTriggerFired,
-    thoughtNodes,
-    generateThoughtAtPosition,
-  } = useThoughtStore();
+    setIdleTriggerFired,
+    updateWordCountBaseline,
+    updateActivityTimestamp
+  } = useInputStore();
 
   // Check if idle time trigger condition is met
   const checkIdleTrigger = useCallback(() => {
@@ -34,8 +41,8 @@ export const useTriggerDetection = () => {
       return true;
     }
     return false;
-  }, [idleTriggerFired, currentInput, lastActivityTimestamp, idleTimeThreshold]);
-
+  }, [idleTriggerFired, lastActivityTimestamp, idleTimeThreshold, currentInput]);
+  
   // Check if word count change trigger condition is met
   const checkWordCountTrigger = useCallback(() => {
     const currentWordCount = currentInput.split(/\s+/).filter(Boolean).length;
@@ -45,27 +52,27 @@ export const useTriggerDetection = () => {
       return true;
     }
     return false;
-  }, [currentInput, wordCountAtLastGeneration, wordCountChangeThreshold]);
+  }, [wordCountAtLastGeneration, wordCountChangeThreshold, currentInput]);
 
   // Check if sentence end trigger condition is met
-  const checkSentenceEndTrigger = useCallback((input: string) => {
+  const checkSentenceEndTrigger = useCallback(() => {
     // Check if the last character is a sentence-ending punctuation
-    const lastChar = input.trim().slice(-1);
+    const lastChar = currentInput.trim().slice(-1);
     const isPunctuation = ['.', '!', '?'].includes(lastChar);
     
     if (!isPunctuation) return false;
     
-    const currentWordCount = input.split(/\s+/).filter(Boolean).length;
+    const currentWordCount = currentInput.split(/\s+/).filter(Boolean).length;
     if (currentWordCount - wordCountAtLastGeneration >= sentenceWordThreshold) {
       console.log(`Trigger: Sentence end > ${sentenceWordThreshold} words 💬`);
       return true;
     }
     return false;
-  }, [currentInput, wordCountAtLastGeneration, sentenceWordThreshold]);
+  }, [wordCountAtLastGeneration, sentenceWordThreshold, currentInput]);
 
 
-  // TESTING: Check if user has typed "t". This is only for testing purposes
-  const checkTTrigger = useCallback(() => {
+  // TESTING: Check if user has typed "*". This is only for testing purposes
+  const checkAstTrigger = useCallback(() => {
     if (currentInput.includes('*')) {
       console.log(`TESTING Trigger: User typed "*" 🔍`);
       return true;
@@ -74,7 +81,7 @@ export const useTriggerDetection = () => {
   }, [currentInput]);
 
   // Function to check all triggers and generate a thought if any is triggered
-  const checkTriggersAndGenerate = useCallback((newText: string, textInputNode: ReactFlowNode) => {
+  const checkTriggersAndGenerate = useCallback(async (textInputNode: ReactFlowNode) => {
     // You can change the strategy here - defaulting to aboveInput
     const position = calculateThoughtNodePosition(
       textInputNode, 
@@ -82,45 +89,71 @@ export const useTriggerDetection = () => {
       positioningStrategies.aboveInput
     );
     
+    const currentWordCount = currentInput.split(/\s+/).filter(Boolean).length;
+    let thoughtGenerated = false;
+    
     // Check for sentence end trigger
-    if (checkSentenceEndTrigger(newText)) {
-      generateThoughtAtPosition('SENTENCE_END', position);
+    if (checkSentenceEndTrigger()) {
+      // Update word count baseline BEFORE generating thought to prevent repeat triggers
+      updateWordCountBaseline(currentWordCount);
+      
+      const thought = await generateThoughtAtPosition('SENTENCE_END', position);
+      if (thought) {
+        thoughtGenerated = true;
+      }
+    }
+    // Check for word count trigger
+    else if (checkWordCountTrigger()) {
+      // Update word count baseline BEFORE generating thought to prevent repeat triggers
+      updateWordCountBaseline(currentWordCount);
+      
+      const thought = await generateThoughtAtPosition('WORD_COUNT_CHANGE', position);
+      if (thought) {
+        thoughtGenerated = true;
+      }
+    }
+    // Check for idle trigger
+    else if (checkIdleTrigger()) {
+      // Set the idle trigger fired state to true BEFORE generating a thought to prevent repeat triggers
+      setIdleTriggerFired(true);
+
+      const thought = await generateThoughtAtPosition('IDLE_TIME', position);
+      if (thought) {
+        thoughtGenerated = true;
+      }
+    }
+    // Check for test trigger
+    else if (checkAstTrigger()) {
+      const thought = await generateThoughtAtPosition('NAMED_ENTITY', position);
+      if (thought) {
+        thoughtGenerated = true;
+      }
+    }
+    
+    // Update activity timestamp if a thought was generated
+    if (thoughtGenerated) {
+      updateActivityTimestamp();
       return true;
     }
     
-    // Check for word count trigger
-    if (checkWordCountTrigger()) {
-      generateThoughtAtPosition('WORD_COUNT_CHANGE', position);
-      return true;
-    }
-
-    // Check for idle trigger
-    if (checkIdleTrigger()) {
-      generateThoughtAtPosition('IDLE_TIME', position);
-      return true;
-    }
-
-    // TESTING: Check if user has typed "t"
-    if (checkTTrigger()) {
-      generateThoughtAtPosition('IDLE_TIME', position);
-      return true;
-    }
-
     return false;
   }, [
-    checkSentenceEndTrigger,
-    checkWordCountTrigger,
-    checkIdleTrigger,
-    checkTTrigger,
-    generateThoughtAtPosition,
-    thoughtNodes
+    checkSentenceEndTrigger, 
+    checkWordCountTrigger, 
+    checkIdleTrigger, 
+    checkAstTrigger, 
+    generateThoughtAtPosition, 
+    thoughtNodes,
+    currentInput,
+    updateWordCountBaseline,
+    setIdleTriggerFired,
+    updateActivityTimestamp
   ]);
 
   return {
+    checkTriggersAndGenerate,
     checkIdleTrigger,
     checkWordCountTrigger,
-    checkSentenceEndTrigger,
-    checkTTrigger,
-    checkTriggersAndGenerate
+    checkSentenceEndTrigger
   };
 }; 

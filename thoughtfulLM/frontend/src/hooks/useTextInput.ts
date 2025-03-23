@@ -1,26 +1,29 @@
-import { useState, useCallback, useEffect } from 'react';
-import { useThoughtStore } from '../store/thoughtStore';
+import { useCallback, useEffect, useState } from 'react';
+import { useInputStore } from '../store/inputStore';
 import { useTriggerDetection } from './useTriggerDetection';
-import { XYPosition, Node as ReactFlowNode } from 'reactflow';
+import { Node as ReactFlowNode } from 'reactflow';
 /**
  * Custom hook that manages text input and integrates with thought generation triggers
  * Handles text changes and triggers thought generation based on configured conditions
  */
 export const useTextInput = () => {
-  const { updateInput, currentInput } = useThoughtStore();
+  const { updateInput, currentInput } = useInputStore();
   const { checkTriggersAndGenerate } = useTriggerDetection();
   
-  const [text, setText] = useState(currentInput || '');
-  const [currentTextInputNode, setCurrentTextInputNode] = useState<ReactFlowNode | null>(null);
+  const [currentTextInputNode, setCurrentTextInputNode] = 
+    useState<ReactFlowNode | null>(null);
 
-  // Update text in component and store
-  const handleTextChange = useCallback((newText: string, textInputNode?: ReactFlowNode) => {
-    setText(newText);
-    updateInput(newText);
+  // Update text in store and check triggers
+  const handleTextChange = useCallback((inputText: string, textInputNode?: ReactFlowNode) => {
+    // Update global state
+    updateInput(inputText);
+    
     if (textInputNode) {
       setCurrentTextInputNode(textInputNode);
-      // Check all triggers with the new text
-      checkTriggersAndGenerate(newText, textInputNode);
+      // Check all triggers after updating input
+      checkTriggersAndGenerate(textInputNode).catch(error => {
+        console.error('Error during trigger detection:', error);
+      });
     }
   }, [updateInput, checkTriggersAndGenerate]);
 
@@ -28,7 +31,9 @@ export const useTextInput = () => {
   useEffect(() => {
     const idleCheckInterval = setInterval(() => {
       if (currentTextInputNode && currentInput.trim()) {
-        checkTriggersAndGenerate(currentInput, currentTextInputNode);
+        checkTriggersAndGenerate(currentTextInputNode).catch(error => {
+          console.error('Error during idle trigger detection:', error);
+        });
       }
     }, 1000); // Check every second
     
@@ -36,7 +41,7 @@ export const useTextInput = () => {
   }, [checkTriggersAndGenerate, currentInput, currentTextInputNode]);
 
   return {
-    text,
+    text: currentInput,
     handleTextChange
   };
 }; 

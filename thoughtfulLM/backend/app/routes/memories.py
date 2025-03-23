@@ -1,5 +1,5 @@
-from fastapi import APIRouter, HTTPException, status
-from typing import Dict, Any
+from fastapi import APIRouter, HTTPException, status, Query
+from typing import Dict, Any, List
 import uuid
 from datetime import datetime
 
@@ -54,6 +54,40 @@ async def add_memory(request: MemoryRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail=f"Failed to add memory: {str(e)}"
+        )
+
+@router.get("/", status_code=status.HTTP_200_OK)
+async def get_memories_by_type(memory_type: str = Query(None, description="Memory type (LONG_TERM or SHORT_TERM)")):
+    """
+    Get memory items by type.
+    
+    Args:
+        memory_type: Optional memory type filter (LONG_TERM or SHORT_TERM)
+                    If not provided, returns all memory items
+    
+    Returns:
+        List of memory items filtered by type if specified
+    """
+    try:
+        if memory_type:
+            if memory_type == "LONG_TERM":
+                return memory_store.get_long_term_memory()
+            elif memory_type == "SHORT_TERM":
+                return memory_store.get_short_term_memory()
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid memory type: {memory_type}. Valid types are LONG_TERM and SHORT_TERM"
+                )
+        else:
+            # Return all memory
+            return memory_store.get_all_memory()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get memories: {str(e)}"
         )
 
 @router.delete("/", status_code=status.HTTP_204_NO_CONTENT)

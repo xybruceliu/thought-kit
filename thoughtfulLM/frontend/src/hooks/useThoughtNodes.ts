@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Node, NodeChange, applyNodeChanges, XYPosition, useReactFlow } from 'reactflow';
 import { useThoughtStore } from '../store/thoughtStore';
+import { useMemoryStore } from '../store/memoryStore';
 
 /**
  * Custom hook that manages ReactFlow nodes in sync with the Thought store
@@ -8,7 +9,8 @@ import { useThoughtStore } from '../store/thoughtStore';
  */
 export const useThoughtNodes = () => {
   const reactFlowInstance = useReactFlow();
-  const { thoughtNodes, updateThoughtNodePosition, generateThoughtAtPosition } = useThoughtStore();
+  const { thoughtNodes, updateThoughtNodePosition, generateThoughtAtPosition, fetchAllThoughts } = useThoughtStore();
+  const { fetchMemories } = useMemoryStore();
   
   // Initialize with text input node and thought nodes from store
   const [nodes, setNodes] = useState<Node[]>([
@@ -48,7 +50,7 @@ export const useThoughtNodes = () => {
 
   // Handle clicks on the pane to generate thoughts
   const onPaneClick = useCallback(
-    (event: React.MouseEvent) => {
+    async (event: React.MouseEvent) => {
       // Get position in the flow coordinates
       const position = reactFlowInstance.screenToFlowPosition({
         x: event.clientX,
@@ -60,10 +62,14 @@ export const useThoughtNodes = () => {
       const offsetY = 50;  // pixels to the top
       
       // Generate a thought at the clicked position with offsets
-      generateThoughtAtPosition('CLICK', {
-        x: position.x - offsetX,
-        y: position.y - offsetY
-      });
+      try {
+        await generateThoughtAtPosition('CLICK', {
+          x: position.x - offsetX,
+          y: position.y - offsetY
+        });
+      } catch (error) {
+        console.error('Error generating thought on pane click:', error);
+      }
     },
     [reactFlowInstance, generateThoughtAtPosition]
   );
@@ -77,6 +83,19 @@ export const useThoughtNodes = () => {
       ...thoughtNodes
     ]);
   }, [thoughtNodes]);
+
+  // Initialize the store with the data from the backend  
+  useEffect(() => {
+    // Fetch thoughts
+    fetchAllThoughts().catch(error => {
+      console.error('Error fetching thoughts:', error);
+    });
+    
+    // Fetch memories
+    fetchMemories().catch(error => {
+      console.error('Error fetching memories:', error);
+    });
+  }, [fetchAllThoughts, fetchMemories]);
 
   return {
     nodes,

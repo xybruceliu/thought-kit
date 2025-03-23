@@ -2,14 +2,13 @@
 // This file will handle global state management for the application
 
 import { create } from 'zustand';
-import { Node, Position, XYPosition } from 'reactflow';
-import { generateRandomThought, getRandomInt } from '../utils';
+import { Node, XYPosition } from 'reactflow';
+import { getRandomInt } from '../utils';
 import { 
   Thought, 
-  ThoughtConfig, 
 } from '../types/thought';
-import { Event, EventType } from '../types/event';
-import { Timestamps } from '../types/common';
+import { EventType } from '../types/event';
+import { thoughtApi } from '../api/thoughtApi';
 
 // ReactFlow node for thought bubble visualization
 export interface ThoughtNode extends Node {
@@ -25,75 +24,21 @@ export interface ThoughtNode extends Node {
 
 // Define the store state
 interface ThoughtStoreState {
-  // Input tracking
-  currentInput: string;
-  wordCountAtLastGeneration: number;
-
-  // Trigger tracking
-  lastActivityTimestamp: number;
-  idleTimeThreshold: number; // in milliseconds
-  wordCountChangeThreshold: number;
-  sentenceWordThreshold: number; // Threshold for sentence word count
-  idleTriggerFired: boolean; // Flag to track if idle trigger has fired
-
   // Thoughts and nodes
   thoughts: Thought[];
   thoughtNodes: ThoughtNode[];
   maxThoughtCount: number; // Maximum number of thoughts to display
   removingThoughtIds: string[]; // Track thoughts being removed for animation
+  isLoading: boolean; // Track API loading state
 
   // Actions
-  updateInput: (newInput: string) => void;
-  generateThoughtAtPosition: (triggerType: EventType, position?: XYPosition) => Thought;
+  generateThoughtAtPosition: (triggerType: EventType, position?: XYPosition) => Promise<Thought | null>;
   updateThoughtNodePosition: (nodeId: string, position: XYPosition) => void;
-  removeThought: (thoughtId: string) => void;
-  setMaxThoughtCount: (count: number) => void;
+  removeThought: (thoughtId: string) => Promise<void>;
+  setMaxThoughtCount: (count: number) => Promise<void>;
+  fetchAllThoughts: () => Promise<void>;
+  getThought: (thoughtId: string) => Promise<Thought | null>;
 }
-
-// Create a Thought object
-// Temporary function to create a thought randomly for testing purposes
-// TODO: Replace with actual API call to create a thought
-const createThought = (triggerType: EventType): Thought => {
-  const now = new Date().toISOString();
-  const id = `thought_${Date.now()}`;
-  const content = generateRandomThought();
-  
-  return {
-    id,
-    content: {
-      text: content,
-    },
-    config: {
-      modality: 'TEXT',
-      depth: getRandomInt(1, 5), 
-      length: getRandomInt(2, 5),
-      interactivity: 'VIEW',
-      persistent: false,
-      weight: 0.0,
-    },
-    timestamps: {
-      created: now,
-      updated: now,
-    },
-    triggerEvent: {
-      id: `event_${Date.now()}`,
-      type: triggerType,
-      content: {
-        text: "trigger event",
-      },
-      timestamps: {
-        created: now,
-        updated: now,
-      },
-    },
-    references: [],
-    user_comments: [],
-    score: {
-      weight: 0.0,
-      saliency: Math.random() * 0.3 + 0.7, // Random value between 0.7 and 1.0
-    }
-  };
-};
 
 // Create a ThoughtNode from a Thought
 const createThoughtNode = (thought: Thought, position?: XYPosition): ThoughtNode => {
@@ -115,89 +60,46 @@ const createThoughtNode = (thought: Thought, position?: XYPosition): ThoughtNode
 
 // Create the store
 export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
-  // Input tracking
-  currentInput: "",
-  wordCountAtLastGeneration: 0,
-  
-  // Trigger tracking
-  lastActivityTimestamp: Date.now(),
-  idleTimeThreshold: 10000, // 10 seconds
-  wordCountChangeThreshold: 6, // Words added/removed to trigger
-  sentenceWordThreshold: 2, // Words in a sentence to trigger
-  idleTriggerFired: false, // Initially not fired
-  
   // Thoughts and nodes
   thoughts: [],
   thoughtNodes: [],
   maxThoughtCount: 5, // Maximum number of thoughts to display
   removingThoughtIds: [], // Initially empty
+  isLoading: false, // Loading state
   
-  // Actions
-  updateInput: (newInput: string) => {
-    set((state) => {
-      const currentWordCount = newInput.split(/\s+/).filter(Boolean).length;
-      const previousWordCount = state.currentInput.split(/\s+/).filter(Boolean).length;
+  generateThoughtAtPosition: async (triggerType: EventType, position?: XYPosition) => {
+    try {
+      set({ isLoading: true });
       
-      // Reset wordCountAtLastGeneration if word count decreases significantly
-      // This prevents requiring too many words to trigger the next thought
-      let updatedWordCountAtLastGeneration = state.wordCountAtLastGeneration;
-      if (currentWordCount < previousWordCount) {
-        updatedWordCountAtLastGeneration = currentWordCount;
-      }
+      // Use the input store to get the current input
+      const inputStoreModule = await import('./inputStore');
+      const { useInputStore } = inputStoreModule;
+      const { currentInput } = useInputStore.getState();
       
-      return {
-        currentInput: newInput,
-        // Reset idle trigger flag when user types
-        lastActivityTimestamp: Date.now(),
-        idleTriggerFired: false,
-        wordCountAtLastGeneration: updatedWordCountAtLastGeneration
-      };
-    });
-  },
-  
-  // Generate a thought at a specific position
-  generateThoughtAtPosition: (triggerType: EventType, position?: XYPosition) => {
-    // Create thought and node
-    const thought = createThought(triggerType);
-    
-    // Reference to the store functions
-    const { thoughts, thoughtNodes, maxThoughtCount, removeThought, removingThoughtIds } = get();
-    
-    // Check if we'll exceed the maximum thought count (accounting for nodes already being removed)
-    const activeThoughtCount = thoughts.length - removingThoughtIds.length;
-    
-    if (activeThoughtCount >= maxThoughtCount) {
-      // Sort thoughts by saliency (lowest first), excluding those already being removed
-      const availableThoughts = thoughts.filter(t => !removingThoughtIds.includes(t.id));
-      const sortedThoughts = [...availableThoughts].sort((a, b) => 
-        (a.score?.saliency || 0) - (b.score?.saliency || 0)
-      );
+      // Call the backend API to generate a thought
+      const thoughtData = await thoughtApi.generateThought({
+        event_text: currentInput,
+        event_type: triggerType
+      });
       
-      // Get the least salient thought
-      const leastSalientThought = sortedThoughts[0];
+      // Create a thought node for visualization
+      const thoughtNode = createThoughtNode(thoughtData, position);
       
-      // Remove the least salient thought using the existing function
-      console.log(`❗️ Removing least salient thought: ${leastSalientThought.id}`);
-      removeThought(leastSalientThought.id);
+      // Update state with new thought and node
+      set((state) => ({
+        thoughts: [...state.thoughts, thoughtData],
+        thoughtNodes: [...state.thoughtNodes, thoughtNode],
+        isLoading: false
+      }));
+      
+      return thoughtData;
+    } catch (error) {
+      console.error('Error generating thought:', error);
+      set({ isLoading: false });
+      return null;
     }
-    
-    // Now create and add the new thought node
-    const thoughtNode = createThoughtNode(thought, position);
-    
-    // Update state with just the new thought (since we already removed the least salient one if needed)
-    set((state) => ({
-      thoughts: [...state.thoughts, thought],
-      thoughtNodes: [...state.thoughtNodes, thoughtNode],
-      wordCountAtLastGeneration: state.currentInput.split(/\s+/).filter(Boolean).length,
-      lastActivityTimestamp: Date.now(),
-      // If this is an idle trigger, mark it as fired
-      idleTriggerFired: triggerType === 'IDLE_TIME' ? true : state.idleTriggerFired,
-    }));
-    
-    return thought;
   },
   
-  // Update a thought node's position
   updateThoughtNodePosition: (nodeId: string, position: XYPosition) => {
     set((state) => ({
       thoughtNodes: state.thoughtNodes.map(node => 
@@ -206,30 +108,95 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
     }));
   },
   
-  // Remove a thought and its node
-  removeThought: (thoughtId: string) => {
-    // First mark the thought as removing (for animation)
-    set((state) => ({
-      removingThoughtIds: [...state.removingThoughtIds, thoughtId],
-      thoughtNodes: state.thoughtNodes.map(node => 
-        node.id === thoughtId ? { ...node, data: { ...node.data, isRemoving: true } } : node
-      )
-    }));
-    
-    // After animation delay, actually remove the thought
-    setTimeout(() => {
+  removeThought: async (thoughtId: string) => {
+    try {
+      // Mark thought as removing for animation
       set((state) => ({
-        thoughts: state.thoughts.filter(t => t.id !== thoughtId),
-        thoughtNodes: state.thoughtNodes.filter(n => n.id !== thoughtId),
+        removingThoughtIds: [...state.removingThoughtIds, thoughtId]
+      }));
+      
+      // Delay removal to allow for animation
+      setTimeout(async () => {
+        // Call the backend API to remove the thought
+        await thoughtApi.deleteThought(thoughtId);
+        
+        // Update state by removing the thought and node
+        set((state) => ({
+          thoughts: state.thoughts.filter(t => t.id !== thoughtId),
+          thoughtNodes: state.thoughtNodes.filter(n => n.id !== thoughtId),
+          removingThoughtIds: state.removingThoughtIds.filter(id => id !== thoughtId)
+        }));
+      }, 500); // 500ms for animation
+    } catch (error) {
+      console.error('Error removing thought:', error);
+      // Remove from removing list even if API call fails
+      set((state) => ({
         removingThoughtIds: state.removingThoughtIds.filter(id => id !== thoughtId)
       }));
-    }, 500); // Match the duration of the exit animation
+    }
   },
   
-  // Set maxThoughtCount
-  setMaxThoughtCount: (count: number) => {
-    set((state) => ({
-      maxThoughtCount: count,
-    }));
+  setMaxThoughtCount: async (count: number) => {
+    try {
+      // Call the backend API to set max thought count
+      await thoughtApi.setMaxThoughtCount(count);
+      
+      // Update local state
+      set({ maxThoughtCount: count });
+    } catch (error) {
+      console.error('Error setting max thought count:', error);
+    }
+  },
+  
+  fetchAllThoughts: async () => {
+    try {
+      set({ isLoading: true });
+      
+      // Call the backend API to get all thoughts
+      const thoughts = await thoughtApi.getAllThoughts();
+      
+      // Create thought nodes for all thoughts
+      const thoughtNodes = thoughts.map(thought => createThoughtNode(thought));
+      
+      // Update state with fetched thoughts
+      set({
+        thoughts,
+        thoughtNodes,
+        isLoading: false
+      });
+    } catch (error) {
+      console.error('Error fetching thoughts:', error);
+      set({ isLoading: false });
+    }
+  },
+  
+  getThought: async (thoughtId: string) => {
+    try {
+      // Check if thought exists in local state first
+      const existingThought = get().thoughts.find(t => t.id === thoughtId);
+      if (existingThought) return existingThought;
+      
+      // If not found locally, fetch from backend
+      const thought = await thoughtApi.getThought(thoughtId);
+      
+      // Add to local state if not already there
+      set((state) => {
+        if (!state.thoughts.some(t => t.id === thought.id)) {
+          return {
+            thoughts: [...state.thoughts, thought],
+            thoughtNodes: [
+              ...state.thoughtNodes,
+              createThoughtNode(thought)
+            ]
+          };
+        }
+        return state;
+      });
+      
+      return thought;
+    } catch (error) {
+      console.error(`Error getting thought ${thoughtId}:`, error);
+      return null;
+    }
   }
 })); 
