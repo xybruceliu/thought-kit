@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Node, NodeChange, applyNodeChanges, XYPosition, useReactFlow } from 'reactflow';
+import { Node, NodeChange, applyNodeChanges, XYPosition } from 'reactflow';
 import { useThoughtStore } from '../store/thoughtStore';
 import { useMemoryStore } from '../store/memoryStore';
 
@@ -8,8 +8,7 @@ import { useMemoryStore } from '../store/memoryStore';
  * Provides methods for managing nodes and handles synchronization with canvas interactions
  */
 export const useThoughtNodes = () => {
-  const reactFlowInstance = useReactFlow();
-  const { thoughtNodes, updateThoughtNodePosition, generateThoughtAtPosition, fetchAllThoughts } = useThoughtStore();
+  const { thoughtNodes, updateThoughtNodePosition, fetchAllThoughts } = useThoughtStore();
   const { fetchMemories } = useMemoryStore();
   
   // Initialize with text input node and thought nodes from store
@@ -48,32 +47,6 @@ export const useThoughtNodes = () => {
     [nodes, updateThoughtNodePosition]
   );
 
-  // Handle clicks on the pane to generate thoughts
-  const onPaneClick = useCallback(
-    async (event: React.MouseEvent) => {
-      // Get position in the flow coordinates
-      const position = reactFlowInstance.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
-      
-      // Apply offset to position bubbles to the top left of cursor
-      const offsetX = 80;  // pixels to the left
-      const offsetY = 50;  // pixels to the top
-      
-      // Generate a thought at the clicked position with offsets
-      try {
-        await generateThoughtAtPosition('CLICK', {
-          x: position.x - offsetX,
-          y: position.y - offsetY
-        });
-      } catch (error) {
-        console.error('Error generating thought on pane click:', error);
-      }
-    },
-    [reactFlowInstance, generateThoughtAtPosition]
-  );
-
   // Keep nodes in sync with thoughtNodes in the store
   useEffect(() => {
     setNodes([
@@ -99,7 +72,6 @@ export const useThoughtNodes = () => {
 
   return {
     nodes,
-    onNodesChange,
-    onPaneClick
+    onNodesChange
   };
 }; 

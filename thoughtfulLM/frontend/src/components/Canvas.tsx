@@ -11,6 +11,7 @@ import { Box } from '@chakra-ui/react';
 import TextInputNode from './TextInputNode';
 import ThoughtBubbleNode from './ThoughtBubbleNode';
 import { useThoughtNodes } from '../hooks';
+import { useTriggerDetection } from '../hooks';
 
 // Define custom node types
 const nodeTypes: NodeTypes = {
@@ -20,8 +21,9 @@ const nodeTypes: NodeTypes = {
 
 // The inner component that has access to the ReactFlow hooks
 const CanvasContent: React.FC = () => {
-  // Use our custom hook
-  const { nodes, onNodesChange, onPaneClick } = useThoughtNodes();
+  // Use our custom hooks
+  const { nodes, onNodesChange } = useThoughtNodes();
+  const { onPaneClick } = useTriggerDetection();
   
   // Initialize edges state
   const [edges] = useState<Edge[]>([]);

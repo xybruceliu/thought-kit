@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useThoughtStore } from '../store/thoughtStore';
 import { useInputStore } from '../store/inputStore';
 import { EventType } from '../types/event';
-import { Node as ReactFlowNode } from 'reactflow';
+import { Node as ReactFlowNode, useReactFlow } from 'reactflow';
 import { calculateThoughtNodePosition, positioningStrategies } from '../utils';
 
 /**
@@ -10,6 +10,7 @@ import { calculateThoughtNodePosition, positioningStrategies } from '../utils';
  * Separates trigger detection concerns from the thought store
  */
 export const useTriggerDetection = () => {
+  const reactFlowInstance = useReactFlow();
   const { 
     thoughtNodes,
     generateThoughtAtPosition,
@@ -150,10 +151,39 @@ export const useTriggerDetection = () => {
     updateActivityTimestamp
   ]);
 
+  // Handle clicks on the pane to generate thoughts
+  const onPaneClick = useCallback(
+    async (event: React.MouseEvent) => {
+      
+      // Get position in the flow coordinates
+      const position = reactFlowInstance.screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+      
+      // Apply offset to position bubbles to the top left of cursor
+      const offsetX = 80;  // pixels to the left
+      const offsetY = 50;  // pixels to the top
+      
+      // Generate a thought at the clicked position with offsets
+      try {
+        console.log('Trigger: Pane click 🖱️');
+        await generateThoughtAtPosition('CLICK', {
+          x: position.x - offsetX,
+          y: position.y - offsetY
+        });
+      } catch (error) {
+        console.error('Error generating thought on pane click:', error);
+      }
+    },
+    [reactFlowInstance, generateThoughtAtPosition]
+  );
+
   return {
     checkTriggersAndGenerate,
     checkIdleTrigger,
     checkWordCountTrigger,
-    checkSentenceEndTrigger
+    checkSentenceEndTrigger,
+    onPaneClick
   };
 }; 
