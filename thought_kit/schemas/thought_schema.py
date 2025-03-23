@@ -147,8 +147,8 @@ class Thought(BaseModel):
                 "references": [],
                 "user_comments": [],
                 "score": {
-                    "weight": 0.75, # Weight is a parameter that can be changed by the user.
-                    "saliency": 0.6 # Saliency is a parameter that is automatically updated by the system.
+                    "weight": 0.75, 
+                    "saliency": 0.6 
                 }
             }
         }

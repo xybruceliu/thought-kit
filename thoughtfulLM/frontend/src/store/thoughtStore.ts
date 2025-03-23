@@ -98,15 +98,15 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
         const nonPersistentThoughts = thoughts.filter(t => !t.config.persistent);
         
         if (nonPersistentThoughts.length > 0) {
-          // Calculate combined score for each thought: (2 * weight + saliency)
+          // get the saliency score for each thought
           const thoughtsWithScore = nonPersistentThoughts.map(t => ({
             id: t.id,
-            combinedScore: (2 * t.score.weight) + (t.score.saliency || 0)
+            saliency: t.score.saliency
           }));
           
           // Find the thought with the lowest score
           const lowestScoreThought = thoughtsWithScore.reduce((lowest, current) => 
-            current.combinedScore < lowest.combinedScore ? current : lowest
+            current.saliency < lowest.saliency ? current : lowest
           );
           
           // Remove the lowest-scoring thought (this will call the backend API)
@@ -132,29 +132,39 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
   
   removeThought: async (thoughtId: string) => {
     try {
+      // Check if thought is already being removed
+      if (get().removingThoughtIds.includes(thoughtId)) {
+        console.log(`Thought ${thoughtId} is already being removed, skipping duplicate removal`);
+        return;
+      }
+      
       // Mark thought as removing for animation
       set((state) => ({
         removingThoughtIds: [...state.removingThoughtIds, thoughtId]
       }));
       
-      // Delay removal to allow for animation
+      // Delay removal to allow for animation to complete
       setTimeout(async () => {
-        // Call the backend API to remove the thought
-        await thoughtApi.deleteThought(thoughtId);
-        
-        // Update state by removing the thought and node
-        set((state) => ({
-          thoughts: state.thoughts.filter(t => t.id !== thoughtId),
-          thoughtNodes: state.thoughtNodes.filter(n => n.id !== thoughtId),
-          removingThoughtIds: state.removingThoughtIds.filter(id => id !== thoughtId)
-        }));
-      }, 500); // 500ms for animation
+        try {
+          // Call the backend API to remove the thought
+          await thoughtApi.deleteThought(thoughtId);
+          
+          // Update state by removing the thought and node
+          set((state) => ({
+            thoughts: state.thoughts.filter(t => t.id !== thoughtId),
+            thoughtNodes: state.thoughtNodes.filter(n => n.id !== thoughtId),
+            removingThoughtIds: state.removingThoughtIds.filter(id => id !== thoughtId)
+          }));
+        } catch (error) {
+          console.error(`Error removing thought ${thoughtId}:`, error);
+          // Remove from removing list even if API call fails
+          set((state) => ({
+            removingThoughtIds: state.removingThoughtIds.filter(id => id !== thoughtId)
+          }));
+        }
+      }, 1000); // 1000ms to match the exit animation duration
     } catch (error) {
-      console.error('Error removing thought:', error);
-      // Remove from removing list even if API call fails
-      set((state) => ({
-        removingThoughtIds: state.removingThoughtIds.filter(id => id !== thoughtId)
-      }));
+      console.error('Error initiating thought removal:', error);
     }
   },
   

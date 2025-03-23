@@ -8,7 +8,12 @@ import { useMemoryStore } from '../store/memoryStore';
  * Provides methods for managing nodes and handles synchronization with canvas interactions
  */
 export const useThoughtNodes = () => {
-  const { thoughtNodes, updateThoughtNodePosition, fetchAllThoughts } = useThoughtStore();
+  const { 
+    thoughtNodes, 
+    updateThoughtNodePosition, 
+    fetchAllThoughts,
+    removingThoughtIds  // Get the removingThoughtIds from the store
+  } = useThoughtStore();
   const { fetchMemories } = useMemoryStore();
   
   // Initialize with text input node and thought nodes from store
@@ -19,9 +24,6 @@ export const useThoughtNodes = () => {
       position: { x: 0, y: 0 },
       data: { 
         value: '', 
-        onChange: (value: string) => {
-          console.log('Input changed:', value);
-        } 
       },
       draggable: false, // Prevent dragging the text input node
     },
@@ -52,10 +54,16 @@ export const useThoughtNodes = () => {
     setNodes([
       // Keep the input node
       nodes.find(node => node.id === 'input-1') as Node,
-      // Add all thought nodes from the store
-      ...thoughtNodes
+      // Add all thought nodes from the store with isRemoving flag
+      ...thoughtNodes.map(node => ({
+        ...node,
+        data: {
+          ...node.data,
+          isRemoving: removingThoughtIds.includes(node.id)
+        }
+      }))
     ]);
-  }, [thoughtNodes]);
+  }, [thoughtNodes, removingThoughtIds]); // Add removingThoughtIds as a dependency
 
   // Initialize the store with the data from the backend  
   useEffect(() => {

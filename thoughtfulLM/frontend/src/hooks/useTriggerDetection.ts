@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
 import { useThoughtStore } from '../store/thoughtStore';
 import { useInputStore } from '../store/inputStore';
-import { EventType } from '../types/event';
 import { Node as ReactFlowNode, useReactFlow } from 'reactflow';
 import { calculateThoughtNodePosition, positioningStrategies } from '../utils';
 
@@ -18,14 +17,15 @@ export const useTriggerDetection = () => {
   
   const {
     currentInput,
+    inputAtLastGeneration,
+    newInput,
     lastActivityTimestamp,
     idleTimeThreshold,
-    wordCountAtLastGeneration,
     wordCountChangeThreshold,
     sentenceWordThreshold,
     idleTriggerFired,
     setIdleTriggerFired,
-    updateWordCountBaseline,
+    updateInputBaseline,
     updateActivityTimestamp
   } = useInputStore();
 
@@ -46,30 +46,36 @@ export const useTriggerDetection = () => {
   
   // Check if word count change trigger condition is met
   const checkWordCountTrigger = useCallback(() => {
-    const currentWordCount = currentInput.split(/\s+/).filter(Boolean).length;
-    // Only trigger when word count has increased by the threshold
-    if (currentWordCount - wordCountAtLastGeneration >= wordCountChangeThreshold) {
+    // Use newInput instead of calculating difference from currentInput
+    const newWordCount = newInput.split(/\s+/).filter(Boolean).length;
+    // Only trigger when new word count has reached the threshold
+    if (newWordCount >= wordCountChangeThreshold) {
       console.log(`Trigger: Word count increase > ${wordCountChangeThreshold} ✍️`);
+      console.log(`Old text: "${inputAtLastGeneration}"`);
+      console.log(`New text: "${newInput}"`);
       return true;
     }
     return false;
-  }, [wordCountAtLastGeneration, wordCountChangeThreshold, currentInput]);
+  }, [newInput, wordCountChangeThreshold, inputAtLastGeneration]);
 
   // Check if sentence end trigger condition is met
   const checkSentenceEndTrigger = useCallback(() => {
-    // Check if the last character is a sentence-ending punctuation
-    const lastChar = currentInput.trim().slice(-1);
+    // Check if the last character of the new input or current input is a sentence-ending punctuation
+    const lastChar = newInput.trim().slice(-1);
     const isPunctuation = ['.', '!', '?'].includes(lastChar);
     
     if (!isPunctuation) return false;
     
-    const currentWordCount = currentInput.split(/\s+/).filter(Boolean).length;
-    if (currentWordCount - wordCountAtLastGeneration >= sentenceWordThreshold) {
+    // Use newInput word count for sentence trigger
+    const newWordCount = newInput.split(/\s+/).filter(Boolean).length;
+    if (newWordCount >= sentenceWordThreshold) {
       console.log(`Trigger: Sentence end > ${sentenceWordThreshold} words 💬`);
+      console.log(`Old text: "${inputAtLastGeneration}"`);
+      console.log(`New text: "${newInput}"`);
       return true;
     }
     return false;
-  }, [wordCountAtLastGeneration, sentenceWordThreshold, currentInput]);
+  }, [newInput, sentenceWordThreshold, inputAtLastGeneration]);
 
 
   // TESTING: Check if user has typed "*". This is only for testing purposes
@@ -81,7 +87,7 @@ export const useTriggerDetection = () => {
     return false;
   }, [currentInput]);
 
-  // Function to check all triggers and d
+  // Function to check all triggers and generate thoughts
   const checkTriggersAndGenerate = useCallback(async (textInputNode: ReactFlowNode) => {
     // You can change the strategy here - defaulting to aboveInput
     const position = calculateThoughtNodePosition(
@@ -90,14 +96,16 @@ export const useTriggerDetection = () => {
       positioningStrategies.aboveInput
     );
     
-    const currentWordCount = currentInput.split(/\s+/).filter(Boolean).length;
     let thoughtGenerated = false;
+    
+    // Save the current input at the time we check triggers
+    const inputAtCheckTime = currentInput;
     
     // Check for sentence end trigger
     if (checkSentenceEndTrigger()) {
-      // Update word count baseline BEFORE generating thought to prevent repeat triggers
-      updateWordCountBaseline(currentWordCount);
-      
+      // Update the input baseline BEFORE generating a thought
+      updateInputBaseline(inputAtCheckTime);
+
       const thought = await generateThoughtAtPosition('SENTENCE_END', position);
       if (thought) {
         thoughtGenerated = true;
@@ -105,8 +113,7 @@ export const useTriggerDetection = () => {
     }
     // Check for word count trigger
     else if (checkWordCountTrigger()) {
-      // Update word count baseline BEFORE generating thought to prevent repeat triggers
-      updateWordCountBaseline(currentWordCount);
+      updateInputBaseline(inputAtCheckTime);
       
       const thought = await generateThoughtAtPosition('WORD_COUNT_CHANGE', position);
       if (thought) {
@@ -117,6 +124,7 @@ export const useTriggerDetection = () => {
     else if (checkIdleTrigger()) {
       // Set the idle trigger fired state to true BEFORE generating a thought to prevent repeat triggers
       setIdleTriggerFired(true);
+      updateInputBaseline(inputAtCheckTime);
 
       const thought = await generateThoughtAtPosition('IDLE_TIME', position);
       if (thought) {
@@ -125,9 +133,10 @@ export const useTriggerDetection = () => {
     }
     // Check for test trigger
     else if (checkAstTrigger()) {
+      updateInputBaseline(inputAtCheckTime);
       const thought = await generateThoughtAtPosition('NAMED_ENTITY', position);
       if (thought) {
-        thoughtGenerated = true;
+        thoughtGenerated = true;    
       }
     }
     
@@ -146,7 +155,7 @@ export const useTriggerDetection = () => {
     generateThoughtAtPosition, 
     thoughtNodes,
     currentInput,
-    updateWordCountBaseline,
+    updateInputBaseline,
     setIdleTriggerFired,
     updateActivityTimestamp
   ]);
@@ -168,15 +177,20 @@ export const useTriggerDetection = () => {
       // Generate a thought at the clicked position with offsets
       try {
         console.log('Trigger: Pane click 🖱️');
-        await generateThoughtAtPosition('CLICK', {
+        const thought = await generateThoughtAtPosition('CLICK', {
           x: position.x - offsetX,
           y: position.y - offsetY
         });
+        
+        if (thought) {
+          // Save the input at the time of click generation
+          updateInputBaseline(currentInput);
+        }
       } catch (error) {
         console.error('Error generating thought on pane click:', error);
       }
     },
-    [reactFlowInstance, generateThoughtAtPosition]
+    [reactFlowInstance, generateThoughtAtPosition, currentInput, updateInputBaseline]
   );
 
   return {

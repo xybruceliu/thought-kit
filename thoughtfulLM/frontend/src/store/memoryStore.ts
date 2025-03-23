@@ -11,10 +11,6 @@ interface MemoryState {
   memory: Memory;
   isLoading: boolean;
   
-  // Configuration
-  maxShortTermCount: number;
-  maxLongTermCount: number;
-  
   // Actions
   addMemoryItem: (text: string, type: 'LONG_TERM' | 'SHORT_TERM') => Promise<MemoryItem | null>;
   clearMemories: (type?: 'LONG_TERM' | 'SHORT_TERM') => Promise<void>;
@@ -30,10 +26,6 @@ export const useMemoryStore = create<MemoryState>((set, get) => ({
     short_term: [],
   },
   isLoading: false,
-  
-  // Configuration
-  maxShortTermCount: 10,
-  maxLongTermCount: 20,
   
   // Add a memory item
   addMemoryItem: async (text: string, type: 'LONG_TERM' | 'SHORT_TERM') => {

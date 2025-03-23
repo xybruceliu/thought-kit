@@ -140,6 +140,36 @@ class MemoryStore:
                 
         return None
     
+    def update_memory_item_by_index(self, index: int, type: Literal["LONG_TERM", "SHORT_TERM"], text: str) -> Optional[MemoryItem]:
+        """
+        Update a memory item's text content in the store by index.
+        
+        Args:
+            index: The index of the memory item to update
+            type: The type of memory (LONG_TERM or SHORT_TERM)
+            text: The new text content
+            
+        Returns:
+            The updated memory item if found, None otherwise
+        """
+        try:
+            if type == "LONG_TERM" and index < len(self.memory.long_term):
+                # Update the text content of the existing memory item
+                self.memory.long_term[index].content.text = text
+                # Update the timestamp
+                self.memory.long_term[index].timestamps.updated = datetime.now().isoformat()
+                return self.memory.long_term[index]
+            elif type == "SHORT_TERM" and index < len(self.memory.short_term):
+                # Update the text content of the existing memory item
+                self.memory.short_term[index].content.text = text
+                # Update the timestamp
+                self.memory.short_term[index].timestamps.updated = datetime.now().isoformat()
+                return self.memory.short_term[index]
+            else:
+                return None
+        except IndexError:
+            return None
+    
     def remove_memory_item(self, memory_id: str) -> bool:
         """
         Remove a memory item from the store.
