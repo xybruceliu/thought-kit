@@ -54,6 +54,9 @@ async def generate_thought(request: GenerationRequest):
         # Use the single parameter format
         result = await thoughtkit.generate(input_data, return_json_str=False, return_model=True)
 
+        # Add the thought to the thought store
+        thought_store.add_thought(result)
+
         return result
     
     except Exception as e:
@@ -199,22 +202,16 @@ async def delete_thought(thought_id: str):
             detail=f"Failed to delete thought: {str(e)}"
         )
 
-@router.post("/max-count", status_code=status.HTTP_200_OK)
-async def set_max_thought_count(max_count: int):
+@router.delete("/", status_code=status.HTTP_204_NO_CONTENT)
+async def clear_all_thoughts():
     """
-    Set the maximum number of thoughts to store.
-    
-    Args:
-        max_count: The maximum number of thoughts
-    
-    Returns:
-        A confirmation message
+    Clear all thoughts from the store.
     """
     try:
-        thought_store.set_max_thought_count(max_count)
-        return {"message": f"Max thought count set to {max_count}"}
+        thought_store.clear()
+        return None
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-            detail=f"Failed to set max thought count: {str(e)}"
+            detail=f"Failed to clear thoughts: {str(e)}"
         ) 

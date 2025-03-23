@@ -44,10 +44,6 @@ export interface AddMemoryRequest {
   text: string;
 }
 
-export interface MaxThoughtCountResponse {
-  message: string;
-}
-
 // API client class
 class ThoughtApi {
   // Generate a thought using the ThoughtKit API
@@ -128,20 +124,6 @@ class ThoughtApi {
     }
   }
 
-  // Set the maximum number of thoughts to store
-  async setMaxThoughtCount(maxCount: number): Promise<MaxThoughtCountResponse> {
-    try {
-      const response: AxiosResponse<MaxThoughtCountResponse> = await axios.post(
-        `${BASE_URL}/thoughts/max-count`,
-        maxCount
-      );
-      return response.data;
-    } catch (error) {
-      console.error('Error setting max thought count:', error);
-      throw this.handleError(error);
-    }
-  }
-
   // Add a memory
   async addMemory(request: AddMemoryRequest): Promise<MemoryItem> {
     try {
@@ -178,6 +160,29 @@ class ThoughtApi {
       await axios.delete(`${BASE_URL}/memories/`);
     } catch (error) {
       console.error('Error clearing memories:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  // Clear all thoughts
+  async clearThoughts(): Promise<void> {
+    try {
+      await axios.delete(`${BASE_URL}/thoughts/`);
+    } catch (error) {
+      console.error('Error clearing thoughts:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  // Clear all data (thoughts and memories)
+  async clearAllData(): Promise<void> {
+    try {
+      await Promise.all([
+        this.clearThoughts(),
+        this.clearMemories()
+      ]);
+    } catch (error) {
+      console.error('Error clearing all data:', error);
       throw this.handleError(error);
     }
   }

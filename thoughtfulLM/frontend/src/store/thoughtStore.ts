@@ -35,7 +35,6 @@ interface ThoughtStoreState {
   generateThoughtAtPosition: (triggerType: EventType, position?: XYPosition) => Promise<Thought | null>;
   updateThoughtNodePosition: (nodeId: string, position: XYPosition) => void;
   removeThought: (thoughtId: string) => Promise<void>;
-  setMaxThoughtCount: (count: number) => Promise<void>;
   fetchAllThoughts: () => Promise<void>;
   getThought: (thoughtId: string) => Promise<Thought | null>;
 }
@@ -133,18 +132,6 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       set((state) => ({
         removingThoughtIds: state.removingThoughtIds.filter(id => id !== thoughtId)
       }));
-    }
-  },
-  
-  setMaxThoughtCount: async (count: number) => {
-    try {
-      // Call the backend API to set max thought count
-      await thoughtApi.setMaxThoughtCount(count);
-      
-      // Update local state
-      set({ maxThoughtCount: count });
-    } catch (error) {
-      console.error('Error setting max thought count:', error);
     }
   },
   

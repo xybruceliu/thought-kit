@@ -105,43 +105,6 @@ class ThoughtStore:
     def clear(self) -> None:
         """Clear all thoughts from the store."""
         self.thoughts.clear()
-    
-    def set_max_thought_count(self, count: int) -> None:
-        """
-        Set the maximum number of thoughts to store.
-        
-        Args:
-            count: The maximum number of thoughts
-        """
-        self.max_thought_count = count
-        
-        # If we have too many thoughts, remove the least salient ones
-        while len(self.thoughts) > self.max_thought_count:
-            self._prune_least_salient_thought()
-    
-    def _prune_least_salient_thought(self) -> None:
-        """
-        Remove the least salient thought from the store that is not persistent.
-        Saliency is determined by the thought's score.saliency value.
-        """
-        if not self.thoughts:
-            return
-        
-        filtered_thoughts = []
-        for thought in self.thoughts.values():
-            if not getattr(thought.config, "persistent", False):
-                filtered_thoughts.append(thought)
-        
-        # Sort thoughts by saliency (lowest first)
-        sorted_thoughts = sorted(
-            filtered_thoughts, 
-            key=lambda t: getattr(t.score, "saliency", 0) if hasattr(t, "score") else 0
-        )
-        
-        # Remove the least salient thought
-        if sorted_thoughts:
-            least_salient = sorted_thoughts[0]
-            self.remove_thought(least_salient.id)
 
 # Create a singleton instance
 thought_store = ThoughtStore() 

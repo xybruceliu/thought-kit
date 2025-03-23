@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -12,6 +12,7 @@ import TextInputNode from './TextInputNode';
 import ThoughtBubbleNode from './ThoughtBubbleNode';
 import { useThoughtNodes } from '../hooks';
 import { useTriggerDetection } from '../hooks';
+import { thoughtApi } from '../api/thoughtApi';
 
 // Define custom node types
 const nodeTypes: NodeTypes = {
@@ -27,6 +28,24 @@ const CanvasContent: React.FC = () => {
   
   // Initialize edges state
   const [edges] = useState<Edge[]>([]);
+
+  // Clear all data when the component mounts (page loads/refreshes)
+  useEffect(() => {
+    const clearDataOnLoad = async () => {
+      try {
+        // Clear both thoughts and memories
+        await thoughtApi.clearAllData();
+        console.log('All data cleared on page refresh');
+      } catch (error) {
+        console.error('Error clearing data on page load:', error);
+      }
+    };
+    
+    // Execute the clear operation
+    clearDataOnLoad();
+    
+    // This effect should only run once when the component mounts
+  }, []);
 
   return (
     <ReactFlow

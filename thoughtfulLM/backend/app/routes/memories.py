@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Query
 from typing import Dict, Any, List
 import uuid
 from datetime import datetime
+from pydantic import BaseModel
 
 from app.models.memory_models import MemoryRequest
 from app.stores.memory_store import memory_store
@@ -102,4 +103,4 @@ async def clear_all_memories():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail=f"Failed to clear memories: {str(e)}"
-        ) 
+        )

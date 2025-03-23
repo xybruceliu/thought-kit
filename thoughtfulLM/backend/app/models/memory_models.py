@@ -14,4 +14,4 @@ class MemoryRequest(BaseModel):
                 "text": "The user is interested in climate change data"
             }
         }
-    ) 
+    )

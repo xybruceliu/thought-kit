@@ -179,56 +179,6 @@ class MemoryStore:
     def clear_short_term(self) -> None:
         """Clear only short-term memories from the store."""
         self.memory.short_term = []
-    
-    def set_max_memory_count(self, short_term_count: int, long_term_count: int) -> None:
-        """
-        Set the maximum number of memory items to store in each category.
-        
-        Args:
-            short_term_count: The maximum number of short-term memories
-            long_term_count: The maximum number of long-term memories
-        """
-        self.max_short_term_count = short_term_count
-        self.max_long_term_count = long_term_count
-        
-        # If we have too many memories, prune them
-        while len(self.memory.short_term) > self.max_short_term_count:
-            self._prune_oldest_memory("SHORT_TERM")
-            
-        while len(self.memory.long_term) > self.max_long_term_count:
-            self._prune_oldest_memory("LONG_TERM")
-    
-    def _prune_oldest_memory(self, memory_type: Literal["LONG_TERM", "SHORT_TERM"]) -> None:
-        """
-        Remove the oldest memory item of the specified type.
-        Age is determined by the memory's timestamps.created value.
-        
-        Args:
-            memory_type: The type of memory to prune ("LONG_TERM" or "SHORT_TERM")
-        """
-        if memory_type == "LONG_TERM" and self.memory.long_term:
-            # Sort memories by creation timestamp (oldest first)
-            sorted_memories = sorted(
-                self.memory.long_term,
-                key=lambda m: m.timestamps.created
-            )
-            
-            # Remove the oldest memory
-            if sorted_memories:
-                oldest = sorted_memories[0]
-                self.remove_memory_item(oldest.id)
-                
-        elif memory_type == "SHORT_TERM" and self.memory.short_term:
-            # Sort memories by creation timestamp (oldest first)
-            sorted_memories = sorted(
-                self.memory.short_term,
-                key=lambda m: m.timestamps.created
-            )
-            
-            # Remove the oldest memory
-            if sorted_memories:
-                oldest = sorted_memories[0]
-                self.remove_memory_item(oldest.id)
 
 # Create a singleton instance
 memory_store = MemoryStore() 
