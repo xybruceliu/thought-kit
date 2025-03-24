@@ -35,10 +35,10 @@ const colors = [
 const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected }) => {
   // Get the thought from the store using the thoughtId
   const thoughts = useThoughtStore(state => state.thoughts);
-  const removeThought = useThoughtStore(state => state.removeThought);
-  const updateThought = useThoughtStore(state => state.updateThought);
   const handleThoughtPin = useThoughtStore(state => state.handleThoughtPin);
   const handleThoughtDelete = useThoughtStore(state => state.handleThoughtDelete);
+  const handleThoughtClick = useThoughtStore(state => state.handleThoughtClick);
+
   const thought = thoughts.find(t => t.id === data.thoughtId);
   
   // IMPORTANT: All hooks must be called at the top level, before any conditional returns
@@ -209,12 +209,10 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
           // Prevent bubbling to parent elements
           e.stopPropagation();
           
-          // Dispatch custom event with thought ID for handling in parent components
-          const event = new CustomEvent('thought-click', { 
-            bubbles: true, 
-            detail: { thoughtId: data.thoughtId } 
-          });
-          e.currentTarget.dispatchEvent(event);
+          // Directly call handleThoughtClick instead of dispatching a custom event
+          if (data.thoughtId) {
+            handleThoughtClick(data.thoughtId);
+          }
         }}
         position="relative"
       >
@@ -256,7 +254,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
               }
             }}
             _hover={{
-              bg: `${colors[colorIndex]}30`,
+              bg: "none",
               color: thought.config.persistent ? "yellow.500" : "gray.700"
             }}
           />
@@ -265,8 +263,8 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
         {/* Delete button */}
         <Box 
           position="absolute"
-          top="-5.5px"
-          right="-5.5px"
+          top="-6px"
+          right="-6px"
           opacity={showDeleteButton ? opacity : 0}
           visibility={showDeleteButton ? "visible" : "hidden"}
           transition="opacity 0.2s ease-in-out, visibility 0.2s ease-in-out"
@@ -289,7 +287,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
               }
             }}
             _hover={{
-              bg: `${colors[colorIndex]}30`,
+              bg: "none",
               color: "gray.700"
             }}
           />
