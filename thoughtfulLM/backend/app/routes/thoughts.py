@@ -87,8 +87,8 @@ async def generate_thought(request: GenerationRequest):
                 if cosine_similarity(result.content.embedding, thought.content.embedding) > 0.8:
                     # Create a copy with updated saliency
                     updated_thought = thought.model_copy()
-                    # Increase saliency by 0.2, but cap at 1.0
-                    updated_thought.score.saliency = min(1.0, updated_thought.score.saliency + 0.2)
+                    # Increase saliency by 0.2, but make sure weight + saliency doesn't exceed 2.0
+                    updated_thought.score.saliency = min(updated_thought.score.saliency + 0.2, 2.0 - updated_thought.score.weight)
                     similar_thought_found = True
                     break  # Exit loop once we find a similar thought
 
@@ -229,11 +229,11 @@ async def update_thought(thought_id: str, update_request: ThoughtUpdateRequest):
         # Update score properties if provided
         if update_request.weight is not None:
             # Ensure weight is between 0 and 1
-            thought.score.weight = max(0.0, min(1.0, update_request.weight))
+            thought.score.weight = update_request.weight
         
         if update_request.saliency is not None:
             # Ensure saliency is between 0 and 1
-            thought.score.saliency = max(0.0, min(1.0, update_request.saliency))
+            thought.score.saliency = update_request.saliency
         
         # Update config properties if provided
         if update_request.persistent is not None:

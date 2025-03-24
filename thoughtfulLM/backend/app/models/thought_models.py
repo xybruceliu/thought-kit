@@ -114,8 +114,8 @@ class ThoughtUpdateRequest(BaseModel):
     thought: Thought = Field(..., description="The thought to update")
     
     # Score properties
-    weight: Optional[float] = Field(None, description="New weight value (0-1)", ge=0.0, le=1.0)
-    saliency: Optional[float] = Field(None, description="New saliency value (0-1)", ge=0.0, le=1.0)
+    weight: Optional[float] = Field(None, description="New weight value (0-42)", ge=0.0, le=42.0)
+    saliency: Optional[float] = Field(None, description="New saliency value (0-42)", ge=0.0, le=42.0)
     
     # Config properties
     persistent: Optional[bool] = Field(None, description="Whether the thought should be persistent")

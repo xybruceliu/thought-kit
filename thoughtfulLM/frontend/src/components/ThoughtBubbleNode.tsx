@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NodeProps, Handle, Position } from 'reactflow';
-import { Box, Text, keyframes } from '@chakra-ui/react';
-import { Thought } from '../types/thought';
+import { Box, Text, keyframes, IconButton, Fade } from '@chakra-ui/react';
 import { useThoughtStore } from '../store/thoughtStore';
+import { CloseIcon, StarIcon } from '@chakra-ui/icons';
 
 type ThoughtBubbleNodeProps = NodeProps<{
   content: string;
@@ -35,6 +35,10 @@ const colors = [
 const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected }) => {
   // Get the thought from the store using the thoughtId
   const thoughts = useThoughtStore(state => state.thoughts);
+  const removeThought = useThoughtStore(state => state.removeThought);
+  const updateThought = useThoughtStore(state => state.updateThought);
+  const handleThoughtPin = useThoughtStore(state => state.handleThoughtPin);
+  const handleThoughtDelete = useThoughtStore(state => state.handleThoughtDelete);
   const thought = thoughts.find(t => t.id === data.thoughtId);
   
   // IMPORTANT: All hooks must be called at the top level, before any conditional returns
@@ -44,6 +48,12 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
   const [isDragging, setIsDragging] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
   const prevIsRemovingRef = useRef(data.isRemoving);
+  
+  // Add state for hovering and mouse position
+  const [isHovering, setIsHovering] = useState(false);
+  const [showDeleteButton, setShowDeleteButton] = useState(false);
+  const [showPinButton, setShowPinButton] = useState(false);
+  const bubbleRef = useRef<HTMLDivElement>(null);
   
   // Hook for setting animation duration
   useEffect(() => {
@@ -66,6 +76,23 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
     // Update ref for next comparison
     prevIsRemovingRef.current = data.isRemoving;
   }, [data.isRemoving]);
+  
+  // Function to handle mouse movement and determine which quadrant
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!bubbleRef.current || isDragging) return;
+    
+    const rect = bubbleRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left; // x position within the element
+    const y = e.clientY - rect.top;  // y position within the element
+    
+    // Check if mouse is in the top right quadrant
+    const isTopRight = x > rect.width / 1.5 && y < rect.height / 1.5;
+    // Check if mouse is in the top left quadrant
+    const isTopLeft = x < rect.width / 3 && y < rect.height / 1.5;
+    
+    setShowDeleteButton(isTopRight);
+    setShowPinButton(isTopLeft);
+  };
   
   // If thought is not found, show minimal content
   if (!thought) {
@@ -135,9 +162,17 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
       style={{ position: 'relative' }}
       onMouseDown={() => setIsDragging(true)}
       onMouseUp={() => setIsDragging(false)}
-      onMouseLeave={() => setIsDragging(false)}
+      onMouseLeave={() => {
+        setIsDragging(false);
+        setIsHovering(false);
+        setShowDeleteButton(false);
+        setShowPinButton(false);
+      }}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseMove={handleMouseMove}
     >
       <Box
+        ref={bubbleRef}
         bg={`linear-gradient(135deg, white 0%, ${colors[colorIndex]}20 100%)`}
         borderRadius={blobVariants[startVariantIndex]}
         boxShadow={`0 0 ${shadowBlur}px ${shadowSize}px ${colors[colorIndex]}30, inset 0 0 15px rgba(255, 255, 255, 0.8)`}
@@ -181,6 +216,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
           });
           e.currentTarget.dispatchEvent(event);
         }}
+        position="relative"
       >
         <Text
           textAlign="center"
@@ -192,6 +228,72 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
         >
           {data.content}
         </Text>
+        
+        {/* Star (pin) button */}
+        <Box 
+          position="absolute"
+          top="-15px"
+          left="-15px"
+          opacity={thought.config.persistent || showPinButton ? opacity : 0}
+          visibility={thought.config.persistent || showPinButton ? "visible" : "hidden"}
+          transition="opacity 0.2s ease-in-out, visibility 0.2s ease-in-out"
+          zIndex="1"
+          style={{
+            transform: `scale(${1/sizeScale})`
+          }}
+        >
+          <IconButton
+            aria-label={thought.config.persistent ? "Unpin thought" : "Pin thought"}
+            icon={<StarIcon />}
+            size="md"
+            isRound
+            variant="ghost"
+            color={thought.config.persistent ? "yellow.300" : "gray.500"}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (thought) {
+                handleThoughtPin(thought.id);
+              }
+            }}
+            _hover={{
+              bg: `${colors[colorIndex]}30`,
+              color: thought.config.persistent ? "yellow.500" : "gray.700"
+            }}
+          />
+        </Box>
+        
+        {/* Delete button */}
+        <Box 
+          position="absolute"
+          top="-5.5px"
+          right="-5.5px"
+          opacity={showDeleteButton ? opacity : 0}
+          visibility={showDeleteButton ? "visible" : "hidden"}
+          transition="opacity 0.2s ease-in-out, visibility 0.2s ease-in-out"
+          zIndex="1"
+          style={{
+            transform: `scale(${1/sizeScale})`
+          }}
+        >
+          <IconButton
+            aria-label="Delete thought"
+            icon={<CloseIcon />}
+            size="xs"
+            isRound
+            variant="ghost"
+            color="gray.500"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (thought) {
+                handleThoughtDelete(thought.id);
+              }
+            }}
+            _hover={{
+              bg: `${colors[colorIndex]}30`,
+              color: "gray.700"
+            }}
+          />
+        </Box>
       </Box>
       {/* Invisible handle to improve drag experience */}
       <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />

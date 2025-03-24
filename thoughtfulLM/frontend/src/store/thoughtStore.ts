@@ -42,6 +42,8 @@ interface ThoughtStoreState {
   removeThought: (thoughtId: string) => Promise<void>;
   clearThoughts: () => void;
   handleThoughtClick: (thoughtId: string) => Promise<void>; 
+  handleThoughtPin: (thoughtId: string) => Promise<void>;
+  handleThoughtDelete: (thoughtId: string) => Promise<void>;
 }
 
 // Create a ThoughtNode from a Thought
@@ -176,10 +178,10 @@ Weight: ${thoughtData.score.weight}`)
         removeThought(lowestScoreThought.id);
       }
       
-      // Decrease saliency of other thoughts by the time decay
+      // Decrease saliency of other thoughts by the time decay if thought is non-persistent
       // This is a time decay applied to older thoughts
       const updatedThoughts = get().thoughts.map(thought => {
-        if (thought.id !== thoughtData.id) {
+        if (thought.id !== thoughtData.id && !thought.config.persistent) {
           const thoughtCopy = { ...thought };
           thoughtCopy.score.saliency = Math.max(0, thought.score.saliency - get().decay);
           // Update the node state too
@@ -235,6 +237,51 @@ Weight: ${thoughtData.score.weight}`)
     }
   },
 
+  // Handle pinning/unpinning a thought
+  handleThoughtPin: async (thoughtId: string) => {
+    try {
+      set({ isLoading: true });
+      
+      // Get the thought from the store
+      const thought = get().thoughts.find(t => t.id === thoughtId);
+      if (!thought) {
+        console.error(`Thought with ID ${thoughtId} not found in store`);
+        set({ isLoading: false });
+        return;
+      }
+      
+      // Determine which operation to use based on current state
+      const operation = thought.config.persistent ? "unpin" : "pin";
+      
+      // Use the API to operate on the thought
+      const result = await thoughtApi.operateOnThought({
+        operation: operation,
+        thoughts: [thought],
+        options: {}
+      });
+      
+      // The result might be a single thought or an array of thoughts
+      const updatedThought = Array.isArray(result) ? result[0] : result;
+      
+      // Update the thought in our store
+      get().updateThought(thoughtId, updatedThought);
+      
+      set({ isLoading: false });
+    } catch (error) {
+      console.error(`Error pinning/unpinning thought ${thoughtId}:`, error);
+      set({ isLoading: false });
+    }
+  },
+
+  // Handle deleting a thought
+  handleThoughtDelete: async (thoughtId: string) => {
+    try {
+      // Just call the existing removeThought method
+      await get().removeThought(thoughtId);
+    } catch (error) {
+      console.error(`Error handling thought deletion for ${thoughtId}:`, error);
+    }
+  },
 
   // HELPER FUNCTIONS
   // Update the position of a thought node
@@ -285,7 +332,7 @@ Weight: ${thoughtData.score.weight}`)
       }));
       
       // Wait a moment for the animation
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Remove the thought and its node
       set((state) => ({

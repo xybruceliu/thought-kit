@@ -35,8 +35,8 @@ def react(thoughts: List[Thought], memory: Optional[Memory] = None, reaction: st
         # Simply append the reaction text directly
         thought.user_comments.append(reaction)
         
-        # Increase weight to indicate user attention
-        new_weight = min(thought.score.weight + amount, 1.0)
+       # Make sure weight + saliency doesn't exceed 2.0
+        new_weight = min(thought.score.weight + amount, 2.0 - thought.score.saliency)
         thought.score.weight = round(new_weight, 2)
         
     return thoughts 

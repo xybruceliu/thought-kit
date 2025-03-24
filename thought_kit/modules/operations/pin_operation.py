@@ -1,13 +1,13 @@
 """
-Operation for anchoring a thought by setting its persistent property to true.
+Operation for pining a thought by setting its persistent property to true.
 """
 
 from thought_kit.schemas import Thought, Memory
 from typing import List, Optional
 
-def anchor(thoughts: List[Thought], memory: Optional[Memory] = None, **options) -> List[Thought]:
+def pin(thoughts: List[Thought], memory: Optional[Memory] = None, **options) -> List[Thought]:
     """
-    Anchor thoughts by setting their persistent property to true.
+    Pin thoughts by setting their persistent property to true.
     
     Args:
         thoughts: List of thoughts to operate on
@@ -24,9 +24,9 @@ def anchor(thoughts: List[Thought], memory: Optional[Memory] = None, **options) 
     return thoughts
 
 
-def unanchor(thoughts: List[Thought], memory: Optional[Memory] = None, **options) -> List[Thought]:
+def unpin(thoughts: List[Thought], memory: Optional[Memory] = None, **options) -> List[Thought]:
     """
-    Unanchor thoughts by setting their persistent property to false.
+    Unpin thoughts by setting their persistent property to false.
     
     Args:
         thoughts: List of thoughts to operate on
