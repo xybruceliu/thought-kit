@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NodeProps, Handle, Position } from 'reactflow';
 import { Box, Text, keyframes } from '@chakra-ui/react';
 import { Thought } from '../types/thought';
+import { useThoughtStore } from '../store/thoughtStore';
 
 type ThoughtBubbleNodeProps = NodeProps<{
   content: string;
-  thought: Thought; // Include the full thought object to access weight and saliency
+  thoughtId: string; // Store the thought ID instead of the full object
   blobVariant?: number;
   isRemoving?: boolean;
 }>;
@@ -32,6 +33,45 @@ const colors = [
 ];
 
 const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected }) => {
+  // Get the thought from the store using the thoughtId
+  const thoughts = useThoughtStore(state => state.thoughts);
+  const thought = thoughts.find(t => t.id === data.thoughtId);
+  
+  // IMPORTANT: All hooks must be called at the top level, before any conditional returns
+  // Random animation duration for more natural movement
+  const [animationDuration, setAnimationDuration] = useState("7s");
+  const [isNew, setIsNew] = useState(true);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
+  const prevIsRemovingRef = useRef(data.isRemoving);
+  
+  // Hook for setting animation duration
+  useEffect(() => {
+    // Generate a random duration when the component mounts
+    const duration = 5 + Math.random() * 5;
+    setAnimationDuration(`${duration}s`);
+    
+    // Set isNew to false after the entrance animation completes
+    const timer = setTimeout(() => setIsNew(false), 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Effect to handle removal animation
+  useEffect(() => {
+    // If isRemoving prop changed from false to true, trigger exit animation
+    if (data.isRemoving && !prevIsRemovingRef.current) {
+      setIsExiting(true);
+    }
+    
+    // Update ref for next comparison
+    prevIsRemovingRef.current = data.isRemoving;
+  }, [data.isRemoving]);
+  
+  // If thought is not found, show minimal content
+  if (!thought) {
+    return <Box>Content not found</Box>;
+  }
+  
   // Get three different variant indices to create more dramatic animation
   const startVariantIndex = data.blobVariant !== undefined ? data.blobVariant % blobVariants.length : 0;
   const midVariantIndex = (startVariantIndex + 2) % blobVariants.length; // Skip one to get more contrast
@@ -39,13 +79,18 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
   const colorIndex = data.blobVariant !== undefined ? data.blobVariant % colors.length : 0;
   
   // Calculate importance score from weight and saliency
-  const importanceScore = data.thought.score.weight + data.thought.score.saliency;
+  const importanceScore = thought.score.weight + thought.score.saliency;
   
   // Calculate size scale based on importance score (0.5 to 1.5)
   const sizeScale = 0.7 + (importanceScore * 0.5);
   
-  // Calculate opacity based on importance score (0.3 to 0.9)
-  const opacity = 0.3 + (importanceScore * 0.3);
+  // Calculate opacity based on importance score (0.2 to 1.0)
+  const opacity = 0.2 + (importanceScore * 0.4);
+
+  // Calculate shadow size based on importance score
+  const shadowSize = 7 + (importanceScore * 9); 
+  const shadowBlur = 10 + (importanceScore * 12); 
+  
 
   // Create a dynamic keyframe animation for this specific bubble with multiple stages
   const morphAnimation = keyframes`
@@ -85,34 +130,6 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
     }
   `;
 
-  // Random animation duration for more natural movement
-  const [animationDuration, setAnimationDuration] = useState("7s");
-  const [isNew, setIsNew] = useState(true);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isExiting, setIsExiting] = useState(false);
-  const prevIsRemovingRef = useRef(data.isRemoving);
-  
-  useEffect(() => {
-    // Generate a random duration when the component mounts
-    const duration = 5 + Math.random() * 5;
-    setAnimationDuration(`${duration}s`);
-    
-    // Set isNew to false after the entrance animation completes
-    const timer = setTimeout(() => setIsNew(false), 1000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Effect to handle removal animation
-  useEffect(() => {
-    // If isRemoving prop changed from false to true, trigger exit animation
-    if (data.isRemoving && !prevIsRemovingRef.current) {
-      setIsExiting(true);
-    }
-    
-    // Update ref for next comparison
-    prevIsRemovingRef.current = data.isRemoving;
-  }, [data.isRemoving]);
-
   return (
     <div 
       style={{ position: 'relative' }}
@@ -121,9 +138,10 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
       onMouseLeave={() => setIsDragging(false)}
     >
       <Box
-        bg="white"
+        bg={`linear-gradient(135deg, white 0%, ${colors[colorIndex]}20 100%)`}
         borderRadius={blobVariants[startVariantIndex]}
-        boxShadow={`0 0 15px 8px ${colors[colorIndex]}20`}
+        boxShadow={`0 0 ${shadowBlur}px ${shadowSize}px ${colors[colorIndex]}30, inset 0 0 15px rgba(255, 255, 255, 0.8)`}
+        border="none"
         minWidth="100px"
         maxWidth="200px"
         height="auto"
@@ -131,13 +149,13 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
         display="flex"
         alignItems="center"
         justifyContent="center"
-        border="none"
         cursor="grab"
         className="thought-bubble"
-        // Simplified styling - separate scale from animation
         style={{
           opacity: isExiting ? 0 : opacity,
           transform: `scale(${sizeScale})`,
+          backdropFilter: "blur(5px)",
+          transition: "border-radius 0.5s ease-in-out",  // Smoother transitions between shapes
         }}
         animation={
           isExiting
@@ -150,7 +168,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
           cursor: "grabbing",
         }}
         _hover={{
-          boxShadow: `0 0 17px 10px ${colors[colorIndex]}40`,
+          boxShadow: `0 0 ${shadowBlur + 2}px ${shadowSize + 2}px ${colors[colorIndex]}50`,
         }}
         onClick={(e) => {
           // Prevent bubbling to parent elements
@@ -159,7 +177,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
           // Dispatch custom event with thought ID for handling in parent components
           const event = new CustomEvent('thought-click', { 
             bubbles: true, 
-            detail: { thoughtId: data.thought.id } 
+            detail: { thoughtId: data.thoughtId } 
           });
           e.currentTarget.dispatchEvent(event);
         }}

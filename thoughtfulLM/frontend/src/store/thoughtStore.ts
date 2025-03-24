@@ -17,7 +17,7 @@ export interface ThoughtNode extends Node {
   position: XYPosition;
   data: {
     content: string;
-    thought: Thought;
+    thoughtId: string;  // Store only the ID, not the full thought
     blobVariant: number;
   };
 }
@@ -56,7 +56,7 @@ const createThoughtNode = (thought: Thought, position?: XYPosition): ThoughtNode
     position: { x, y },
     data: {
       content: thought.content.text,
-      thought,
+      thoughtId: thought.id,  // Store just the ID
       blobVariant: getRandomInt(0, 5),
     },
   };
@@ -133,6 +133,10 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       
       // This is a new thought - create a node for it
       const thoughtNode = createThoughtNode(thoughtData, position);
+
+      console.log(`💭 New thought created: ${thoughtData.id}: ${thoughtData.content.text}
+Saliency: ${thoughtData.score.saliency}
+Weight: ${thoughtData.score.weight}`)
       
       // Add the new thought and node to state
       set((state) => ({
@@ -146,7 +150,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       // In this research prototype, we just set the first item in short-term memory as the current input 
       const memoryItem = await thoughtApi.createMemory({
         type: 'SHORT_TERM',
-        text: lastSentence
+        text: currentInput
       });
       memory.short_term = [memoryItem];
         
@@ -250,7 +254,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
         thought.id === thoughtId ? updatedThought : thought
       );
       
-      // Then update the node data
+      // Then update only the content in the node data
       const updatedThoughtNodes = state.thoughtNodes.map((node) => {
         if (node.id === thoughtId) {
           return {
@@ -258,7 +262,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
             data: {
               ...node.data,
               content: updatedThought.content.text,
-              thought: updatedThought
+              // thoughtId stays the same, no need to update
             }
           };
         }

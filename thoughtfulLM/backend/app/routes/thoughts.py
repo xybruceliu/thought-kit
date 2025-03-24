@@ -60,7 +60,7 @@ async def generate_thought(request: GenerationRequest):
         # Create a clean copy of input_data for logging
         log_input_data = {
             "event": input_data["event"],
-            "seed": input_data["seed"]["name"] if "name" in input_data["seed"] else "loaded_seed",
+            "seed": input_data["seed"]["type"] if "type" in input_data["seed"] else "loaded_seed",
             "config": input_data["config"],
             "memory": request.memory.short_term[0].content.text if request.memory.short_term else "No short term memory yet",
             "thoughts": f"[{len(request.thoughts or [])} thoughts from frontend]"
