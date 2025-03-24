@@ -14,6 +14,7 @@ import { useThoughtNodes } from '../hooks';
 import { useTriggerDetection } from '../hooks';
 import { thoughtApi } from '../api/thoughtApi';
 import { useThoughtStore } from '../store/thoughtStore';
+import { useMemoryStore } from '../store/memoryStore';
 
 // Define custom node types
 const nodeTypes: NodeTypes = {
@@ -54,8 +55,14 @@ const CanvasContent: React.FC = () => {
   useEffect(() => {
     const clearDataOnLoad = async () => {
       try {
-        // Clear both thoughts and memories
-        await thoughtApi.clearAllData();
+        // Get the store actions directly from the imported hooks
+        const thoughtStore = useThoughtStore.getState();
+        const memoryStore = useMemoryStore.getState();
+        
+        // Clear thoughts and memories
+        thoughtStore.clearThoughts();
+        memoryStore.clearMemories();
+        
         console.log('All data cleared on page refresh');
       } catch (error) {
         console.error('Error clearing data on page load:', error);

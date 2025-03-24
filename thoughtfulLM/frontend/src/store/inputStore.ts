@@ -36,7 +36,7 @@ export const useInputStore = create<InputStoreState>((set) => ({
   lastActivityTimestamp: Date.now(),
   idleTimeThreshold: 17000, // 17 seconds
   wordCountChangeThreshold: 7, // Words added/removed to trigger
-  sentenceWordThreshold: 3, // Words in a sentence to trigger
+  sentenceWordThreshold: 2, // Words in a sentence to trigger
   idleTriggerFired: false, // Initially not fired
   
   // Update input text and reset activity timestamp

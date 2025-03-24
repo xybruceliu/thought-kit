@@ -10,11 +10,9 @@ import { useMemoryStore } from '../store/memoryStore';
 export const useThoughtNodes = () => {
   const { 
     thoughtNodes, 
-    updateThoughtNodePosition, 
-    fetchAllThoughts,
+    updateThoughtNodePosition,
     removingThoughtIds  // Get the removingThoughtIds from the store
   } = useThoughtStore();
-  const { fetchMemories } = useMemoryStore();
   
   // Initialize with text input node and thought nodes from store
   const [nodes, setNodes] = useState<Node[]>([
@@ -65,18 +63,8 @@ export const useThoughtNodes = () => {
     ]);
   }, [thoughtNodes, removingThoughtIds]); // Add removingThoughtIds as a dependency
 
-  // Initialize the store with the data from the backend  
-  useEffect(() => {
-    // Fetch thoughts
-    fetchAllThoughts().catch(error => {
-      console.error('Error fetching thoughts:', error);
-    });
-    
-    // Fetch memories
-    fetchMemories().catch(error => {
-      console.error('Error fetching memories:', error);
-    });
-  }, [fetchAllThoughts, fetchMemories]);
+  // With frontend-only storage, we don't need to initialize from backend
+  // The stores are initialized with empty arrays already
 
   return {
     nodes,

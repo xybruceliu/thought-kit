@@ -30,7 +30,7 @@ interface ThoughtStoreState {
   maxThoughtCount: number; // Maximum number of thoughts to display
   removingThoughtIds: string[]; // Track thoughts being removed for animation
   isLoading: boolean; // Track API loading state
-  timeDecay: number; // Time decay for saliency
+  decay: number; // Time decay for saliency
   likeAmount: number; // Amount to like a thought
 
   // Actions
@@ -38,8 +38,7 @@ interface ThoughtStoreState {
   updateThoughtNodePosition: (nodeId: string, position: XYPosition) => void;
   updateThoughtNodeState: (thoughtId: string, updatedThought: Thought) => void;
   removeThought: (thoughtId: string) => Promise<void>;
-  fetchAllThoughts: () => Promise<void>;
-
+  clearThoughts: () => void;
   handleThoughtClick: (thoughtId: string) => Promise<void>; 
 }
 
@@ -71,27 +70,40 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
 
   // SETTINGS
   maxThoughtCount: 5, // Maximum number of thoughts to display
-  timeDecay: 0.2, // Time decay for saliency
+  decay: 0.1, // Time decay for saliency
   likeAmount: 0.2, // Amount to like a thought
   
   generateThoughtAtPosition: async (triggerType: EventType, position?: XYPosition) => {
     try {
       set({ isLoading: true });
       
+
+      // GENERATE THOUGHT
       // Use the input store to get the current input
       const inputStoreModule = await import('./inputStore');
       const { useInputStore } = inputStoreModule;
       const { currentInput } = useInputStore.getState();
+
+      // get the last sentence of the current input, split by . or ! or ?
+      const sentences = currentInput.split(/[.!?]/).filter(s => s.trim().length > 0);
+      const lastSentence = sentences.length > 0 ? sentences[sentences.length - 1].trim() : currentInput;
+      
+      // Get memory from memoryStore for the API call
+      const memoryStoreModule = await import('./memoryStore');
+      const { useMemoryStore } = memoryStoreModule;
+      const { memory } = useMemoryStore.getState();
       
       // Call the backend API to generate a thought
       const thoughtData = await thoughtApi.generateThought({
-        event_text: currentInput,
-        event_type: triggerType
+        event_text: lastSentence,
+        event_type: triggerType,
+        thoughts: get().thoughts, // Send all current thoughts to backend
+        memory: memory // Send all current memory to backend
       });
 
       // If the response is null, return null
       if (!thoughtData) {
-        console.log('No thought data returned from backend');
+        console.log('❌ No thought data returned from backend');
         set({ isLoading: false });
         return null;
       }
@@ -101,26 +113,19 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       const isUpdate = existingThoughtIndex >= 0;
       
       if (isUpdate) {
-        console.log(`Found similar thought in store: ${thoughtData.id}: ${thoughtData.content.text}`);
-
-        // Create an update with all the thought's properties
-        const updates = {
-          weight: thoughtData.score.weight,
-          saliency: thoughtData.score.saliency,
-          persistent: thoughtData.config.persistent,
-          interactivity: thoughtData.config.interactivity as 'VIEW' | 'COMMENT' | 'EDIT',
-          content_text: thoughtData.content.text
-        };
+        console.log(`🫵 Found similar thought in store: ${thoughtData.id}: ${thoughtData.content.text}`);
         
-        try {
-          // Use API to update backend, then update state
-          const updatedThought = await thoughtApi.updateThought(thoughtData.id, updates);
-          get().updateThoughtNodeState(thoughtData.id, updatedThought);
-        } catch (error) {
-          console.error(`Error updating thought ${thoughtData.id}:`, error);
-        } finally {
-          set({ isLoading: false });
-        }
+        // Update the thought in our local store
+        const updatedThoughts = [...get().thoughts]; 
+        updatedThoughts[existingThoughtIndex] = thoughtData;
+        
+        set({
+          thoughts: updatedThoughts,
+          isLoading: false
+        });
+        
+        // Also update the node
+        get().updateThoughtNodeState(thoughtData.id, thoughtData);
         
         return thoughtData;
       }
@@ -134,24 +139,17 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
         thoughtNodes: [...state.thoughtNodes, thoughtNode],
         isLoading: false
       }));
-      
-      // Decrease saliency of other thoughts by the time decay
-      // This is a time decay applied to older thoughts
-      const otherThoughts = get().thoughts.filter(t => t.id !== thoughtData.id);
-      
-      // Process each thought update sequentially to avoid race conditions
-      for (const thought of otherThoughts) {
-        try {
-          const newSaliency = Math.max(0, thought.score.saliency - get().timeDecay);
-          const updatedThought = await thoughtApi.updateThought(thought.id, { 
-            saliency: newSaliency 
-          });
-          get().updateThoughtNodeState(thought.id, updatedThought);
-        } catch (error) {
-          console.error(`Error decreasing saliency for thought ${thought.id}:`, error);
-        }
-      }
-      
+
+      // ADD TO MEMORY
+      // In this research prototype, we just set the first item in short-term memory as the current input 
+      const memoryItem = await thoughtApi.createMemory({
+        type: 'SHORT_TERM',
+        text: lastSentence
+      });
+      memory.short_term = [memoryItem];
+        
+
+      // REMOVE THOUGHT
       // Check if we need to remove a thought (non-persistent thoughts exceeded max count)
       const { thoughts, removeThought } = get();
       let nonPersistentThoughts = thoughts.filter(t => !t.config.persistent);
@@ -167,9 +165,26 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
           current.score < lowest.score ? current : lowest
         );
         
-        // Remove the lowest-scoring thought (this will call the backend API)
-        await removeThought(lowestScoreThought.id);
+        // Remove the thought with the lowest score
+        console.log(`🗑 Removing thought ${lowestScoreThought.id} due to exceeding max count`);
+        removeThought(lowestScoreThought.id);
       }
+      
+      // Decrease saliency of other thoughts by the time decay
+      // This is a time decay applied to older thoughts
+      const updatedThoughts = get().thoughts.map(thought => {
+        if (thought.id !== thoughtData.id) {
+          const thoughtCopy = { ...thought };
+          thoughtCopy.score.saliency = Math.max(0, thought.score.saliency - get().decay);
+          // Update the node state too
+          get().updateThoughtNodeState(thought.id, thoughtCopy);
+          return thoughtCopy;
+        }
+        return thought;
+      });
+      
+      // Update all thoughts in state
+      set({ thoughts: updatedThoughts });
       
       return thoughtData;
     } catch (error) {
@@ -179,124 +194,117 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
     }
   },
   
+  // Update the position of a thought node
   updateThoughtNodePosition: (nodeId: string, position: XYPosition) => {
     set((state) => ({
-      thoughtNodes: state.thoughtNodes.map(node => 
+      thoughtNodes: state.thoughtNodes.map((node) => 
         node.id === nodeId ? { ...node, position } : node
       )
     }));
   },
-
-  // Function to update only the frontend state
+  
+  // Update the state of a thought node
   updateThoughtNodeState: (thoughtId: string, updatedThought: Thought) => {
-    set((state) => ({
-      thoughts: state.thoughts.map(t => 
-        t.id === thoughtId ? updatedThought : t
-      ),
-      thoughtNodes: state.thoughtNodes.map(node => 
-        node.id === thoughtId 
-          ? { 
-              ...node, 
-              data: { 
-                ...node.data, 
-                content: updatedThought.content.text,
-                thought: updatedThought 
-              } 
-            } 
-          : node
-      )
-    }));
+    set((state) => {
+      // First update the thought in the thoughts array
+      const updatedThoughts = state.thoughts.map((thought) =>
+        thought.id === thoughtId ? updatedThought : thought
+      );
+      
+      // Then update the node data
+      const updatedThoughtNodes = state.thoughtNodes.map((node) => {
+        if (node.id === thoughtId) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              content: updatedThought.content.text,
+              thought: updatedThought
+            }
+          };
+        }
+        return node;
+      });
+      
+      return {
+        thoughts: updatedThoughts,
+        thoughtNodes: updatedThoughtNodes
+      };
+    });
   },
   
+  // Remove a thought from the store
   removeThought: async (thoughtId: string) => {
     try {
-      // Check if thought is already being removed
-      if (get().removingThoughtIds.includes(thoughtId)) {
-        console.log(`Thought ${thoughtId} is already being removed, skipping duplicate removal`);
-        return;
-      }
-      
-      // Mark thought as removing for animation
+      // Mark the thought as being removed (for animation)
       set((state) => ({
         removingThoughtIds: [...state.removingThoughtIds, thoughtId]
       }));
       
-      // Delay removal to allow for animation to complete
-      setTimeout(async () => {
-        try {
-          // Call the backend API to remove the thought
-          await thoughtApi.deleteThought(thoughtId);
-          
-          // Update state by removing the thought and node
-          set((state) => ({
-            thoughts: state.thoughts.filter(t => t.id !== thoughtId),
-            thoughtNodes: state.thoughtNodes.filter(n => n.id !== thoughtId),
-            removingThoughtIds: state.removingThoughtIds.filter(id => id !== thoughtId)
-          }));
-        } catch (error) {
-          console.error(`Error removing thought ${thoughtId}:`, error);
-          // Remove from removing list even if API call fails
-          set((state) => ({
-            removingThoughtIds: state.removingThoughtIds.filter(id => id !== thoughtId)
-          }));
-        }
-      }, 1000); // 1000ms to match the exit animation duration
+      // Wait a moment for the animation
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Remove the thought and its node
+      set((state) => ({
+        thoughts: state.thoughts.filter(t => t.id !== thoughtId),
+        thoughtNodes: state.thoughtNodes.filter(n => n.id !== thoughtId),
+        removingThoughtIds: state.removingThoughtIds.filter(id => id !== thoughtId)
+      }));
     } catch (error) {
-      console.error('Error initiating thought removal:', error);
+      console.error(`Error removing thought ${thoughtId}:`, error);
+      // Remove from removing list in case of error
+      set((state) => ({
+        removingThoughtIds: state.removingThoughtIds.filter(id => id !== thoughtId)
+      }));
     }
   },
+
+  clearThoughts: () => {
+    // Clear all thoughts in a single operation
+    set({
+      thoughts: [],
+      thoughtNodes: [],
+      removingThoughtIds: []
+    });
+  },
   
-  fetchAllThoughts: async () => {
+  // Handle a click on a thought node
+  handleThoughtClick: async (thoughtId: string) => {
     try {
       set({ isLoading: true });
       
-      // Call the backend API to get all thoughts
-      const thoughts = await thoughtApi.getAllThoughts();
-      
-      // Create thought nodes for all thoughts
-      const thoughtNodes = thoughts.map(thought => createThoughtNode(thought));
-      
-      // Update state with fetched thoughts
-      set({
-        thoughts,
-        thoughtNodes,
-        isLoading: false
-      });
-    } catch (error) {
-      console.error('Error fetching thoughts:', error);
-      set({ isLoading: false });
-    }
-  },
-  
-  // Simplified handler for thought bubble clicks
-  handleThoughtClick: async (thoughtId: string) => {
-    try {
+      // Get the thought from the store
       const thought = get().thoughts.find(t => t.id === thoughtId);
-      
       if (!thought) {
-        console.error(`Thought ${thoughtId} not found`);
+        console.error(`Thought with ID ${thoughtId} not found in store`);
+        set({ isLoading: false });
         return;
       }
       
-      // Use the "like" operation with amount 0.2
-      const result = await thoughtApi.operateOnThought({
-        operation: "like",
-        thoughts: [thought],
-        options: {
-          amount: get().likeAmount
-        }
-      });
+      // Create a copy of the thought with increased weight
+      const updatedThought = { ...thought };
+      updatedThought.score.weight = Math.min(1.0, thought.score.weight + get().likeAmount);
       
-      // Get the updated thought from the result
-      const updatedThought = Array.isArray(result) ? result[0] : result;
+      // Get memory for the API call
+      const memoryStoreModule = await import('./memoryStore');
+      const { useMemoryStore } = memoryStoreModule;
+      const { memory } = useMemoryStore.getState();
       
-      // Update in local state using the shared state update function
-      // No delay needed anymore as we handle transitions in the component
-      get().updateThoughtNodeState(thoughtId, updatedThought);
+      // Update the thought using the API
+      const apiRequest = {
+        thought: updatedThought,
+        weight: updatedThought.score.weight
+      };
       
-      console.log(`Liked thought ${thoughtId}, new weight: ${updatedThought.score.weight}`);
+      const result = await thoughtApi.updateThought(thoughtId, apiRequest);
+      
+      // Update the local state
+      get().updateThoughtNodeState(thoughtId, result);
+      
+      set({ isLoading: false });
     } catch (error) {
-      console.error(`Error handling click for thought ${thoughtId}:`, error);
+      console.error(`Error handling thought click for ${thoughtId}:`, error);
+      set({ isLoading: false });
     }
   }
 })); 

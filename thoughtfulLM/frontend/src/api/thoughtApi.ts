@@ -19,6 +19,8 @@ const BASE_URL = 'http://localhost:8000/api/v1';
 export interface GenerateThoughtRequest {
   event_text: string;
   event_type: EventType;
+  thoughts?: Thought[];
+  memory?: Memory;
 }
 
 export interface OperateOnThoughtRequest {
@@ -39,12 +41,13 @@ export interface ArticulateThoughtsResponse {
   response: string;
 }
 
-export interface AddMemoryRequest {
+export interface CreateMemoryRequest {
   type: 'LONG_TERM' | 'SHORT_TERM';
   text: string;
 }
 
 export interface UpdateThoughtRequest {
+  thought: Thought;
   weight?: number;
   saliency?: number;
   persistent?: boolean;
@@ -86,10 +89,23 @@ class ThoughtApi {
   // Update a thought with multiple properties
   async updateThought(thoughtId: string, request: UpdateThoughtRequest): Promise<Thought> {
     try {
-      // Only include non-undefined fields in the request
-      const requestData = Object.fromEntries(
-        Object.entries(request).filter(([_, value]) => value !== undefined)
-      );
+      // Filter out undefined fields but keep nested objects like 'thought'
+      const requestData: any = {};
+      
+      // Always include the thought object if present
+      if (request.thought) {
+        requestData.thought = request.thought;
+      }
+      
+      // Add the rest of the properties if defined
+      if (request.weight !== undefined) requestData.weight = request.weight;
+      if (request.saliency !== undefined) requestData.saliency = request.saliency;
+      if (request.persistent !== undefined) requestData.persistent = request.persistent;
+      if (request.interactivity !== undefined) requestData.interactivity = request.interactivity;
+      if (request.content_text !== undefined) requestData.content_text = request.content_text;
+      if (request.add_user_comment !== undefined) requestData.add_user_comment = request.add_user_comment;
+      
+      console.log(`Sending update request for thought ${thoughtId}`, requestData);
       
       const response: AxiosResponse<Thought> = await axios.put(
         `${BASE_URL}/thoughts/${thoughtId}`,
@@ -116,44 +132,8 @@ class ThoughtApi {
     }
   }
 
-  // Get all thoughts
-  async getAllThoughts(): Promise<Thought[]> {
-    try {
-      const response: AxiosResponse<Thought[]> = await axios.get(
-        `${BASE_URL}/thoughts/`
-      );
-      return response.data;
-    } catch (error) {
-      console.error('Error getting all thoughts:', error);
-      throw this.handleError(error);
-    }
-  }
-
-  // Get a thought by ID
-  async getThought(thoughtId: string): Promise<Thought> {
-    try {
-      const response: AxiosResponse<Thought> = await axios.get(
-        `${BASE_URL}/thoughts/${thoughtId}`
-      );
-      return response.data;
-    } catch (error) {
-      console.error(`Error getting thought with ID ${thoughtId}:`, error);
-      throw this.handleError(error);
-    }
-  }
-
-  // Delete a thought by ID
-  async deleteThought(thoughtId: string): Promise<void> {
-    try {
-      await axios.delete(`${BASE_URL}/thoughts/${thoughtId}`);
-    } catch (error) {
-      console.error(`Error deleting thought with ID ${thoughtId}:`, error);
-      throw this.handleError(error);
-    }
-  }
-
-  // Add a memory
-  async addMemory(request: AddMemoryRequest): Promise<MemoryItem> {
+  // Create a memory item
+  async createMemory(request: CreateMemoryRequest): Promise<MemoryItem> {
     try {
       const response: AxiosResponse<MemoryItem> = await axios.post(
         `${BASE_URL}/memories/`,
@@ -161,72 +141,23 @@ class ThoughtApi {
       );
       return response.data;
     } catch (error) {
-      console.error('Error adding memory:', error);
+      console.error('Error creating memory:', error);
       throw this.handleError(error);
     }
   }
-
-  // Get memories by type
-  async getMemoriesByType(type?: 'LONG_TERM' | 'SHORT_TERM'): Promise<Memory | MemoryItem[]> {
-    try {
-      let url = `${BASE_URL}/memories/`;
-      if (type) {
-        url += `?memory_type=${type}`;
-      }
-      
-      const response: AxiosResponse<Memory | MemoryItem[]> = await axios.get(url);
-      return response.data;
-    } catch (error) {
-      console.error(`Error getting memories by type ${type || 'all'}:`, error);
-      throw this.handleError(error);
-    }
-  }
-
-  // Clear all memories
-  async clearMemories(): Promise<void> {
-    try {
-      await axios.delete(`${BASE_URL}/memories/`);
-    } catch (error) {
-      console.error('Error clearing memories:', error);
-      throw this.handleError(error);
-    }
-  }
-
-  // Clear all thoughts
-  async clearThoughts(): Promise<void> {
-    try {
-      await axios.delete(`${BASE_URL}/thoughts/`);
-    } catch (error) {
-      console.error('Error clearing thoughts:', error);
-      throw this.handleError(error);
-    }
-  }
-
-  // Clear all data (thoughts and memories)
-  async clearAllData(): Promise<void> {
-    try {
-      await Promise.all([
-        this.clearThoughts(),
-        this.clearMemories()
-      ]);
-    } catch (error) {
-      console.error('Error clearing all data:', error);
-      throw this.handleError(error);
-    }
-  }
-
-  // Helper method to handle errors
+  
+  // Error handling 
   private handleError(error: any): Error {
-    if (axios.isAxiosError(error)) {
-      // Return a more helpful error message when possible
-      const errorMessage = error.response?.data?.detail || error.message;
-      return new Error(`API Error: ${errorMessage}`);
+    if (axios.isAxiosError(error) && error.response) {
+      // Return the error message from the backend if available
+      const errorMessage = error.response.data.detail || 'An error occurred';
+      return new Error(errorMessage);
     }
-    return error instanceof Error ? error : new Error('Unknown error occurred');
+    return new Error('An unexpected error occurred');
   }
 }
 
-// Create and export a singleton instance
+// Export a singleton instance
 export const thoughtApi = new ThoughtApi();
 
 export default thoughtApi; 
