@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NodeProps, Handle, Position } from 'reactflow';
 import { Box, Text, keyframes } from '@chakra-ui/react';
+import { Thought } from '../types/thought';
 
 type ThoughtBubbleNodeProps = NodeProps<{
   content: string;
+  thought: Thought; // Include the full thought object to access weight and saliency
   blobVariant?: number;
   isRemoving?: boolean;
 }>;
@@ -36,28 +38,22 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
   const endVariantIndex = (startVariantIndex + 4) % blobVariants.length; // Skip more for even more contrast
   const colorIndex = data.blobVariant !== undefined ? data.blobVariant % colors.length : 0;
   
+  // Calculate importance score from weight and saliency
+  const importanceScore = data.thought.score.weight + data.thought.score.saliency;
+  
+  // Calculate size scale based on importance score (0.5 to 1.5)
+  const sizeScale = 0.7 + (importanceScore * 0.5);
+  
+  // Calculate opacity based on importance score (0.3 to 0.9)
+  const opacity = 0.3 + (importanceScore * 0.3);
+
   // Create a dynamic keyframe animation for this specific bubble with multiple stages
   const morphAnimation = keyframes`
-    0% { 
-      border-radius: ${blobVariants[startVariantIndex]};
-      transform: scale(1);
-    }
-    25% { 
-      border-radius: ${blobVariants[midVariantIndex]};
-      transform: scale(1.05);
-    }
-    50% { 
-      border-radius: ${blobVariants[endVariantIndex]};
-      transform: scale(1);
-    }
-    75% { 
-      border-radius: ${blobVariants[midVariantIndex]};
-      transform: scale(0.95);
-    }
-    100% { 
-      border-radius: ${blobVariants[startVariantIndex]};
-      transform: scale(1);
-    }
+    0% { border-radius: ${blobVariants[startVariantIndex]}; }
+    25% { border-radius: ${blobVariants[midVariantIndex]}; }
+    50% { border-radius: ${blobVariants[endVariantIndex]}; }
+    75% { border-radius: ${blobVariants[midVariantIndex]}; }
+    100% { border-radius: ${blobVariants[startVariantIndex]}; }
   `;
 
   // Entrance animation - fade in, scale up, and morph from circle
@@ -65,28 +61,27 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
     0% {
       opacity: 0;
       border-radius: 35%;
-      transform: scale(0.95);
+      transform: scale(${sizeScale * 0.95});
     }
     60% {
-      opacity: 0.5;
-      transform: scale(1);
+      opacity: ${opacity / 2};
+      transform: scale(${sizeScale});
     }
     100% {
-      opacity: 0.7;
+      opacity: ${opacity};
       border-radius: ${blobVariants[startVariantIndex]};
-      
     }
   `;
 
   // Exit animation - fade out and shrink
   const exitAnimation = keyframes`
     0% {
-      opacity: 0.7;
-      transform: scale(1);
+      opacity: ${opacity};
+      transform: scale(${sizeScale});
     }
     100% {
       opacity: 0;
-      transform: scale(0.8);
+      transform: scale(${sizeScale * 0.8});
     }
   `;
 
@@ -138,13 +133,11 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
         justifyContent="center"
         border="none"
         cursor="grab"
-        // Enhanced physics effect for dragging with more pronounced spring and delay
+        className="thought-bubble"
+        // Simplified styling - separate scale from animation
         style={{
-            opacity: isExiting ? 0 : 0.7,
-          transition: isDragging 
-            ? 'none' 
-            : 'transform 0.8s cubic-bezier(0.19, 1.69, 0.42, 0.9) 0.1s',
-          willChange: 'transform',
+          opacity: isExiting ? 0 : opacity,
+          transform: `scale(${sizeScale})`,
         }}
         animation={
           isExiting
@@ -158,6 +151,17 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
         }}
         _hover={{
           boxShadow: `0 0 17px 10px ${colors[colorIndex]}40`,
+        }}
+        onClick={(e) => {
+          // Prevent bubbling to parent elements
+          e.stopPropagation();
+          
+          // Dispatch custom event with thought ID for handling in parent components
+          const event = new CustomEvent('thought-click', { 
+            bubbles: true, 
+            detail: { thoughtId: data.thought.id } 
+          });
+          e.currentTarget.dispatchEvent(event);
         }}
       >
         <Text

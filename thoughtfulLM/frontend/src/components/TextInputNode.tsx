@@ -55,7 +55,7 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
         ref={textareaRef}
         value={text}
         onChange={handleChange}
-        placeholder="Ask anything"
+        placeholder="Say anything"
         minHeight="200px"
         resize="none"
         border="none"

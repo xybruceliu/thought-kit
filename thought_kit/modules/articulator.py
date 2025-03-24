@@ -41,8 +41,8 @@ class ThoughtArticulator:
         if not thoughts:
             return ""
             
-        # Sort thoughts by saliency to prioritize important ones
-        sorted_thoughts = sorted(thoughts, key=lambda t: t.score.saliency, reverse=True)
+        # Sort thoughts by saliency + weight
+        sorted_thoughts = sorted(thoughts, key=lambda t: t.score.saliency + t.score.weight, reverse=True)
         
         # Build context for articulation
         context_sections = []
@@ -50,13 +50,13 @@ class ThoughtArticulator:
         # Thoughts context section
         thought_lines = ["## Selected Thoughts (ordered by importance)"]
         for i, thought in enumerate(sorted_thoughts, 1):
-            saliency = thought.score.saliency
+            importance_score = thought.score.saliency + thought.score.weight
             user_comments = thought.user_comments
             if user_comments:
                 user_comments_str = ", ".join(user_comments)
-                thought_lines.append(f"{i}. [Saliency: {saliency:.2f}] \"{thought.content.text}\" (User comments: {user_comments_str})")
+                thought_lines.append(f"{i}. [Importance: {importance_score:.2f}] \"{thought.content.text}\" (User comments: {user_comments_str})")
             else:
-                thought_lines.append(f"{i}. [Saliency: {saliency:.2f}] \"{thought.content.text}\"")
+                thought_lines.append(f"{i}. [Importance: {importance_score:.2f}] \"{thought.content.text}\"")
         thought_lines.append("")
         context_sections.append("\n".join(thought_lines))
         
@@ -99,7 +99,7 @@ Just create a direct, natural response using the provided thoughts as your found
 <Task>
 Compose a natural, coherent response using the provided thoughts as your foundation. 
 Consider the following guidelines:
-1. Prioritize thoughts with higher saliency values when crafting your response
+1. Prioritize thoughts with higher importance score when crafting your response
 2. If user comments are provided, consider them when crafting your response
 3. Maintain the key insights and perspectives from the thoughts
 4. Create a cohesive flow rather than listing thoughts in sequence

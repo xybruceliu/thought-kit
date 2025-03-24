@@ -44,10 +44,19 @@ export interface AddMemoryRequest {
   text: string;
 }
 
+export interface UpdateThoughtRequest {
+  weight?: number;
+  saliency?: number;
+  persistent?: boolean;
+  interactivity?: 'VIEW' | 'COMMENT' | 'EDIT';
+  content_text?: string;
+  add_user_comment?: string;
+}
+
 // API client class
 class ThoughtApi {
   // Generate a thought using the ThoughtKit API
-  async generateThought(request: GenerateThoughtRequest): Promise<Thought> {
+  async generateThought(request: GenerateThoughtRequest): Promise<Thought | null> {
     try {
       const response: AxiosResponse<Thought> = await axios.post(
         `${BASE_URL}/thoughts/generate`,
@@ -70,6 +79,25 @@ class ThoughtApi {
       return response.data;
     } catch (error) {
       console.error('Error operating on thought:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  // Update a thought with multiple properties
+  async updateThought(thoughtId: string, request: UpdateThoughtRequest): Promise<Thought> {
+    try {
+      // Only include non-undefined fields in the request
+      const requestData = Object.fromEntries(
+        Object.entries(request).filter(([_, value]) => value !== undefined)
+      );
+      
+      const response: AxiosResponse<Thought> = await axios.put(
+        `${BASE_URL}/thoughts/${thoughtId}`,
+        requestData
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error updating thought ${thoughtId}:`, error);
       throw this.handleError(error);
     }
   }

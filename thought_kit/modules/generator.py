@@ -162,8 +162,8 @@ class ThoughtGenerator:
         
         # Previous thoughts context section
         if previous_thoughts and previous_thoughts:
-            # Sort previous thoughts by saliency score and take top 3
-            sorted_thoughts = sorted(previous_thoughts, key=lambda t: t.score.saliency, reverse=True)
+            # Sort previous thoughts by saliency + weight
+            sorted_thoughts = sorted(previous_thoughts, key=lambda t: t.score.saliency + t.score.weight, reverse=True)
             top_thoughts = sorted_thoughts[:min(3, len(sorted_thoughts))]
             
             if top_thoughts:
@@ -215,6 +215,8 @@ Rate the saliency of the following thought on a scale from 0 to 10 (where 0 is t
 Saliency is defined as the thought's potential to either:
 - Enhance shared understanding (aligning with common ground theory), or
 - Introduce useful new directions (e.g., creative ideas, problem-solving insights).
+When rating, use the FULL range of the rating scale from 1-10, DO NOT default to a small range of ratings (like 7-8, 5-6, etc.)
+Be decisive and critical - some thoughts deserve very low ratings (1-2) and others deserve very high ratings (8-10).
 
 <Response Format>
 Respond with a JSON object containing:

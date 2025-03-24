@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, status
-from app.models.thought_models import GenerationRequest, OperationRequest, ArticulationRequest
+from fastapi import APIRouter, HTTPException, status, Body
+from app.models.thought_models import GenerationRequest, OperationRequest, ArticulationRequest, ThoughtUpdateRequest
 from app.stores.thought_store import thought_store
 from app.stores.memory_store import memory_store
+from app.utils.similarity import cosine_similarity
 from thought_kit import thoughtkit
 import random
 import re
@@ -9,6 +10,8 @@ from thought_kit.schemas.memory_schema import MemoryItem
 from thought_kit.schemas.common_schema import Content, Timestamps
 import uuid
 from datetime import datetime
+
+
 
 router = APIRouter(
     prefix="/thoughts",
@@ -56,10 +59,10 @@ async def generate_thought(request: GenerationRequest):
             "config": {
                 "modality": "TEXT",
                 "depth": 3,
-                "length": 5,
+                "length": 3,
                 "interactivity": "EDIT",
                 "persistent": False,
-                "weight": 0.5 # weight are initialized to 0.5, this is a parameter that can be changed by the user.
+                "weight": 0 # weight are initialized to 0, this is a parameter that can be changed by the user.
             },
             "memory": memory_store.get_all_memory(),
             "thoughts": thought_store.get_all_thoughts()
@@ -79,7 +82,6 @@ async def generate_thought(request: GenerationRequest):
             "memory": short_term_memory_text,
             "thoughts": f"[{len(input_data['thoughts'])} thoughts]"
         }
-
         print("--------------------------------")
         print("🤔 New Thought Generation Request:")
         print(log_input_data)
@@ -88,7 +90,56 @@ async def generate_thought(request: GenerationRequest):
         # Use the single parameter format
         result = await thoughtkit.generate(input_data, return_json_str=False, return_model=True)
 
-        # Add the thought to the thought store
+        # Update short term memory (conversation history) to full_text
+        # This is not optimal, but for this research prototype we are just using the first memory item
+        # And the first memory item is the conversation history, so we are just updating that.
+        if memory_store.memory.short_term:
+            memory_store.update_memory_item_by_index(0, "SHORT_TERM", full_text)
+        else:
+            # Create a proper MemoryItem object
+            memory_item = MemoryItem(
+                id=f"memory_item_{uuid.uuid4().hex[:8]}",
+                timestamps=Timestamps(
+                    created=datetime.now().isoformat(),
+                    updated=datetime.now().isoformat()
+                ),
+                type="SHORT_TERM",
+                content=Content(
+                    text=full_text,
+                    embedding=None  # For this research prototype we are not leveraging the memory embeddings
+                )
+            )
+            memory_store.add_memory_item(memory_item)
+
+        # If saliency is less than 0.6 return None
+        if result.score.saliency < 0.6:
+            print("❌ No thought generated, saliency is less than 0.6")
+            return None
+
+        # if the thought is similar to one of the existing thoughts (cosine similarity of the embeddings)
+        # Do not add it. Instead, increase the saliency of that existing thought and return the updated thought
+        similar_thought_found = False
+        updated_thought = None
+        
+        for thought in thought_store.get_all_thoughts():
+            if result.content.embedding:
+                if cosine_similarity(result.content.embedding, thought.content.embedding) > 0.8:
+                    # Increase saliency by 0.2, but cap at 1.0
+                    thought.score.saliency = min(1.0, thought.score.saliency + 0.2)
+                    similar_thought_found = True
+                    updated_thought = thought
+                    break  # Exit loop once we find a similar thought
+
+        if similar_thought_found and updated_thought:
+            # Return the updated thought directly
+            print("--------------------------------")
+            print("🫵 Similar Thought Found - Returning Updated Thought:")
+            print(f"ID: {updated_thought.id}, Saliency: {updated_thought.score.saliency}")
+            print("--------------------------------")
+            return updated_thought
+
+
+        # Otherwise add the thought to the thought store
         thought_store.add_thought(result)
 
         log_output_data = {
@@ -118,27 +169,6 @@ async def generate_thought(request: GenerationRequest):
         print("💭 New Thought Generation Response:")
         print(log_output_data)
         print("--------------------------------")
-
-        # Update short term memory (conversation history) to full_text\
-        # This is not optimal, but for this research prototype we are just using the first memory item
-        # And the first memory item is the conversation history, so we are just updating that.
-        if memory_store.memory.short_term:
-            memory_store.update_memory_item_by_index(0, "SHORT_TERM", full_text)
-        else:
-            # Create a proper MemoryItem object
-            memory_item = MemoryItem(
-                id=f"memory_item_{uuid.uuid4().hex[:8]}",
-                timestamps=Timestamps(
-                    created=datetime.now().isoformat(),
-                    updated=datetime.now().isoformat()
-                ),
-                type="SHORT_TERM",
-                content=Content(
-                    text=full_text,
-                    embedding=None  # For this research prototype we are not leveraging the memory embeddings
-                )
-            )
-            memory_store.add_memory_item(memory_item)
 
         return result
     
@@ -297,4 +327,61 @@ async def clear_all_thoughts():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail=f"Failed to clear thoughts: {str(e)}"
+        )
+
+@router.put("/{thought_id}", status_code=status.HTTP_200_OK)
+async def update_thought(thought_id: str, update_request: ThoughtUpdateRequest):
+    """
+    Update a thought with new properties.
+    
+    Args:
+        thought_id: The ID of the thought to update
+        update_request: The request containing the properties to update
+    
+    Returns:
+        The updated thought
+    """
+    try:
+        thought = thought_store.get_thought(thought_id)
+        if not thought:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Thought with ID {thought_id} not found"
+            )
+        
+        # Update score properties if provided
+        if update_request.weight is not None:
+            # Ensure weight is between 0 and 1
+            thought.score.weight = max(0.0, min(1.0, update_request.weight))
+        
+        if update_request.saliency is not None:
+            # Ensure saliency is between 0 and 1
+            thought.score.saliency = max(0.0, min(1.0, update_request.saliency))
+        
+        # Update config properties if provided
+        if update_request.persistent is not None:
+            thought.config.persistent = update_request.persistent
+        
+        if update_request.interactivity is not None:
+            thought.config.interactivity = update_request.interactivity
+        
+        # Update content text if provided
+        if update_request.content_text is not None:
+            thought.content.text = update_request.content_text
+        
+        # Add user comment if provided
+        if update_request.add_user_comment:
+            thought.user_comments.append(update_request.add_user_comment)
+        
+        # Update timestamp
+        thought.timestamps.updated = datetime.now().isoformat()
+        
+        # Update the thought in the store
+        thought_store.update_thought(thought_id, thought)
+        
+        return thought
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail=f"Failed to update thought: {str(e)}"
         ) 

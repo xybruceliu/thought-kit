@@ -24,8 +24,8 @@ def like(thoughts: List[Thought], memory: Optional[Memory] = None, amount: float
             continue
 
         # Calculate new weight, ensuring it doesn't exceed 1.0
-        new_weight = min(thought.config.weight + amount, 1.0)
-        thought.config.weight = round(new_weight, 2)
+        new_weight = min(thought.score.weight + amount, 1.0)
+        thought.score.weight = round(new_weight, 2)
         
     return thoughts
 
@@ -50,8 +50,8 @@ def dislike(thoughts: List[Thought], memory: Optional[Memory] = None, amount: fl
             continue
 
         # Calculate new weight, ensuring it doesn't fall below 0.0
-        new_weight = max(thought.config.weight - amount, 0.0)
-        thought.config.weight = round(new_weight, 2)
+        new_weight = max(thought.score.weight - amount, 0.0)
+        thought.score.weight = round(new_weight, 2)
 
     return thoughts 
 

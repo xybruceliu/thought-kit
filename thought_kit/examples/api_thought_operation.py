@@ -37,7 +37,7 @@ async def main():
     thought = await thoughtkit.generate(thought_input, return_json_str=False)
     
     print(f"Original thought: {thought['content']['text']}")
-    print(f"Original weight: {thought['config']['weight']}")
+    print(f"Original weight: {thought['score']['weight']}")
     
     # Create input data for the operation
     operation_input = {
@@ -58,7 +58,7 @@ async def main():
     # Since result is a list (even for a single thought), get the first item
     updated_thought = result[0]
     print(f"Updated thought: {updated_thought['content']['text']}")
-    print(f"Updated weight: {updated_thought['config']['weight']}")
+    print(f"Updated weight: {updated_thought['score']['weight']}")
     
     # Demonstrate multiple operations
     # Let's like it again with the default amount (0.1)
@@ -71,7 +71,7 @@ async def main():
     result = thoughtkit.operate(operation_input, return_json_str=False)
     final_thought = result[0]
     
-    print(f"Final weight after second like: {final_thought['config']['weight']}")
+    print(f"Final weight after second like: {final_thought['score']['weight']}")
     
     # Demonstrate weight capping at 1.0
     # Let's try to increase it by a large amount
@@ -86,7 +86,7 @@ async def main():
     result = thoughtkit.operate(operation_input, return_json_str=False)
     capped_thought = result[0]
     
-    print(f"Weight after attempting large amount: {capped_thought['config']['weight']}")
+    print(f"Weight after attempting large amount: {capped_thought['score']['weight']}")
 
 if __name__ == "__main__":
     asyncio.run(main())

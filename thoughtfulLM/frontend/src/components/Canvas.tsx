@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -13,6 +13,7 @@ import ThoughtBubbleNode from './ThoughtBubbleNode';
 import { useThoughtNodes } from '../hooks';
 import { useTriggerDetection } from '../hooks';
 import { thoughtApi } from '../api/thoughtApi';
+import { useThoughtStore } from '../store/thoughtStore';
 
 // Define custom node types
 const nodeTypes: NodeTypes = {
@@ -25,9 +26,29 @@ const CanvasContent: React.FC = () => {
   // Use our custom hooks
   const { nodes, onNodesChange } = useThoughtNodes();
   const { onPaneClick } = useTriggerDetection();
+  const { handleThoughtClick } = useThoughtStore();
   
   // Initialize edges state
   const [edges] = useState<Edge[]>([]);
+
+  // Event handler for thought-click events
+  const handleThoughtClickEvent = useCallback((event: Event) => {
+    const customEvent = event as CustomEvent;
+    if (customEvent.detail && customEvent.detail.thoughtId) {
+      handleThoughtClick(customEvent.detail.thoughtId);
+    }
+  }, [handleThoughtClick]);
+
+  // Add event listener for thought-click events
+  useEffect(() => {
+    // Add the event listener to the document since the event will bubble up
+    document.addEventListener('thought-click', handleThoughtClickEvent);
+    
+    // Cleanup
+    return () => {
+      document.removeEventListener('thought-click', handleThoughtClickEvent);
+    };
+  }, [handleThoughtClickEvent]);
 
   // Clear all data when the component mounts (page loads/refreshes)
   useEffect(() => {

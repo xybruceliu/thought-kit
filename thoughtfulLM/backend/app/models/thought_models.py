@@ -93,3 +93,32 @@ class ArticulationRequest(BaseModel):
         }
     )
     
+class ThoughtUpdateRequest(BaseModel):
+    """Request model for updating thought properties"""
+    # Score properties
+    weight: Optional[float] = Field(None, description="New weight value (0-1)", ge=0.0, le=1.0)
+    saliency: Optional[float] = Field(None, description="New saliency value (0-1)", ge=0.0, le=1.0)
+    
+    # Config properties
+    persistent: Optional[bool] = Field(None, description="Whether the thought should be persistent")
+    interactivity: Optional[Literal["VIEW", "COMMENT", "EDIT"]] = Field(None, description="Interactivity level")
+    
+    # Content properties
+    content_text: Optional[str] = Field(None, description="Updated thought content text")
+    
+    # Allow a user comment to be added
+    add_user_comment: Optional[str] = Field(None, description="User comment to add to the thought")
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "weight": 0.7,
+                "saliency": 0.8,
+                "persistent": True,
+                "interactivity": "EDIT",
+                "content_text": "Updated thought content",
+                "add_user_comment": "This thought is important"
+            }
+        }
+    )
+    
