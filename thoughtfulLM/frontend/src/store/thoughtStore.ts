@@ -41,9 +41,11 @@ interface ThoughtStoreState {
   updateThought: (thoughtId: string, updatedThought: Thought) => void;
   removeThought: (thoughtId: string) => Promise<void>;
   clearThoughts: () => void;
+  
   handleThoughtClick: (thoughtId: string) => Promise<void>; 
   handleThoughtPin: (thoughtId: string) => Promise<void>;
   handleThoughtDelete: (thoughtId: string) => Promise<void>;
+  handleThoughtsSubmit: () => Promise<void>;
 }
 
 // Create a ThoughtNode from a Thought
@@ -280,6 +282,51 @@ Weight: ${thoughtData.score.weight}`)
       await get().removeThought(thoughtId);
     } catch (error) {
       console.error(`Error handling thought deletion for ${thoughtId}:`, error);
+    }
+  },
+  
+  // Handle submitting thoughts to be articulated by the backend
+  handleThoughtsSubmit: async () => {
+    try {
+      set({ isLoading: true });
+      
+      // Get current thoughts from the store
+      const { thoughts } = get();
+      
+      // Check if there are any thoughts to articulate
+      if (thoughts.length === 0) {
+        console.log('No thoughts to articulate');
+        set({ isLoading: false });
+        return;
+      }
+      
+      console.log('📝 Submitting thoughts for articulation');
+      
+      // Get memory from memoryStore for context
+      const memoryStoreModule = await import('./memoryStore');
+      const { useMemoryStore } = memoryStoreModule;
+      const { memory } = useMemoryStore.getState();
+      
+      // Call the backend API to articulate thoughts
+      const result = await thoughtApi.articulateThoughts({
+        thoughts: thoughts,
+        memory: memory
+      });
+      
+      // Handle the result
+      if (result) {
+        console.log('✅ Thoughts successfully articulated:', result);
+        
+        // Here we could update the UI or store with the articulated result
+        // This will be connected to the frontend later
+      } else {
+        console.error('❌ Failed to articulate thoughts');
+      }
+      
+      set({ isLoading: false });
+    } catch (error) {
+      console.error('Error articulating thoughts:', error);
+      set({ isLoading: false });
     }
   },
 

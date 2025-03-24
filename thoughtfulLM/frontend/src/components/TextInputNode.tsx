@@ -1,7 +1,8 @@
 import React, { useCallback, useRef, useEffect } from 'react';
 import { NodeProps, useReactFlow } from 'reactflow';
-import { Box, Textarea } from '@chakra-ui/react';
+import { Box, Textarea, Kbd } from '@chakra-ui/react';
 import { useTextInput } from '../hooks';
+import { useThoughtStore } from '../store/thoughtStore';
 
 type TextInputNodeProps = NodeProps<{
   value?: string;
@@ -12,6 +13,7 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
   const { text, handleTextChange } = useTextInput();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const reactFlowInstance = useReactFlow();
+  const handleThoughtsSubmit = useThoughtStore(state => state.handleThoughtsSubmit);
 
   const handleChange = useCallback(
     (event: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -28,6 +30,22 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
       }
     },
     [data, handleTextChange, id, reactFlowInstance]
+  );
+  
+  // Handle keyboard shortcuts
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      // Check for Command/Control + Enter
+      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+        event.preventDefault(); // Prevent default behavior (newline)
+        
+        console.log('Cmd/Ctrl + Enter pressed, submitting thoughts...');
+        
+        // Call the handleThoughtsSubmit function from the thought store
+        handleThoughtsSubmit();
+      }
+    },
+    [handleThoughtsSubmit]
   );
 
   // Auto-resize functionality
@@ -55,6 +73,7 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
         ref={textareaRef}
         value={text}
         onChange={handleChange}
+        onKeyDown={handleKeyDown}
         placeholder="Say anything"
         minHeight="200px"
         resize="none"
@@ -70,6 +89,14 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
         p={5}
         overflowY="hidden"
       />
+      <Box position="absolute" bottom="-5" right="3">
+        <Box fontSize="2xs" color="gray.400" display="flex" alignItems="center">
+          <Kbd>{navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}</Kbd>
+          <Box as="span" mx="1">+</Box>
+          <Kbd>Enter</Kbd>
+          <Box as="span" ml="1">to submit</Box>
+        </Box>
+      </Box>
     </Box>
   );
 };
