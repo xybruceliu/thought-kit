@@ -1,5 +1,5 @@
 """
-Operation for reacting to a thought by adding a comment and increasing its weight.
+Operation for reacting to a thought by adding a emoji and increasing its weight.
 """
 
 from thought_kit.schemas import Thought, Memory
@@ -7,17 +7,17 @@ from typing import List, Optional
 
 def react(thoughts: List[Thought], memory: Optional[Memory] = None, reaction: str = "", amount: float = 0.1, **options) -> List[Thought]:
     """
-    React to thoughts by adding a comment and increasing their weight.
+    React to thoughts by adding an emoji and increasing their weight.
     
     Args:
         thoughts: List of thoughts to operate on
         memory: Optional memory context (not used in this operation)
-        reaction: User's reaction text, emoji, or other content to add as a comment
+        reaction: User's reaction text, emoji, or other content to add as a emoji
         amount: Amount to increase the weight by (default: 0.1)
         **options: Additional options (not used)
         
     Returns:
-        The updated list of thoughts with added comments and increased weights
+        The updated list of thoughts with added emoji and increased weights
     """
     if not reaction:
         # If no reaction provided, just return the thoughts unchanged

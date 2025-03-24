@@ -46,16 +46,6 @@ export interface CreateMemoryRequest {
   text: string;
 }
 
-export interface UpdateThoughtRequest {
-  thought: Thought;
-  weight?: number;
-  saliency?: number;
-  persistent?: boolean;
-  interactivity?: 'VIEW' | 'COMMENT' | 'EDIT';
-  content_text?: string;
-  add_user_comment?: string;
-}
-
 // API client class
 class ThoughtApi {
   // Generate a thought using the ThoughtKit API
@@ -82,38 +72,6 @@ class ThoughtApi {
       return response.data;
     } catch (error) {
       console.error('Error operating on thought:', error);
-      throw this.handleError(error);
-    }
-  }
-
-  // Update a thought with multiple properties
-  async updateThought(thoughtId: string, request: UpdateThoughtRequest): Promise<Thought> {
-    try {
-      // Filter out undefined fields but keep nested objects like 'thought'
-      const requestData: any = {};
-      
-      // Always include the thought object if present
-      if (request.thought) {
-        requestData.thought = request.thought;
-      }
-      
-      // Add the rest of the properties if defined
-      if (request.weight !== undefined) requestData.weight = request.weight;
-      if (request.saliency !== undefined) requestData.saliency = request.saliency;
-      if (request.persistent !== undefined) requestData.persistent = request.persistent;
-      if (request.interactivity !== undefined) requestData.interactivity = request.interactivity;
-      if (request.content_text !== undefined) requestData.content_text = request.content_text;
-      if (request.add_user_comment !== undefined) requestData.add_user_comment = request.add_user_comment;
-      
-      console.log(`Sending update request for thought ${thoughtId}`, requestData);
-      
-      const response: AxiosResponse<Thought> = await axios.put(
-        `${BASE_URL}/thoughts/${thoughtId}`,
-        requestData
-      );
-      return response.data;
-    } catch (error) {
-      console.error(`Error updating thought ${thoughtId}:`, error);
       throw this.handleError(error);
     }
   }

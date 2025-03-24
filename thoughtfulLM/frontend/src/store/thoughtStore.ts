@@ -27,16 +27,18 @@ interface ThoughtStoreState {
   // Thoughts and nodes
   thoughts: Thought[];
   thoughtNodes: ThoughtNode[];
-  maxThoughtCount: number; // Maximum number of thoughts to display
   removingThoughtIds: string[]; // Track thoughts being removed for animation
   isLoading: boolean; // Track API loading state
+
+  // Settings
+  maxThoughtCount: number; // Maximum number of thoughts to display
   decay: number; // Time decay for saliency
   likeAmount: number; // Amount to like a thought
 
   // Actions
   generateThoughtAtPosition: (triggerType: EventType, position?: XYPosition) => Promise<Thought | null>;
   updateThoughtNodePosition: (nodeId: string, position: XYPosition) => void;
-  updateThoughtNodeState: (thoughtId: string, updatedThought: Thought) => void;
+  updateThought: (thoughtId: string, updatedThought: Thought) => void;
   removeThought: (thoughtId: string) => Promise<void>;
   clearThoughts: () => void;
   handleThoughtClick: (thoughtId: string) => Promise<void>; 
@@ -72,11 +74,10 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
   maxThoughtCount: 5, // Maximum number of thoughts to display
   decay: 0.1, // Time decay for saliency
   likeAmount: 0.2, // Amount to like a thought
-  
+
   generateThoughtAtPosition: async (triggerType: EventType, position?: XYPosition) => {
     try {
       set({ isLoading: true });
-      
 
       // GENERATE THOUGHT
       // Use the input store to get the current input
@@ -125,7 +126,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
         });
         
         // Also update the node
-        get().updateThoughtNodeState(thoughtData.id, thoughtData);
+        get().updateThought(thoughtData.id, thoughtData);
         
         return thoughtData;
       }
@@ -140,7 +141,8 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
         isLoading: false
       }));
 
-      // ADD TO MEMORY
+
+      // UPDATE MEMORY
       // In this research prototype, we just set the first item in short-term memory as the current input 
       const memoryItem = await thoughtApi.createMemory({
         type: 'SHORT_TERM',
@@ -149,7 +151,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       memory.short_term = [memoryItem];
         
 
-      // REMOVE THOUGHT
+      // CHECK IF WE NEED TO REMOVE A THOUGHT
       // Check if we need to remove a thought (non-persistent thoughts exceeded max count)
       const { thoughts, removeThought } = get();
       let nonPersistentThoughts = thoughts.filter(t => !t.config.persistent);
@@ -177,7 +179,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
           const thoughtCopy = { ...thought };
           thoughtCopy.score.saliency = Math.max(0, thought.score.saliency - get().decay);
           // Update the node state too
-          get().updateThoughtNodeState(thought.id, thoughtCopy);
+          get().updateThought(thought.id, thoughtCopy);
           return thoughtCopy;
         }
         return thought;
@@ -194,6 +196,43 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
     }
   },
   
+  // Handle a click on a thought node
+  handleThoughtClick: async (thoughtId: string) => {
+    try {
+      set({ isLoading: true });
+      
+      // Get the thought from the store
+      const thought = get().thoughts.find(t => t.id === thoughtId);
+      if (!thought) {
+        console.error(`Thought with ID ${thoughtId} not found in store`);
+        set({ isLoading: false });
+        return;
+      }
+      
+      // Use the API to operate on the thought
+      const result = await thoughtApi.operateOnThought({
+        operation: 'like',
+        thoughts: [thought],
+        options: {
+          amount: get().likeAmount
+        }
+      });
+      
+      // The result might be a single thought or an array of thoughts
+      const updatedThought = Array.isArray(result) ? result[0] : result;
+      
+      // Update the thought in our store
+      get().updateThought(thoughtId, updatedThought);
+      
+      set({ isLoading: false });
+    } catch (error) {
+      console.error(`Error handling thought click for ${thoughtId}:`, error);
+      set({ isLoading: false });
+    }
+  },
+
+
+  // HELPER FUNCTIONS
   // Update the position of a thought node
   updateThoughtNodePosition: (nodeId: string, position: XYPosition) => {
     set((state) => ({
@@ -204,7 +243,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
   },
   
   // Update the state of a thought node
-  updateThoughtNodeState: (thoughtId: string, updatedThought: Thought) => {
+  updateThought: (thoughtId: string, updatedThought: Thought) => {
     set((state) => {
       // First update the thought in the thoughts array
       const updatedThoughts = state.thoughts.map((thought) =>
@@ -260,51 +299,12 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
   },
 
   clearThoughts: () => {
-    // Clear all thoughts in a single operation
+    // Clear all thoughts
     set({
       thoughts: [],
       thoughtNodes: [],
       removingThoughtIds: []
     });
-  },
-  
-  // Handle a click on a thought node
-  handleThoughtClick: async (thoughtId: string) => {
-    try {
-      set({ isLoading: true });
-      
-      // Get the thought from the store
-      const thought = get().thoughts.find(t => t.id === thoughtId);
-      if (!thought) {
-        console.error(`Thought with ID ${thoughtId} not found in store`);
-        set({ isLoading: false });
-        return;
-      }
-      
-      // Create a copy of the thought with increased weight
-      const updatedThought = { ...thought };
-      updatedThought.score.weight = Math.min(1.0, thought.score.weight + get().likeAmount);
-      
-      // Get memory for the API call
-      const memoryStoreModule = await import('./memoryStore');
-      const { useMemoryStore } = memoryStoreModule;
-      const { memory } = useMemoryStore.getState();
-      
-      // Update the thought using the API
-      const apiRequest = {
-        thought: updatedThought,
-        weight: updatedThought.score.weight
-      };
-      
-      const result = await thoughtApi.updateThought(thoughtId, apiRequest);
-      
-      // Update the local state
-      get().updateThoughtNodeState(thoughtId, result);
-      
-      set({ isLoading: false });
-    } catch (error) {
-      console.error(`Error handling thought click for ${thoughtId}:`, error);
-      set({ isLoading: false });
-    }
   }
+
 })); 
