@@ -362,7 +362,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       get().markThoughtAsRemoving(thoughtId);
       
       // Wait a moment for the animation
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 1100));
       
       // Remove the thought and unmark it
       set((state) => ({

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { Node, NodeChange, applyNodeChanges, XYPosition } from 'reactflow';
+import { Node, NodeChange, applyNodeChanges, XYPosition, Position } from 'reactflow';
 import { useThoughtStore } from '../store/thoughtStore';
 import { Thought } from '../types/thought';
 import { getRandomInt } from '../utils';
@@ -21,7 +21,6 @@ export interface ThoughtNode extends Node {
 
 /**
  * Custom hook that manages ReactFlow nodes for thoughts
- * Handles synchronization between thought store and ReactFlow
  */
 export const useThoughtNodes = () => {
   const { 
@@ -30,114 +29,111 @@ export const useThoughtNodes = () => {
     generateThought
   } = useThoughtStore();
   
-  // Track ReactFlow nodes in local state
+  // Single source of truth - just the nodes
   const [nodes, setNodes] = useState<ThoughtNode[]>([]);
   
-  // Track node positions locally
-  const [nodePositions, setNodePositions] = useState<Record<string, XYPosition>>({});
+  // Create a node from a thought
+  const thoughtToNode = useCallback((
+    thought: Thought, 
+    position?: XYPosition, 
+    existingNode?: ThoughtNode
+  ): ThoughtNode => {
+    
+    return {
+      id: thought.id,
+      type: 'thoughtBubble',
+      position: position || { x: 0, y: 0 },
+      data: {
+        content: thought.content.text,
+        thoughtId: thought.id,
+        blobVariant: existingNode?.data.blobVariant || thought.id.length % 5,
+        isRemoving: removingThoughtIds.includes(thought.id)
+      },
+      // Preserve any other ReactFlow properties
+      ...(existingNode && { 
+        selected: existingNode.selected,
+        dragging: existingNode.dragging,
+        // Include other ReactFlow properties as needed
+      })
+    };
+  }, [removingThoughtIds]);
   
-  // Generate a thought with the correct positioning
+  // Generate a thought and create a node for it
   const createThoughtNodeAtPosition = useCallback(async (
     triggerType: EventType, 
     position?: XYPosition,
     textInputNode?: Node
   ) => {
-    // Generate thought through the store (data only)
+    console.log(`DEBUG: createThoughtNodeAtPosition called with:
+      triggerType: ${triggerType}
+      position: ${position ? `(${position.x}, ${position.y})` : 'undefined'}
+      textInputNode: ${textInputNode ? `ID: ${textInputNode.id}, Position: (${textInputNode.position.x}, ${textInputNode.position.y})` : 'undefined'}`);
+    
+    // Generate thought through the store
     const thought = await generateThought(triggerType);
+    if (!thought) return null;
     
-    if (!thought) {
-      return null;
-    }
+    // Determine final position with a default
+    let finalPosition: XYPosition | undefined = position;
     
-    // Determine final position - use provided position, or calculate based on input node
-    let finalPosition: XYPosition;
-    
-    if (position) {
-      finalPosition = position;
-    } else if (textInputNode) {
-      // Calculate position based on the input node and existing nodes
+    // Calculate position if needed
+    if (!finalPosition && textInputNode) {
+      console.log(`DEBUG: Calculating position with textInputNode:
+        ID: ${textInputNode.id}
+        Position: (${textInputNode.position.x}, ${textInputNode.position.y})
+        Width: ${textInputNode.width || 'undefined'}
+        Height: ${textInputNode.height || 'undefined'}`);
+      
       finalPosition = calculateThoughtNodePosition(
         textInputNode,
         nodes,
         positioningStrategies.aboveInput
       );
+      
+      console.log(`DEBUG: Position calculation result: ${finalPosition ? `(${finalPosition.x}, ${finalPosition.y})` : 'undefined'}`);
     } else {
-      // Fallback to random position
-      finalPosition = {
-        x: getRandomInt(100, 700),
-        y: getRandomInt(100, 500)
-      };
+      console.log(`DEBUG: Skipping position calculation. Reason: ${finalPosition ? 'Position already provided' : 'textInputNode is undefined'}`);
     }
     
-    // Store the position for this thought node
-    setNodePositions(prev => ({
-      ...prev,
-      [thought.id]: finalPosition
-    }));
-    
-    console.log(`💭 New thought node created: ${thought.id}: ${thought.content.text}
-Trigger: ${thought.trigger_event.type}
-Saliency: ${thought.score.saliency}
-Weight: ${thought.score.weight}
-Position: (${finalPosition.x.toFixed(2)}, ${finalPosition.y.toFixed(2)})`);
-    
+    // Create the node and add it to our state
+    const newNode = thoughtToNode(thought, finalPosition);
+      setNodes(currentNodes => [...currentNodes, newNode]);
+
+    console.log(`DEBUG THOUGHT Position: ${finalPosition?.x}, ${finalPosition?.y}`);
+    console.log(`DEBUG NEW NODE Position: ${newNode.position.x}, ${newNode.position.y}`);
+
+    console.log(`💭 New thought node created: ${thought.id} at (${newNode.position.x.toFixed(2)}, ${newNode.position.y.toFixed(2)})`);
     return thought;
-  }, [generateThought, nodes]);
+  }, [generateThought, nodes, thoughtToNode]);
   
-  // Update the position of a thought node
-  const updateThoughtNodePosition = useCallback((nodeId: string, position: XYPosition) => {
-    // Update our local positions state
-    setNodePositions(prev => ({
-      ...prev,
-      [nodeId]: position
-    }));
+  // Update nodes when the thoughts change
+  useEffect(() => {
+    setNodes(currentNodes => {
+      // Map existing nodes by ID
+      const existingNodesMap = new Map(
+        currentNodes.map(node => [node.id, node])
+      );
+      
+      // Map thoughts to nodes, preserving existing node properties when possible
+      return thoughts.map(thought => 
+        thoughtToNode(thought, undefined, existingNodesMap.get(thought.id))
+      );
+      });
+  }, [thoughts, thoughtToNode]);
+  
+  // Handle ReactFlow node changes
+  const onNodesChange = useCallback((changes: NodeChange[]) => {
+    setNodes(nds => applyNodeChanges(changes, nds) as ThoughtNode[]);
   }, []);
   
-  // Handle node changes including position updates
-  const onNodesChange = useCallback(
-    (changes: NodeChange[]) => {
-      // Apply changes to local ReactFlow state
-      setNodes((nds) => {
-        // Explicitly use the correct return type
-        const updatedNodes = applyNodeChanges(changes, nds) as ThoughtNode[];
-        return updatedNodes;
-      });
-      
-      // Update positions for position changes
-      changes.forEach(change => {
-        if (change.type === 'position' && change.position) {
-          updateThoughtNodePosition(change.id, change.position);
-        }
-      });
-    },
-    [updateThoughtNodePosition]
-  );
-
-  // Create nodes from thoughts and stored positions
-  useEffect(() => {
-    const newNodes: ThoughtNode[] = thoughts.map(thought => {
-      // Get stored position or generate a random one
-      const position = nodePositions[thought.id] || { 
-        x: getRandomInt(100, 700), 
-        y: getRandomInt(100, 500) 
-      };
-      
-      // Create a node for this thought
-      return {
-        id: thought.id,
-        type: 'thoughtBubble',
-        position,
-        data: {
-          content: thought.content.text,
-          thoughtId: thought.id,
-          blobVariant: thought.id.length % 5, // Deterministic based on ID
-          isRemoving: removingThoughtIds.includes(thought.id)
-        }
-      };
-    });
-    
-    setNodes(newNodes);
-  }, [thoughts, nodePositions, removingThoughtIds]);
+  // Simple function to explicitly update a node's position
+  const updateThoughtNodePosition = useCallback((nodeId: string, position: XYPosition) => {
+    setNodes(currentNodes => 
+      currentNodes.map(node => 
+        node.id === nodeId ? { ...node, position } : node
+      )
+    );
+  }, []);
 
   return {
     thoughtNodes: nodes,
