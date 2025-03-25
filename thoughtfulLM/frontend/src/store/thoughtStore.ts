@@ -42,7 +42,8 @@ interface ThoughtStoreState {
   removeThought: (thoughtId: string) => Promise<void>;
   clearThoughts: () => void;
   
-  handleThoughtClick: (thoughtId: string) => Promise<void>; 
+  handleThoughtLike: (thoughtId: string) => Promise<void>; 
+  handleThoughtDislike: (thoughtId: string) => Promise<void>;
   handleThoughtPin: (thoughtId: string) => Promise<void>;
   handleThoughtDelete: (thoughtId: string) => Promise<void>;
   handleThoughtsSubmit: () => Promise<void>;
@@ -204,8 +205,8 @@ Weight: ${thoughtData.score.weight}`)
     }
   },
   
-  // Handle a click on a thought node
-  handleThoughtClick: async (thoughtId: string) => {
+  // Handle a click on the right side of a thought node (like)
+  handleThoughtLike: async (thoughtId: string) => {
     try {
       set({ isLoading: true });
       
@@ -235,6 +236,41 @@ Weight: ${thoughtData.score.weight}`)
       set({ isLoading: false });
     } catch (error) {
       console.error(`Error handling thought click for ${thoughtId}:`, error);
+      set({ isLoading: false });
+    }
+  },
+  
+  // Handle a click on the left side of a thought node (dislike)
+  handleThoughtDislike: async (thoughtId: string) => {
+    try {
+      set({ isLoading: true });
+      
+      // Get the thought from the store
+      const thought = get().thoughts.find(t => t.id === thoughtId);
+      if (!thought) {
+        console.error(`Thought with ID ${thoughtId} not found in store`);
+        set({ isLoading: false });
+        return;
+      }
+      
+      // Use the API to operate on the thought
+      const result = await thoughtApi.operateOnThought({
+        operation: 'dislike',
+        thoughts: [thought],
+        options: {
+          amount: get().likeAmount // use the same amount but the operation is different
+        }
+      });
+      
+      // The result might be a single thought or an array of thoughts
+      const updatedThought = Array.isArray(result) ? result[0] : result;
+      
+      // Update the thought in our store
+      get().updateThought(thoughtId, updatedThought);
+      
+      set({ isLoading: false });
+    } catch (error) {
+      console.error(`Error handling thought dislike for ${thoughtId}:`, error);
       set({ isLoading: false });
     }
   },

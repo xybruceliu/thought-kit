@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NodeProps, Handle, Position } from 'reactflow';
-import { Box, Text, keyframes, IconButton, Fade } from '@chakra-ui/react';
+import { Box, Text, keyframes, IconButton, Fade, Icon } from '@chakra-ui/react';
 import { useThoughtStore } from '../store/thoughtStore';
-import { CloseIcon, StarIcon } from '@chakra-ui/icons';
+import { DeleteIcon, StarIcon } from '@chakra-ui/icons';
 
 type ThoughtBubbleNodeProps = NodeProps<{
   content: string;
@@ -37,7 +37,8 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
   const thoughts = useThoughtStore(state => state.thoughts);
   const handleThoughtPin = useThoughtStore(state => state.handleThoughtPin);
   const handleThoughtDelete = useThoughtStore(state => state.handleThoughtDelete);
-  const handleThoughtClick = useThoughtStore(state => state.handleThoughtClick);
+  const handleThoughtLike = useThoughtStore(state => state.handleThoughtLike);
+  const handleThoughtDislike = useThoughtStore(state => state.handleThoughtDislike);
 
   const thought = thoughts.find(t => t.id === data.thoughtId);
   
@@ -51,6 +52,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
   
   // Add state for hovering and mouse position
   const [isHovering, setIsHovering] = useState(false);
+  const [hoverSide, setHoverSide] = useState<'left' | 'right' | null>(null);
   const [showDeleteButton, setShowDeleteButton] = useState(false);
   const [showPinButton, setShowPinButton] = useState(false);
   const bubbleRef = useRef<HTMLDivElement>(null);
@@ -85,13 +87,39 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
     const x = e.clientX - rect.left; // x position within the element
     const y = e.clientY - rect.top;  // y position within the element
     
-    // Check if mouse is in the top right quadrant
-    const isTopRight = x > rect.width / 1.5 && y < rect.height / 1.5;
-    // Check if mouse is in the top left quadrant
-    const isTopLeft = x < rect.width / 3 && y < rect.height / 1.5;
+    // Make the detection areas smaller by adjusting the thresholds
+    // Check if mouse is in the top right quadrant - smaller area
+    const isTopRight = x > rect.width * 0.7 && y < rect.height * 0.5;
+    // Check if mouse is in the top left quadrant - smaller area
+    const isTopLeft = x < rect.width * 0.3 && y < rect.height * 0.5;
     
-    setShowDeleteButton(isTopRight);
-    setShowPinButton(isTopLeft);
+    setShowDeleteButton(isTopLeft);
+    setShowPinButton(isTopRight);
+    
+    // Determine which side of the bubble the mouse is on
+    // Use the same boundary as the click handler for consistency
+    setHoverSide(x < rect.width * (3/7) ? 'left' : 'right');
+  };
+  
+  // Handle click on bubble and determine if it's left or right side
+  const handleBubbleClick = (e: React.MouseEvent) => {
+    // Prevent bubbling to parent elements
+    e.stopPropagation();
+    
+    if (!bubbleRef.current || !data.thoughtId) return;
+    
+    const rect = bubbleRef.current.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const bubbleWidth = rect.width;
+    
+    // If click is on the left half, dislike; if on the right half, like
+    if (clickX < bubbleWidth * (2/5)) {
+      console.log(`Dislike thought: ${data.thoughtId}`);
+      handleThoughtDislike(data.thoughtId);
+    } else {
+      console.log(`Like thought: ${data.thoughtId}`);
+      handleThoughtLike(data.thoughtId);
+    }
   };
   
   // If thought is not found, show minimal content
@@ -111,8 +139,16 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
   // Calculate size scale based on importance score (0.5 to 1.5)
   const sizeScale = 0.7 + (importanceScore * 0.5);
   
+  // Calculate hover effect scale modification
+  // Shrink by 3% when hovering left side, expand by 3% when hovering right side
+  const hoverScaleModifier = isHovering 
+    ? (hoverSide === 'left' ? 0.97 : (hoverSide === 'right' ? 1.03 : 1)) 
+    : 1;
+  
   // Calculate opacity based on importance score (0.2 to 1.0)
-  const opacity = 0.2 + (importanceScore * 0.4);
+  // If thought is pinned (persistent), use full opacity (1)
+  const baseOpacity = 0.2 + (importanceScore * 0.4);
+  const opacity = thought.config.persistent ? 1 : baseOpacity;
 
   // Calculate shadow size based on importance score
   const shadowSize = 7 + (importanceScore * 9); 
@@ -165,6 +201,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
       onMouseLeave={() => {
         setIsDragging(false);
         setIsHovering(false);
+        setHoverSide(null);
         setShowDeleteButton(false);
         setShowPinButton(false);
       }}
@@ -186,11 +223,11 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
         justifyContent="center"
         cursor="grab"
         className="thought-bubble"
+        opacity={isExiting ? 0 : opacity}
         style={{
-          opacity: isExiting ? 0 : opacity,
-          transform: `scale(${sizeScale})`,
+          transform: `scale(${sizeScale * hoverScaleModifier})`,
           backdropFilter: "blur(5px)",
-          transition: "border-radius 0.5s ease-in-out",  // Smoother transitions between shapes
+          transition: "border-radius 0.5s ease-in-out, opacity 0.3s ease-in-out, transform 0.3s ease-in-out",
         }}
         animation={
           isExiting
@@ -203,17 +240,10 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
           cursor: "grabbing",
         }}
         _hover={{
+          opacity: 1,
           boxShadow: `0 0 ${shadowBlur + 2}px ${shadowSize + 2}px ${colors[colorIndex]}50`,
         }}
-        onClick={(e) => {
-          // Prevent bubbling to parent elements
-          e.stopPropagation();
-          
-          // Directly call handleThoughtClick instead of dispatching a custom event
-          if (data.thoughtId) {
-            handleThoughtClick(data.thoughtId);
-          }
-        }}
+        onClick={handleBubbleClick}
         position="relative"
       >
         <Text
@@ -230,8 +260,8 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
         {/* Star (pin) button */}
         <Box 
           position="absolute"
-          top="-15px"
-          left="-15px"
+          top="-16px"
+          right="-19px"
           opacity={thought.config.persistent || showPinButton ? opacity : 0}
           visibility={thought.config.persistent || showPinButton ? "visible" : "hidden"}
           transition="opacity 0.2s ease-in-out, visibility 0.2s ease-in-out"
@@ -255,7 +285,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
             }}
             _hover={{
               bg: "none",
-              color: thought.config.persistent ? "yellow.500" : "gray.700"
+              color: "yellow.600"
             }}
           />
         </Box>
@@ -263,8 +293,8 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
         {/* Delete button */}
         <Box 
           position="absolute"
-          top="-6px"
-          right="-6px"
+          top="-10px"
+          left="-15px"
           opacity={showDeleteButton ? opacity : 0}
           visibility={showDeleteButton ? "visible" : "hidden"}
           transition="opacity 0.2s ease-in-out, visibility 0.2s ease-in-out"
@@ -275,8 +305,8 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
         >
           <IconButton
             aria-label="Delete thought"
-            icon={<CloseIcon />}
-            size="xs"
+            icon={<DeleteIcon />}
+            size="sm"
             isRound
             variant="ghost"
             color="gray.500"
@@ -288,7 +318,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
             }}
             _hover={{
               bg: "none",
-              color: "gray.700"
+              color: "red.600"
             }}
           />
         </Box>
