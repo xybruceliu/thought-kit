@@ -1,5 +1,5 @@
 import { XYPosition, Node as ReactFlowNode } from 'reactflow';
-import { ThoughtNode } from '../store/thoughtStore';
+import { ThoughtNode } from '../hooks/useThoughtNodes';
 
 
 // Constants for node dimensions and spacing

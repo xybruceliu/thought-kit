@@ -22,7 +22,7 @@ export interface Thought {
   content: Content;
   config: ThoughtConfig;
   timestamps: Timestamps;
-  triggerEvent: Event;
+  trigger_event: Event;
   seed?: ThoughtSeed;
   references: string[];
   user_comments: string[];

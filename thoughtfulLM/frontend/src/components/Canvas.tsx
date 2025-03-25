@@ -1,16 +1,17 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import ReactFlow, {
   Background,
   Controls,
   ReactFlowProvider,
   NodeTypes,
-  Edge
+  Edge,
+  NodeChange
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Box } from '@chakra-ui/react';
 import TextInputNode from './TextInputNode';
 import ThoughtBubbleNode from './ThoughtBubbleNode';
-import { useThoughtNodes } from '../hooks';
+import { useThoughtNodes, useInputNodes } from '../hooks';
 import { useTriggerDetection } from '../hooks';
 import { thoughtApi } from '../api/thoughtApi';
 import { useThoughtStore } from '../store/thoughtStore';
@@ -24,12 +25,18 @@ const nodeTypes: NodeTypes = {
 
 // The inner component that has access to the ReactFlow hooks
 const CanvasContent: React.FC = () => {
-  // Use our custom hooks
-  const { nodes, onNodesChange } = useThoughtNodes();
+  // Use our custom hooks for both thought and input nodes
+  const { thoughtNodes, onThoughtNodesChange } = useThoughtNodes();
+  const { inputNodes, onInputNodesChange, addInputNode } = useInputNodes();
   const { onPaneClick } = useTriggerDetection();
   
   // Initialize edges state
   const [edges] = useState<Edge[]>([]);
+
+  // Combine all nodes for the canvas
+  const nodes = useMemo(() => {
+    return [...inputNodes, ...thoughtNodes];
+  }, [inputNodes, thoughtNodes]);
 
   // Clear all data when the component mounts (page loads/refreshes)
   useEffect(() => {
@@ -55,12 +62,19 @@ const CanvasContent: React.FC = () => {
     // This effect should only run once when the component mounts
   }, []);
 
+  // Combined nodes change handler
+  const handleNodesChange = useCallback((changes: NodeChange[]) => {
+    // Determine which nodes are being changed and call the appropriate handler
+    onThoughtNodesChange(changes);
+    onInputNodesChange(changes);
+  }, [onThoughtNodesChange, onInputNodesChange]);
+
   return (
     <ReactFlow
       nodes={nodes}
       edges={edges}
       nodeTypes={nodeTypes}
-      onNodesChange={onNodesChange}
+      onNodesChange={handleNodesChange}
       onPaneClick={onPaneClick}
       fitView
       fitViewOptions={{

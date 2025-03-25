@@ -1,7 +1,7 @@
 import React, { useCallback, useRef, useEffect } from 'react';
 import { NodeProps, useReactFlow } from 'reactflow';
 import { Box, Textarea, Kbd } from '@chakra-ui/react';
-import { useTextInput } from '../hooks';
+import { useInputNodes } from '../hooks';
 import { useThoughtStore } from '../store/thoughtStore';
 
 type TextInputNodeProps = NodeProps<{
@@ -10,7 +10,9 @@ type TextInputNodeProps = NodeProps<{
 }>;
 
 const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
-  const { text, handleTextChange } = useTextInput();
+  const { getInputText, handleTextChange } = useInputNodes();
+  const text = getInputText(id);
+  
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const reactFlowInstance = useReactFlow();
   const handleThoughtsSubmit = useThoughtStore(state => state.handleThoughtsSubmit);
@@ -20,10 +22,9 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
       const newValue = event.target.value;
       const textInputNode = reactFlowInstance.getNode(id);
       if (textInputNode) {
-        handleTextChange(newValue, textInputNode);
+        handleTextChange(id, newValue, textInputNode);
       }
    
-      
       // Also call the original onChange if provided
       if (data.onChange) {
         data.onChange(newValue);

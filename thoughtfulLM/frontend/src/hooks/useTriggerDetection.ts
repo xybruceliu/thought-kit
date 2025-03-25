@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useThoughtStore } from '../store/thoughtStore';
 import { useInputStore } from '../store/inputStore';
 import { Node as ReactFlowNode, useReactFlow } from 'reactflow';
-import { calculateThoughtNodePosition, positioningStrategies } from '../utils';
+import { useThoughtNodes } from './useThoughtNodes';
 
 /**
  * Custom hook that handles thought trigger detection logic
@@ -12,129 +12,129 @@ export const useTriggerDetection = () => {
   const reactFlowInstance = useReactFlow();
   const { 
     thoughtNodes,
-    generateThoughtAtPosition,
-  } = useThoughtStore();
+    createThoughtNodeAtPosition
+  } = useThoughtNodes();
   
   const {
-    currentInput,
-    inputAtLastGeneration,
-    newInput,
-    lastActivityTimestamp,
+    getInputData,
     idleTimeThreshold,
     wordCountChangeThreshold,
     sentenceWordThreshold,
-    idleTriggerFired,
-    setIdleTriggerFired,
     updateInputBaseline,
-    updateActivityTimestamp
+    updateActivityTimestamp,
+    setIdleTriggerFired
   } = useInputStore();
 
   // Check if idle time trigger condition is met
-  const checkIdleTrigger = useCallback(() => {
+  const checkIdleTrigger = useCallback((nodeId: string) => {
+    const inputData = getInputData(nodeId);
+    
     // Only trigger if we haven't already fired an idle trigger and there is input text
-    if (idleTriggerFired || !currentInput.trim()) {
+    if (inputData.idleTriggerFired || !inputData.currentInput.trim()) {
       return false;
     }
     
     const now = Date.now();
-    if ((now - lastActivityTimestamp) > idleTimeThreshold) {
-      console.log(`Trigger: Idle time > ${idleTimeThreshold}ms ⏱️`);
+    if ((now - inputData.lastActivityTimestamp) > idleTimeThreshold) {
+      console.log(`Trigger: Idle time > ${idleTimeThreshold}ms ⏱️ for node ${nodeId}`);
       return true;
     }
     return false;
-  }, [idleTriggerFired, lastActivityTimestamp, idleTimeThreshold, currentInput]);
+  }, [getInputData, idleTimeThreshold]);
   
   // Check if word count change trigger condition is met
-  const checkWordCountTrigger = useCallback(() => {
+  const checkWordCountTrigger = useCallback((nodeId: string) => {
+    const inputData = getInputData(nodeId);
+    
     // Use newInput instead of calculating difference from currentInput
-    const newWordCount = newInput.split(/\s+/).filter(Boolean).length;
+    const newWordCount = inputData.newInput.split(/\s+/).filter(Boolean).length;
     // Only trigger when new word count has reached the threshold
     if (newWordCount >= wordCountChangeThreshold) {
-      console.log(`Trigger: Word count increase > ${wordCountChangeThreshold} ✍️`);
-      console.log(`Old text: "${inputAtLastGeneration}"`);
-      console.log(`New text: "${newInput}"`);
+      console.log(`Trigger: Word count increase > ${wordCountChangeThreshold} ✍️ for node ${nodeId}`);
+      console.log(`Old text: "${inputData.inputAtLastGeneration}"`);
+      console.log(`New text: "${inputData.newInput}"`);
       return true;
     }
     return false;
-  }, [newInput, wordCountChangeThreshold, inputAtLastGeneration]);
+  }, [getInputData, wordCountChangeThreshold]);
 
   // Check if sentence end trigger condition is met
-  const checkSentenceEndTrigger = useCallback(() => {
+  const checkSentenceEndTrigger = useCallback((nodeId: string) => {
+    const inputData = getInputData(nodeId);
+    
     // Check if the last character of the new input or current input is a sentence-ending punctuation
-    const lastChar = newInput.trim().slice(-1);
+    const lastChar = inputData.newInput.trim().slice(-1);
     const isPunctuation = ['.', '!', '?'].includes(lastChar);
     
     if (!isPunctuation) return false;
     
     // Use newInput word count for sentence trigger
-    const newWordCount = newInput.split(/\s+/).filter(Boolean).length;
+    const newWordCount = inputData.newInput.split(/\s+/).filter(Boolean).length;
     if (newWordCount >= sentenceWordThreshold) {
-      console.log(`Trigger: Sentence end > ${sentenceWordThreshold} words 💬`);
-      console.log(`Old text: "${inputAtLastGeneration}"`);
-      console.log(`New text: "${newInput}"`);
+      console.log(`Trigger: Sentence end > ${sentenceWordThreshold} words 💬 for node ${nodeId}`);
+      console.log(`Old text: "${inputData.inputAtLastGeneration}"`);
+      console.log(`New text: "${inputData.newInput}"`);
       return true;
     }
     return false;
-  }, [newInput, sentenceWordThreshold, inputAtLastGeneration]);
+  }, [getInputData, sentenceWordThreshold]);
 
 
   // TESTING: Check if user has typed "*". This is only for testing purposes
-  const checkAstTrigger = useCallback(() => {
-    if (currentInput.includes('*')) {
-      console.log(`TESTING Trigger: User typed "*" 🔍`);
+  const checkAstTrigger = useCallback((nodeId: string) => {
+    const inputData = getInputData(nodeId);
+    
+    if (inputData.currentInput.includes('*')) {
+      console.log(`TESTING Trigger: User typed "*" 🔍 for node ${nodeId}`);
       return true;
     }
     return false;
-  }, [currentInput]);
+  }, [getInputData]);
 
   // Function to check all triggers and generate thoughts
-  const checkTriggersAndGenerate = useCallback(async (textInputNode: ReactFlowNode) => {
-    // You can change the strategy here - defaulting to aboveInput
-    const position = calculateThoughtNodePosition(
-      textInputNode, 
-      thoughtNodes, 
-      positioningStrategies.aboveInput
-    );
-    
+  const checkTriggersAndGenerate = useCallback(async (textInputNode: ReactFlowNode, nodeId: string) => {
     let thoughtGenerated = false;
     
+    // Get input data for this specific node
+    const inputData = getInputData(nodeId);
+    
     // Save the current input at the time we check triggers
-    const inputAtCheckTime = currentInput;
+    const inputAtCheckTime = inputData.currentInput;
     
     // Check for sentence end trigger
-    if (checkSentenceEndTrigger()) {
+    if (checkSentenceEndTrigger(nodeId)) {
       // Update the input baseline BEFORE generating a thought
-      updateInputBaseline(inputAtCheckTime);
+      updateInputBaseline(nodeId, inputAtCheckTime);
 
-      const thought = await generateThoughtAtPosition('SENTENCE_END', position);
+      const thought = await createThoughtNodeAtPosition('SENTENCE_END', undefined, textInputNode);
       if (thought) {
         thoughtGenerated = true;
       }
     }
     // Check for word count trigger
-    else if (checkWordCountTrigger()) {
-      updateInputBaseline(inputAtCheckTime);
+    else if (checkWordCountTrigger(nodeId)) {
+      updateInputBaseline(nodeId, inputAtCheckTime);
       
-      const thought = await generateThoughtAtPosition('WORD_COUNT_CHANGE', position);
+      const thought = await createThoughtNodeAtPosition('WORD_COUNT_CHANGE', undefined, textInputNode);
       if (thought) {
         thoughtGenerated = true;
       }
     }
     // Check for idle trigger
-    else if (checkIdleTrigger()) {
+    else if (checkIdleTrigger(nodeId)) {
       // Set the idle trigger fired state to true BEFORE generating a thought to prevent repeat triggers
-      setIdleTriggerFired(true);
-      updateInputBaseline(inputAtCheckTime);
+      setIdleTriggerFired(nodeId, true);
+      updateInputBaseline(nodeId, inputAtCheckTime);
 
-      const thought = await generateThoughtAtPosition('IDLE_TIME', position);
+      const thought = await createThoughtNodeAtPosition('IDLE_TIME', undefined, textInputNode);
       if (thought) {
         thoughtGenerated = true;
       }
     }
     // Check for test trigger
-    else if (checkAstTrigger()) {
-      updateInputBaseline(inputAtCheckTime);
-      const thought = await generateThoughtAtPosition('NAMED_ENTITY', position);
+    else if (checkAstTrigger(nodeId)) {
+      updateInputBaseline(nodeId, inputAtCheckTime);
+      const thought = await createThoughtNodeAtPosition('NAMED_ENTITY', undefined, textInputNode);
       if (thought) {
         thoughtGenerated = true;    
       }
@@ -142,7 +142,7 @@ export const useTriggerDetection = () => {
     
     // Update activity timestamp if a thought was generated
     if (thoughtGenerated) {
-      updateActivityTimestamp();
+      updateActivityTimestamp(nodeId);
       return true;
     }
     
@@ -152,9 +152,8 @@ export const useTriggerDetection = () => {
     checkWordCountTrigger, 
     checkIdleTrigger, 
     checkAstTrigger, 
-    generateThoughtAtPosition, 
-    thoughtNodes,
-    currentInput,
+    createThoughtNodeAtPosition, 
+    getInputData,
     updateInputBaseline,
     setIdleTriggerFired,
     updateActivityTimestamp
@@ -163,6 +162,12 @@ export const useTriggerDetection = () => {
   // Handle clicks on the pane to generate thoughts
   const onPaneClick = useCallback(
     async (event: React.MouseEvent) => {
+      // Get the active input node ID
+      const activeInputId = useInputStore.getState().activeInputId;
+      if (!activeInputId) {
+        console.warn('No active input node to associate with click event');
+        return;
+      }
       
       // Get position in the flow coordinates
       const position = reactFlowInstance.screenToFlowPosition({
@@ -176,21 +181,24 @@ export const useTriggerDetection = () => {
       
       // Generate a thought at the clicked position with offsets
       try {
-        console.log('Trigger: Pane click 🖱️');
-        const thought = await generateThoughtAtPosition('CLICK', {
+        console.log(`Trigger: Pane click 🖱️ for node ${activeInputId}`);
+        const thought = await createThoughtNodeAtPosition('CLICK', {
           x: position.x - offsetX,
           y: position.y - offsetY
         });
         
         if (thought) {
+          // Get the current input for this node
+          const inputData = getInputData(activeInputId);
+          
           // Save the input at the time of click generation
-          updateInputBaseline(currentInput);
+          updateInputBaseline(activeInputId, inputData.currentInput);
         }
       } catch (error) {
         console.error('Error generating thought on pane click:', error);
       }
     },
-    [reactFlowInstance, generateThoughtAtPosition, currentInput, updateInputBaseline]
+    [reactFlowInstance, createThoughtNodeAtPosition, getInputData, updateInputBaseline]
   );
 
   return {
@@ -198,6 +206,7 @@ export const useTriggerDetection = () => {
     checkIdleTrigger,
     checkWordCountTrigger,
     checkSentenceEndTrigger,
-    onPaneClick
+    checkAstTrigger,
+    onPaneClick,
   };
 }; 

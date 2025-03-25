@@ -2,42 +2,28 @@
 // This file will handle global state management for the application
 
 import { create } from 'zustand';
-import { Node, XYPosition } from 'reactflow';
+import { XYPosition } from 'reactflow';
 import { getRandomInt } from '../utils';
 import { 
   Thought, 
 } from '../types/thought';
 import { EventType } from '../types/event';
 import { thoughtApi } from '../api/thoughtApi';
-
-// ReactFlow node for thought bubble visualization
-export interface ThoughtNode extends Node {
-  id: string;
-  type: 'thoughtBubble';
-  position: XYPosition;
-  data: {
-    content: string;
-    thoughtId: string;  // Store only the ID, not the full thought
-    blobVariant: number;
-  };
-}
+import { ThoughtNode } from '../hooks/useThoughtNodes';
 
 // Define the store state
 interface ThoughtStoreState {
-  // Thoughts and nodes
+  // Data
   thoughts: Thought[];
-  thoughtNodes: ThoughtNode[];
-  removingThoughtIds: string[]; // Track thoughts being removed for animation
   isLoading: boolean; // Track API loading state
-
+  
   // Settings
   maxThoughtCount: number; // Maximum number of thoughts to display
   decay: number; // Time decay for saliency
   likeAmount: number; // Amount to like a thought
 
   // Actions
-  generateThoughtAtPosition: (triggerType: EventType, position?: XYPosition) => Promise<Thought | null>;
-  updateThoughtNodePosition: (nodeId: string, position: XYPosition) => void;
+  generateThought: (triggerType: EventType) => Promise<Thought | null>;
   updateThought: (thoughtId: string, updatedThought: Thought) => void;
   removeThought: (thoughtId: string) => Promise<void>;
   clearThoughts: () => void;
@@ -47,32 +33,18 @@ interface ThoughtStoreState {
   handleThoughtPin: (thoughtId: string) => Promise<void>;
   handleThoughtDelete: (thoughtId: string) => Promise<void>;
   handleThoughtsSubmit: () => Promise<void>;
-}
-
-// Create a ThoughtNode from a Thought
-const createThoughtNode = (thought: Thought, position?: XYPosition): ThoughtNode => {
-  // Use provided position or generate random position
-  const x = position?.x ?? getRandomInt(100, 700);
-  const y = position?.y ?? getRandomInt(100, 500);
   
-  return {
-    id: thought.id,
-    type: 'thoughtBubble',
-    position: { x, y },
-    data: {
-      content: thought.content.text,
-      thoughtId: thought.id,  // Store just the ID
-      blobVariant: getRandomInt(0, 5),
-    },
-  };
-};
+  // Track thoughts being removed for animation (just the ids, not the nodes)
+  removingThoughtIds: string[];
+  markThoughtAsRemoving: (thoughtId: string) => void;
+  unmarkThoughtAsRemoving: (thoughtId: string) => void;
+}
 
 // Create the store
 export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
-  // Thoughts and nodes
+  // Data
   thoughts: [],
-  thoughtNodes: [],
-  removingThoughtIds: [], // Initially empty
+  removingThoughtIds: [], // Track thoughts being removed for animation
   isLoading: false, // Loading state
 
   // SETTINGS
@@ -80,7 +52,20 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
   decay: 0.1, // Time decay for saliency
   likeAmount: 0.2, // Amount to like a thought
 
-  generateThoughtAtPosition: async (triggerType: EventType, position?: XYPosition) => {
+  // Track thoughts being removed
+  markThoughtAsRemoving: (thoughtId: string) => {
+    set((state) => ({
+      removingThoughtIds: [...state.removingThoughtIds, thoughtId]
+    }));
+  },
+  
+  unmarkThoughtAsRemoving: (thoughtId: string) => {
+    set((state) => ({
+      removingThoughtIds: state.removingThoughtIds.filter(id => id !== thoughtId)
+    }));
+  },
+
+  generateThought: async (triggerType: EventType) => {
     try {
       set({ isLoading: true });
 
@@ -88,11 +73,20 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       // Use the input store to get the current input
       const inputStoreModule = await import('./inputStore');
       const { useInputStore } = inputStoreModule;
-      const { currentInput } = useInputStore.getState();
+      const { activeInputId, getInputData } = useInputStore.getState();
+      
+      // Make sure we have an active input
+      if (!activeInputId) {
+        console.error('No active input node found');
+        set({ isLoading: false });
+        return null;
+      }
+      
+      const inputData = getInputData(activeInputId);
 
       // get the last sentence of the current input, split by . or ! or ?
-      const sentences = currentInput.split(/[.!?]/).filter(s => s.trim().length > 0);
-      const lastSentence = sentences.length > 0 ? sentences[sentences.length - 1].trim() : currentInput;
+      const sentences = inputData.currentInput.split(/[.!?]/).filter(s => s.trim().length > 0);
+      const lastSentence = sentences.length > 0 ? sentences[sentences.length - 1].trim() : inputData.currentInput;
       
       // Get memory from memoryStore for the API call
       const memoryStoreModule = await import('./memoryStore');
@@ -130,36 +124,23 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
           isLoading: false
         });
         
-        // Also update the node
-        get().updateThought(thoughtData.id, thoughtData);
-        
         return thoughtData;
       }
       
-      // This is a new thought - create a node for it
-      const thoughtNode = createThoughtNode(thoughtData, position);
-
-      console.log(`💭 New thought created: ${thoughtData.id}: ${thoughtData.content.text}
-Saliency: ${thoughtData.score.saliency}
-Weight: ${thoughtData.score.weight}`)
-      
-      // Add the new thought and node to state
+      // Add the new thought to state
       set((state) => ({
         thoughts: [...state.thoughts, thoughtData],
-        thoughtNodes: [...state.thoughtNodes, thoughtNode],
         isLoading: false
       }));
-
 
       // UPDATE MEMORY
       // In this research prototype, we just set the first item in short-term memory as the current input 
       const memoryItem = await thoughtApi.createMemory({
         type: 'SHORT_TERM',
-        text: currentInput
+        text: inputData.currentInput
       });
       memory.short_term = [memoryItem];
         
-
       // CHECK IF WE NEED TO REMOVE A THOUGHT
       // Check if we need to remove a thought (non-persistent thoughts exceeded max count)
       const { thoughts, removeThought } = get();
@@ -187,8 +168,6 @@ Weight: ${thoughtData.score.weight}`)
         if (thought.id !== thoughtData.id && !thought.config.persistent) {
           const thoughtCopy = { ...thought };
           thoughtCopy.score.saliency = Math.max(0, thought.score.saliency - get().decay);
-          // Update the node state too
-          get().updateThought(thought.id, thoughtCopy);
           return thoughtCopy;
         }
         return thought;
@@ -367,68 +346,34 @@ Weight: ${thoughtData.score.weight}`)
   },
 
   // HELPER FUNCTIONS
-  // Update the position of a thought node
-  updateThoughtNodePosition: (nodeId: string, position: XYPosition) => {
+  // Update the state of a thought
+  updateThought: (thoughtId: string, updatedThought: Thought) => {
     set((state) => ({
-      thoughtNodes: state.thoughtNodes.map((node) => 
-        node.id === nodeId ? { ...node, position } : node
+      thoughts: state.thoughts.map((thought) =>
+        thought.id === thoughtId ? updatedThought : thought
       )
     }));
-  },
-  
-  // Update the state of a thought node
-  updateThought: (thoughtId: string, updatedThought: Thought) => {
-    set((state) => {
-      // First update the thought in the thoughts array
-      const updatedThoughts = state.thoughts.map((thought) =>
-        thought.id === thoughtId ? updatedThought : thought
-      );
-      
-      // Then update only the content in the node data
-      const updatedThoughtNodes = state.thoughtNodes.map((node) => {
-        if (node.id === thoughtId) {
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              content: updatedThought.content.text,
-              // thoughtId stays the same, no need to update
-            }
-          };
-        }
-        return node;
-      });
-      
-      return {
-        thoughts: updatedThoughts,
-        thoughtNodes: updatedThoughtNodes
-      };
-    });
   },
   
   // Remove a thought from the store
   removeThought: async (thoughtId: string) => {
     try {
       // Mark the thought as being removed (for animation)
-      set((state) => ({
-        removingThoughtIds: [...state.removingThoughtIds, thoughtId]
-      }));
+      get().markThoughtAsRemoving(thoughtId);
       
       // Wait a moment for the animation
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Remove the thought and its node
+      // Remove the thought and unmark it
       set((state) => ({
         thoughts: state.thoughts.filter(t => t.id !== thoughtId),
-        thoughtNodes: state.thoughtNodes.filter(n => n.id !== thoughtId),
-        removingThoughtIds: state.removingThoughtIds.filter(id => id !== thoughtId)
       }));
+      
+      get().unmarkThoughtAsRemoving(thoughtId);
     } catch (error) {
       console.error(`Error removing thought ${thoughtId}:`, error);
-      // Remove from removing list in case of error
-      set((state) => ({
-        removingThoughtIds: state.removingThoughtIds.filter(id => id !== thoughtId)
-      }));
+      // Unmark in case of error
+      get().unmarkThoughtAsRemoving(thoughtId);
     }
   },
 
@@ -436,9 +381,7 @@ Weight: ${thoughtData.score.weight}`)
     // Clear all thoughts
     set({
       thoughts: [],
-      thoughtNodes: [],
       removingThoughtIds: []
     });
   }
-
 })); 
