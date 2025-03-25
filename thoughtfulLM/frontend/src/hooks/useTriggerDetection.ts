@@ -51,8 +51,6 @@ export const useTriggerDetection = () => {
     // Only trigger when new word count has reached the threshold
     if (newWordCount >= wordCountChangeThreshold) {
       console.log(`Trigger: Word count increase > ${wordCountChangeThreshold} ✍️ for node ${nodeId}`);
-      console.log(`Old text: "${inputData.inputAtLastGeneration}"`);
-      console.log(`New text: "${inputData.newInput}"`);
       return true;
     }
     return false;
@@ -72,8 +70,6 @@ export const useTriggerDetection = () => {
     const newWordCount = inputData.newInput.split(/\s+/).filter(Boolean).length;
     if (newWordCount >= sentenceWordThreshold) {
       console.log(`Trigger: Sentence end > ${sentenceWordThreshold} words 💬 for node ${nodeId}`);
-      console.log(`Old text: "${inputData.inputAtLastGeneration}"`);
-      console.log(`New text: "${inputData.newInput}"`);
       return true;
     }
     return false;
@@ -169,6 +165,13 @@ export const useTriggerDetection = () => {
         return;
       }
       
+      // Find the active input node from the nodes
+      const activeInputNode = reactFlowInstance.getNode(activeInputId);
+      if (!activeInputNode) {
+        console.warn('Could not find active input node');
+        return;
+      }
+      
       // Get position in the flow coordinates
       const position = reactFlowInstance.screenToFlowPosition({
         x: event.clientX,
@@ -176,16 +179,20 @@ export const useTriggerDetection = () => {
       });
       
       // Apply offset to position bubbles to the top left of cursor
-      const offsetX = 80;  // pixels to the left
-      const offsetY = 50;  // pixels to the top
+      const offsetX = 0;  // pixels to the left
+      const offsetY = 0;  // pixels to the top
+      
+      // Calculate final position with offsets
+      const finalPosition = {
+        x: position.x - offsetX,
+        y: position.y - offsetY
+      };
       
       // Generate a thought at the clicked position with offsets
       try {
         console.log(`Trigger: Pane click 🖱️ for node ${activeInputId}`);
-        const thought = await createThoughtNodeAtPosition('CLICK', {
-          x: position.x - offsetX,
-          y: position.y - offsetY
-        });
+        console.log(`DEBUG Position: (${finalPosition.x}, ${finalPosition.y})`);
+        const thought = await createThoughtNodeAtPosition('CLICK', finalPosition, activeInputNode);
         
         if (thought) {
           // Get the current input for this node

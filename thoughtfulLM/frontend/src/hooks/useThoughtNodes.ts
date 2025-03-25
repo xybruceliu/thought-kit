@@ -1,8 +1,7 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
-import { Node, NodeChange, applyNodeChanges, XYPosition, Position } from 'reactflow';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { Node, NodeChange, applyNodeChanges, XYPosition } from 'reactflow';
 import { useThoughtStore } from '../store/thoughtStore';
 import { Thought } from '../types/thought';
-import { getRandomInt } from '../utils';
 import { EventType } from '../types/event';
 import { calculateThoughtNodePosition, positioningStrategies } from '../utils/nodePositioning';
 
@@ -26,37 +25,58 @@ export const useThoughtNodes = () => {
   const { 
     thoughts,
     removingThoughtIds,
-    generateThought
+    generateThought,
+    setNodePosition,
+    getNodePosition
   } = useThoughtStore();
   
-  // Single source of truth - just the nodes
   const [nodes, setNodes] = useState<ThoughtNode[]>([]);
+  // Store pending position updates to avoid state updates during render
+  const pendingPositionUpdatesRef = useRef<Map<string, XYPosition>>(new Map());
+  
+  // Effect to apply pending position updates outside of render cycle
+  useEffect(() => {
+    const pendingUpdates = pendingPositionUpdatesRef.current;
+    if (pendingUpdates.size > 0) {
+      pendingUpdates.forEach((position, id) => {
+        setNodePosition(id, position);
+      });
+      pendingPositionUpdatesRef.current.clear();
+    }
+  });
   
   // Create a node from a thought
   const thoughtToNode = useCallback((
     thought: Thought, 
     position?: XYPosition, 
-    existingNode?: ThoughtNode
+    existingNode?: ThoughtNode,
+    shouldUpdateStore: boolean = false
   ): ThoughtNode => {
+    // Only update store position if explicitly requested
+    if (position && shouldUpdateStore) {
+      pendingPositionUpdatesRef.current.set(thought.id, position);
+    }
+    
+    // Get position from store, provided position, or default
+    const finalPosition = position || getNodePosition(thought.id) || { x: 0, y: 0 };
     
     return {
       id: thought.id,
       type: 'thoughtBubble',
-      position: position || { x: 0, y: 0 },
+      position: finalPosition,
       data: {
         content: thought.content.text,
         thoughtId: thought.id,
-        blobVariant: existingNode?.data.blobVariant || thought.id.length % 5,
+        blobVariant: existingNode?.data.blobVariant || Math.floor(Math.random() * 5),
         isRemoving: removingThoughtIds.includes(thought.id)
       },
       // Preserve any other ReactFlow properties
       ...(existingNode && { 
         selected: existingNode.selected,
         dragging: existingNode.dragging,
-        // Include other ReactFlow properties as needed
       })
     };
-  }, [removingThoughtIds]);
+  }, [removingThoughtIds, getNodePosition]);
   
   // Generate a thought and create a node for it
   const createThoughtNodeAtPosition = useCallback(async (
@@ -64,43 +84,24 @@ export const useThoughtNodes = () => {
     position?: XYPosition,
     textInputNode?: Node
   ) => {
-    console.log(`DEBUG: createThoughtNodeAtPosition called with:
-      triggerType: ${triggerType}
-      position: ${position ? `(${position.x}, ${position.y})` : 'undefined'}
-      textInputNode: ${textInputNode ? `ID: ${textInputNode.id}, Position: (${textInputNode.position.x}, ${textInputNode.position.y})` : 'undefined'}`);
-    
-    // Generate thought through the store
-    const thought = await generateThought(triggerType);
-    if (!thought) return null;
-    
-    // Determine final position with a default
-    let finalPosition: XYPosition | undefined = position;
-    
     // Calculate position if needed
+    let finalPosition = position;
+    
     if (!finalPosition && textInputNode) {
-      console.log(`DEBUG: Calculating position with textInputNode:
-        ID: ${textInputNode.id}
-        Position: (${textInputNode.position.x}, ${textInputNode.position.y})
-        Width: ${textInputNode.width || 'undefined'}
-        Height: ${textInputNode.height || 'undefined'}`);
-      
       finalPosition = calculateThoughtNodePosition(
         textInputNode,
         nodes,
         positioningStrategies.aboveInput
       );
-      
-      console.log(`DEBUG: Position calculation result: ${finalPosition ? `(${finalPosition.x}, ${finalPosition.y})` : 'undefined'}`);
-    } else {
-      console.log(`DEBUG: Skipping position calculation. Reason: ${finalPosition ? 'Position already provided' : 'textInputNode is undefined'}`);
     }
     
+    // Generate thought through the store
+    const thought = await generateThought(triggerType, finalPosition);
+    if (!thought) return null;
+    
     // Create the node and add it to our state
-    const newNode = thoughtToNode(thought, finalPosition);
-      setNodes(currentNodes => [...currentNodes, newNode]);
-
-    console.log(`DEBUG THOUGHT Position: ${finalPosition?.x}, ${finalPosition?.y}`);
-    console.log(`DEBUG NEW NODE Position: ${newNode.position.x}, ${newNode.position.y}`);
+    const newNode = thoughtToNode(thought, finalPosition, undefined, false);
+    setNodes(currentNodes => [...currentNodes, newNode]);
 
     console.log(`💭 New thought node created: ${thought.id} at (${newNode.position.x.toFixed(2)}, ${newNode.position.y.toFixed(2)})`);
     return thought;
@@ -114,24 +115,43 @@ export const useThoughtNodes = () => {
         currentNodes.map(node => [node.id, node])
       );
       
-      // Map thoughts to nodes, preserving existing node properties when possible
-      return thoughts.map(thought => 
-        thoughtToNode(thought, undefined, existingNodesMap.get(thought.id))
-      );
+      // Map thoughts to nodes, preserving existing node properties
+      return thoughts.map(thought => {
+        const existingNode = existingNodesMap.get(thought.id);
+        const position = getNodePosition(thought.id) || existingNode?.position;
+        return thoughtToNode(thought, position, existingNode, false);
       });
-  }, [thoughts, thoughtToNode]);
+    });
+  }, [thoughts, thoughtToNode, getNodePosition]);
   
-  // Handle ReactFlow node changes
+  // Handle ReactFlow node changes and update positions in the store
   const onNodesChange = useCallback((changes: NodeChange[]) => {
-    setNodes(nds => applyNodeChanges(changes, nds) as ThoughtNode[]);
+    setNodes(nds => {
+      const updatedNodes = applyNodeChanges(changes, nds) as ThoughtNode[];
+      
+      // Queue position updates instead of updating immediately
+      changes.forEach(change => {
+        if (change.type === 'position' && change.position) {
+          pendingPositionUpdatesRef.current.set(change.id, change.position);
+        }
+      });
+      
+      return updatedNodes;
+    });
   }, []);
   
-  // Simple function to explicitly update a node's position
+  // Update a node's position in state and store
   const updateThoughtNodePosition = useCallback((nodeId: string, position: XYPosition) => {
+    // Queue the position update
+    pendingPositionUpdatesRef.current.set(nodeId, position);
+    
     setNodes(currentNodes => 
-      currentNodes.map(node => 
-        node.id === nodeId ? { ...node, position } : node
-      )
+      currentNodes.map(node => {
+        if (node.id === nodeId) {
+          return { ...node, position };
+        }
+        return node;
+      })
     );
   }, []);
 

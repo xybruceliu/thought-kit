@@ -84,7 +84,7 @@ async def generate_thought(request: GenerationRequest):
         
         for thought in request.thoughts or []:
             if result.content.embedding and thought.content and thought.content.embedding:
-                if cosine_similarity(result.content.embedding, thought.content.embedding) > 0.8:
+                if cosine_similarity(result.content.embedding, thought.content.embedding) > 0.7:
                     # Create a copy with updated saliency
                     updated_thought = thought.model_copy()
                     # Increase saliency by 0.2, but make sure weight + saliency doesn't exceed 2.0

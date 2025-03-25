@@ -30,6 +30,7 @@ const colors = [
   "#CBFFE6",  
   "#AFE9FF",  
   "#BFB9FF",  
+  "#FFB9B9",
 ];
 
 const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected }) => {
@@ -124,6 +125,11 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
   
   // If thought is not found, show minimal content
   if (!thought) {
+    // Check if this node is in the process of being removed
+    if (data.isRemoving) {
+      // Return an empty fragment - nothing will be rendered during removal
+      return <></>;
+    }
     return <Box>Content not found</Box>;
   }
   
@@ -131,7 +137,15 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
   const startVariantIndex = data.blobVariant !== undefined ? data.blobVariant % blobVariants.length : 0;
   const midVariantIndex = (startVariantIndex + 2) % blobVariants.length; // Skip one to get more contrast
   const endVariantIndex = (startVariantIndex + 4) % blobVariants.length; // Skip more for even more contrast
-  const colorIndex = data.blobVariant !== undefined ? data.blobVariant % colors.length : 0;
+  // color index based on thought type
+  // association = 0, disambiguation = 1, empathy = 2, interpretation = 3, reference = 4, scaffolding = 5
+  const colorIndex = thought.seed?.type === 'association' ? 0 : 
+                     thought.seed?.type === 'disambiguation' ? 1 : 
+                     thought.seed?.type === 'empathy' ? 2 : 
+                     thought.seed?.type === 'interpretation' ? 3 : 
+                     thought.seed?.type === 'reference' ? 4 : 
+                     thought.seed?.type === 'scaffolding' ? 5 : 
+                     Math.floor(Math.random() * colors.length);
   
   // Calculate importance score from weight and saliency
   const importanceScore = thought.score.weight + thought.score.saliency;
