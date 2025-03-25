@@ -41,12 +41,15 @@ interface ThoughtStoreState {
   handleThoughtDislike: (thoughtId: string) => Promise<void>;
   handleThoughtPin: (thoughtId: string) => Promise<void>;
   handleThoughtDelete: (thoughtId: string) => Promise<void>;
-  handleThoughtsSubmit: () => Promise<void>;
+  handleThoughtsSubmit: () => Promise<string | null>;
   
   // Track thoughts being removed for animation (just the ids, not the nodes)
   removingThoughtIds: string[];
   markThoughtAsRemoving: (thoughtId: string) => void;
   unmarkThoughtAsRemoving: (thoughtId: string) => void;
+  
+  // Signal for response creation
+  onResponseCreated?: (content: string) => string;
 }
 
 // Create the store
@@ -257,6 +260,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
     }
   },
   
+  // Handle submitting thoughts for articulation
   handleThoughtsSubmit: async () => {
     try {
       set({ isLoading: true });
@@ -266,30 +270,37 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       if (thoughts.length === 0) {
         console.log('No thoughts to articulate');
         set({ isLoading: false });
-        return;
+        return null;
       }
       
-      console.log('📝 Submitting thoughts for articulation');
+      console.log('📝 Articulating thoughts');
       
+      // Get memory from memoryStore
       const memoryStoreModule = await import('./memoryStore');
       const { useMemoryStore } = memoryStoreModule;
       const { memory } = useMemoryStore.getState();
       
-      const result = await thoughtApi.articulateThoughts({
-        thoughts: thoughts,
-        memory: memory
+      // Articulate the thoughts into a response
+      const response = await thoughtApi.articulateThoughts({
+        thoughts,
+        memory
       });
       
-      if (result) {
-        console.log('✅ Thoughts successfully articulated');
-      } else {
-        console.error('❌ Failed to articulate thoughts');
+      console.log('Response received:', response);
+      
+      // Signal that response is ready
+      const onResponseCreated = get().onResponseCreated;
+      if (onResponseCreated && response.response) {
+        // Just pass the content, the hook will handle positioning
+        onResponseCreated(response.response);
       }
       
       set({ isLoading: false });
+      return response.response;
     } catch (error) {
       console.error('Error articulating thoughts:', error);
       set({ isLoading: false });
+      return null;
     }
   },
 

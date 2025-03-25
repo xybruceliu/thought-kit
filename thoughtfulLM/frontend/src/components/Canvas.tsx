@@ -11,7 +11,8 @@ import 'reactflow/dist/style.css';
 import { Box } from '@chakra-ui/react';
 import TextInputNode from './TextInputNode';
 import ThoughtBubbleNode from './ThoughtBubbleNode';
-import { useThoughtNodes, useInputNodes } from '../hooks';
+import ResponseNode from './ResponseNode';
+import { useThoughtNodes, useInputNodes, useResponseNodes } from '../hooks';
 import { useTriggerDetection } from '../hooks';
 import { thoughtApi } from '../api/thoughtApi';
 import { useThoughtStore } from '../store/thoughtStore';
@@ -21,13 +22,15 @@ import { useMemoryStore } from '../store/memoryStore';
 const nodeTypes: NodeTypes = {
   textInput: TextInputNode,
   thoughtBubble: ThoughtBubbleNode,
+  response: ResponseNode,
 };
 
 // The inner component that has access to the ReactFlow hooks
 const CanvasContent: React.FC = () => {
-  // Use our custom hooks for both thought and input nodes
+  // Use our custom hooks for nodes
   const { thoughtNodes, onThoughtNodesChange } = useThoughtNodes();
   const { inputNodes, onInputNodesChange, addInputNode } = useInputNodes();
+  const { responseNodes, onResponseNodesChange } = useResponseNodes();
   const { onPaneClick } = useTriggerDetection();
   
   // Initialize edges state
@@ -35,8 +38,8 @@ const CanvasContent: React.FC = () => {
 
   // Combine all nodes for the canvas
   const nodes = useMemo(() => {
-    return [...inputNodes, ...thoughtNodes];
-  }, [inputNodes, thoughtNodes]);
+    return [...inputNodes, ...thoughtNodes, ...responseNodes];
+  }, [inputNodes, thoughtNodes, responseNodes]);
 
   // Clear all data when the component mounts (page loads/refreshes)
   useEffect(() => {
@@ -67,7 +70,8 @@ const CanvasContent: React.FC = () => {
     // Determine which nodes are being changed and call the appropriate handler
     onThoughtNodesChange(changes);
     onInputNodesChange(changes);
-  }, [onThoughtNodesChange, onInputNodesChange]);
+    onResponseNodesChange(changes);
+  }, [onThoughtNodesChange, onInputNodesChange, onResponseNodesChange]);
 
   return (
     <ReactFlow

@@ -3,4 +3,5 @@
 
 export { useThoughtNodes } from './useThoughtNodes';
 export { useTriggerDetection } from './useTriggerDetection';
-export { useInputNodes } from './useInputNodes'; 
+export { useInputNodes } from './useInputNodes';
+export { useResponseNodes } from './useResponseNodes'; 

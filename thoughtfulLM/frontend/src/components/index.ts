@@ -4,5 +4,6 @@
 import Canvas from './Canvas';
 import TextInputNode from './TextInputNode';
 import ThoughtBubbleNode from './ThoughtBubbleNode';
+import ResponseNode from './ResponseNode';
 
-export { Canvas, TextInputNode, ThoughtBubbleNode }; 
+export { Canvas, TextInputNode, ThoughtBubbleNode, ResponseNode }; 
