@@ -78,7 +78,7 @@ export const useResponseNodes = () => {
       // Refit the view to include the new node
       setTimeout(() => {
         reactFlowInstance.fitView({
-          padding: 0.2,
+          padding: 0.5,
           includeHiddenNodes: false,
           duration: 800 // Smooth animation duration in ms
         });
