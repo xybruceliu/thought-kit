@@ -66,7 +66,7 @@ const ResponseNode: React.FC<ResponseNodeProps> = ({ data }) => {
 
   return (
     <Box
-      bg="gray.200"
+      bg="gray.50"
       borderRadius="2xl"
       boxShadow="sm"
       width="500px"

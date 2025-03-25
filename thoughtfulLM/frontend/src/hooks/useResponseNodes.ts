@@ -49,6 +49,10 @@ export const useResponseNodes = () => {
   // Create a response node from content and calculate position
   const createResponseNode = useCallback((content: string) => {
     try {
+      // Clear all existing response nodes
+      // TODO: Temporary, may change later
+      setResponseNodes([]);
+      
       // Get the active input node ID
       const activeInputId = useInputStore.getState().activeInputId;
       if (!activeInputId) {
@@ -77,10 +81,18 @@ export const useResponseNodes = () => {
       
       // Refit the view to include the new node
       setTimeout(() => {
+        // Get all nodes from ReactFlow
+        const allNodes = reactFlowInstance.getNodes();
+        // Filter to only include input and response nodes
+        const nodesToFit = allNodes.filter(node => 
+          node.type === 'textInput' || node.type === 'response'
+        );
+        
         reactFlowInstance.fitView({
           padding: 0.5,
           includeHiddenNodes: false,
-          duration: 800 // Smooth animation duration in ms
+          duration: 800, // Smooth animation duration in ms
+          nodes: nodesToFit // Only fit view to input and response nodes
         });
       }, 100); // Small delay to ensure node is rendered
       
