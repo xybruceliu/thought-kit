@@ -87,6 +87,9 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
     const rect = bubbleRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left; // x position within the element
     const y = e.clientY - rect.top;  // y position within the element
+
+    // Show a small tag on the bottom right of the bubble to indicate the type of thought
+    
     
     // Make the detection areas smaller by adjusting the thresholds
     // Check if mouse is in the top right quadrant - smaller area
@@ -338,6 +341,31 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
             }}
           />
         </Box>
+
+        {/* Thought type indicator tag - only visible on hover */}
+        <Fade in={isHovering} unmountOnExit>
+          <Box
+            position="absolute"
+            bottom="-8px"
+            right="-8px"
+            bg={`${colors[colorIndex]}50`}
+            opacity={0.7}
+            color="gray.600"
+            fontSize="2xs"
+            fontStyle="italic"
+            px="4px"
+            py="1px"
+            borderRadius="6px"
+            boxShadow="0 1px 2px rgba(0,0,0,0.1)"
+            style={{
+              transform: `scale(${1/sizeScale})`,
+              textTransform: 'capitalize'
+            }}
+            transition="transform 0.2s ease-in-out, opacity 0.2s ease-in-out"
+          >
+            {thought.seed?.type || 'thought'}
+          </Box>
+        </Fade>
       </Box>
       {/* Invisible handle to improve drag experience */}
       <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />

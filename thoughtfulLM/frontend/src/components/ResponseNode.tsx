@@ -60,7 +60,7 @@ const ResponseNode: React.FC<ResponseNodeProps> = ({ data }) => {
     if (!contentDiv) return;
     
     // Set a minimum height, but allow it to grow as needed
-    const newHeight = Math.max(120, contentDiv.scrollHeight);
+    const newHeight = Math.max(0, contentDiv.scrollHeight);
     contentDiv.style.height = `${newHeight}px`;
   }, [displayedContent]);
 
@@ -75,7 +75,7 @@ const ResponseNode: React.FC<ResponseNodeProps> = ({ data }) => {
     >
       <Box
         ref={contentRef}
-        minHeight="200px"
+        minHeight="0px"
         borderRadius="2xl"
         fontSize="md"
         color="gray.700"
@@ -83,6 +83,11 @@ const ResponseNode: React.FC<ResponseNodeProps> = ({ data }) => {
         overflowY="auto"
       >
         <Text whiteSpace="pre-wrap">{displayedContent}</Text>
+      </Box>
+      <Box position="absolute" bottom="-5" right="3">
+        <Box fontSize="2xs" color="gray.400" display="flex" alignItems="center">
+          AI's Response
+        </Box>
       </Box>
     </Box>
   );

@@ -88,7 +88,7 @@ const CanvasContent: React.FC = () => {
       }}
     >
       <Controls showInteractive={false} />
-      <Background gap={12} size={1} color="#f0f0f0" />
+      <Background gap={12} size={1} color="none" />
     </ReactFlow>
   );
 };
