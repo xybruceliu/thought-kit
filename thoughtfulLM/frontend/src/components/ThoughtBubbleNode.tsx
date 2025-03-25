@@ -115,10 +115,10 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
     
     // If click is on the left half, dislike; if on the right half, like
     if (clickX < bubbleWidth * (2/5)) {
-      console.log(`Dislike thought: ${data.thoughtId}`);
+      console.log(`Disliking thought: ${data.thoughtId}`);
       handleThoughtDislike(data.thoughtId);
     } else {
-      console.log(`Like thought: ${data.thoughtId}`);
+      console.log(`Liking thought: ${data.thoughtId}`);
       handleThoughtLike(data.thoughtId);
     }
   };
@@ -294,6 +294,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
             onClick={(e) => {
               e.stopPropagation();
               if (thought) {
+                console.log(`Pinning thought: ${thought.id}`);
                 handleThoughtPin(thought.id);
               }
             }}
@@ -327,6 +328,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
             onClick={(e) => {
               e.stopPropagation();
               if (thought) {
+                console.log(`Deleting thought: ${thought.id}`);
                 handleThoughtDelete(thought.id);
               }
             }}
