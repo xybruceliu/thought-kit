@@ -48,8 +48,8 @@ export const useTriggerDetection = () => {
     
     // Use newInput instead of calculating difference from currentInput
     const newWordCount = inputData.newInput.split(/\s+/).filter(Boolean).length;
-    // Only trigger when new word count has reached the threshold
-    if (newWordCount >= wordCountChangeThreshold) {
+    // Only trigger when new word count has reached the threshold and the last character is a " " to make sure user finished typing a word
+    if (newWordCount >= wordCountChangeThreshold && inputData.newInput.slice(-1) === " ") {
       console.log(`Trigger: Word count increase > ${wordCountChangeThreshold} ✍️ for node ${nodeId}`);
       return true;
     }
