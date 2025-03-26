@@ -3,7 +3,8 @@ import { Node, NodeChange, applyNodeChanges, XYPosition } from 'reactflow';
 import { useThoughtStore } from '../store/thoughtStore';
 import { Thought } from '../types/thought';
 import { EventType } from '../types/event';
-import { calculateThoughtNodePosition, positioningStrategies } from '../utils/nodePositioning';
+import { calculateNodePosition, setBoundsAboveNode } from '../utils/nodePositioning';
+import { useBoundsStore } from '../store/boundsStore';
 
 // ReactFlow node for thought bubble visualization
 export interface ThoughtNode extends Node {
@@ -84,15 +85,15 @@ export const useThoughtNodes = () => {
     position?: XYPosition,
     textInputNode?: Node
   ) => {
-    // Calculate position if needed
+    // Calculate position 
     let finalPosition = position;
     
     if (!finalPosition && textInputNode) {
-      finalPosition = calculateThoughtNodePosition(
-        textInputNode,
-        nodes,
-        positioningStrategies.aboveInput
-      );
+      // Set bounds above the input node and update the global store
+      setBoundsAboveNode(textInputNode);
+      
+      // Calculate position using the bounds from the store
+      finalPosition = calculateNodePosition(nodes);
     }
     
     // Generate thought through the store

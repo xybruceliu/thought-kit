@@ -42,15 +42,15 @@ const Settings: React.FC<SettingsProps> = ({
 }) => {
   // Get values and setters from the settings store
   const { 
-    layoutType,
+    interfaceType,
     maxThoughtCount, 
-    setLayoutType, 
+    setInterfaceType, 
     setMaxThoughtCount 
   } = useSettingsStore();
 
-  const handleLayoutChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newLayout = parseInt(e.target.value);
-    setLayoutType(newLayout);
+  const handleInterfaceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newInterface = parseInt(e.target.value);
+    setInterfaceType(newInterface);
   };
 
   const handleMaxThoughtsChange = (valueAsString: string, valueAsNumber: number) => {
@@ -98,15 +98,14 @@ const Settings: React.FC<SettingsProps> = ({
             <PopoverBody>
               <Flex direction="column" gap={3}>
                 <Box>
-                  <Text mb={1} fontSize="sm">Layout</Text>
+                  <Text mb={1} fontSize="sm">Interface</Text>
                   <Select 
                     size="sm" 
-                    value={layoutType} 
-                    onChange={handleLayoutChange}
+                    value={interfaceType} 
+                    onChange={handleInterfaceChange}
                   >
-                    <option value={1}>Layout 1</option>
-                    <option value={2}>Layout 2</option>
-                    <option value={3}>Layout 3</option>
+                    <option value={1}>Interface 1</option>
+                    <option value={2}>Interface 2</option>
                   </Select>
                 </Box>
                 

@@ -62,8 +62,14 @@ async def generate_thought(request: GenerationRequest):
             "event": input_data["event"],
             "seed": input_data["seed"]["type"] if "type" in input_data["seed"] else "loaded_seed",
             "config": input_data["config"],
-            "memory": request.memory.short_term[0].content.text if request.memory.short_term else "No short term memory yet",
-            "thoughts": f"[{len(request.thoughts or [])} thoughts from frontend]"
+            "memory": {
+                "short_term": [m.content.text[:50] + "..." if len(m.content.text) > 50 else m.content.text 
+                              for m in (request.memory.short_term[-10:] if request.memory else [])],
+                "long_term": [m.content.text[:50] + "..." if len(m.content.text) > 50 else m.content.text 
+                             for m in (request.memory.long_term[-10:] if request.memory else [])]
+            },
+            "thoughts": [t.content.text[:50] + "..." if len(t.content.text) > 50 else t.content.text 
+                        for t in (request.thoughts or [])[-10:]]
         }
         print("--------------------------------")
         print("🤔 New Thought Generation Request:")
@@ -114,7 +120,7 @@ async def generate_thought(request: GenerationRequest):
             },
             "trigger_event": {
                 "type": result.trigger_event.type,
-                "text": result.trigger_event.content.text[:50] + "..." if len(result.trigger_event.content.text) > 50 else result.trigger_event.content.text
+                "text": result.trigger_event.content.text[:20] + "..." if len(result.trigger_event.content.text) > 20 else result.trigger_event.content.text
             },
             "seed": result.seed.type if result.seed else "None",
             "score": {

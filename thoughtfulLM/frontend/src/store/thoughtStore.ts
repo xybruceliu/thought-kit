@@ -161,13 +161,24 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
         isLoading: false
       }));
 
+
       // Update memory
       const memoryItem = await thoughtApi.createMemory({
         type: 'SHORT_TERM',
-        text: inputData.currentInput
+        text: "User: " + inputData.currentInput
       });
-      memory.short_term = [memoryItem];
+      // check if the last memory item contains "User: "
+      if (memory.short_term.length > 0) { 
+        if (memory.short_term[memory.short_term.length - 1].content.text.includes("User: ")) {
+          memory.short_term[memory.short_term.length - 1].content.text = "User: " + inputData.currentInput;
+        } else {
+          memory.short_term.push(memoryItem);
+        }
+      } else {
+        memory.short_term.push(memoryItem);
+      }
         
+
       // Remove excess non-persistent thoughts if needed
       const { thoughts, removeThought } = get();
       let nonPersistentThoughts = thoughts.filter(t => !t.config.persistent);

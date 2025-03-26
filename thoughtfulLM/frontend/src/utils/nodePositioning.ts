@@ -1,136 +1,86 @@
 import { XYPosition, Node as ReactFlowNode } from 'reactflow';
 import { ThoughtNode } from '../hooks/useThoughtNodes';
+import { useBoundsStore } from '../store/boundsStore';
 
-
-// Constants for node dimensions and spacing
+// Constants for node dimensions
 export const NODE_DIMENSIONS = {
   HEIGHT: 80,
-  WIDTH: 150,
-  VERTICAL_OFFSET: 0,
-  HORIZONTAL_SPACING: 5
+  WIDTH: 150
+};
+
+// Define Bounds Type (4 points of a rectangular area)
+export type Bounds = {
+  topLeft: XYPosition;
+  topRight: XYPosition;
+  bottomLeft: XYPosition;
+  bottomRight: XYPosition;
 };
 
 // Position strategy interface
 export interface PositioningStrategy {
   name: string;
   calculatePosition: (
-    textInputNode: ReactFlowNode, 
+    bounds: Bounds,
     existingNodes: ThoughtNode[]
   ) => XYPosition;
 }
 
 /**
- * Strategy that places thoughts randomly either above or to the right of the text input
+ * Strategy that places thoughts randomly within a defined rectangular area
  * with overlap avoidance
  */
-export const aboveInputStrategy: PositioningStrategy = {
-  name: 'aboveInput',
-  calculatePosition: (textInputNode, existingNodes) => {
-    if (!textInputNode) {
-      return { x: 300, y: 300 }; // Fallback position
+export const boundedAreaStrategy: PositioningStrategy = {
+  name: 'boundedArea',
+  calculatePosition: (bounds, existingNodes) => {
+    // Fallback position if bounds not provided correctly
+    if (!bounds) {
+      return { x: 300, y: 300 };
     }
 
-    // In ReactFlow, node position is the top-left corner
-    const inputPosition = textInputNode.position;
-    const inputWidth = textInputNode.width || 400; // Use node width or default if undefined
-    const inputHeight = textInputNode.height || 150; // Use node height or default if undefined
+    // Extract bounds information
+    const { topLeft, bottomRight } = bounds;
     
-    // Calculate the center of the input node
-    const inputCenterX = inputPosition.x + (inputWidth / 2);
+    // Define placement area
+    const minX = topLeft.x;
+    const maxX = bottomRight.x - NODE_DIMENSIONS.WIDTH; // Adjust for node width
+    const minY = topLeft.y;
+    const maxY = bottomRight.y - NODE_DIMENSIONS.HEIGHT; // Adjust for node height
     
-    // Randomly decide whether to place the thought above or to the right
-    // Improved positioning balance logic with wider detection area
-    const existingAbove = existingNodes.filter(node => 
-      node.position.y < inputPosition.y && 
-      node.position.x > inputPosition.x - 150 && 
-      node.position.x < inputPosition.x + inputWidth + 150
-    ).length;
-    
-    const existingRight = existingNodes.filter(node => 
-      node.position.x > inputPosition.x + inputWidth &&
-      node.position.y > inputPosition.y - 100 &&
-      node.position.y < inputPosition.y + inputHeight + 100
-    ).length;
-    
-    // More balanced distribution logic
-    let placeAbove;
-    
-    if (existingAbove === 0 && existingRight === 0) {
-      // If no nodes exist yet, 70% chance to go above for a more natural look
-      placeAbove = Math.random() < 0.7;
-    } else {
-      // Stronger bias toward the area with fewer nodes
-      placeAbove = existingAbove <= existingRight ? 
-        Math.random() > 0.25 :  // 75% chance to go above if fewer nodes are above
-        Math.random() > 0.75;   // 25% chance to go above if more nodes are above
+    // Ensure valid area
+    if (maxX <= minX || maxY <= minY) {
+      console.warn('Invalid bounds provided for node positioning');
+      return { x: 300, y: 300 }; // Fallback position
     }
     
     let position: XYPosition;
     let attempts = 0;
-    const maxAttempts = 50;  // Increase max attempts to find a good position
+    const maxAttempts = 50;
     
     // Try to find a non-overlapping position
     do {
-      // Add some randomness to spacing with wider range for more natural look
-      const randomVerticalOffset = Math.random() * 40 - 15;    // -15 to +25px
-      const randomHorizontalOffset = Math.random() * 60 - 20;  // -20 to +40px
-      
-      if (placeAbove) {
-        // Define boundaries for above placement with wider range
-        const maxThoughts = 5;
-        const totalWidth = (maxThoughts * NODE_DIMENSIONS.WIDTH) + ((maxThoughts - 1) * NODE_DIMENSIONS.HORIZONTAL_SPACING);
-        const leftBoundary = inputCenterX - (totalWidth / 2);
-        const rightBoundary = inputCenterX + (totalWidth / 2) - NODE_DIMENSIONS.WIDTH;
-        
-        // Random position above the input with randomized distance
-        const x = leftBoundary + Math.random() * (rightBoundary - leftBoundary);
-        const y = inputPosition.y - NODE_DIMENSIONS.VERTICAL_OFFSET - NODE_DIMENSIONS.HEIGHT + randomVerticalOffset;
-        position = { x, y };
-      } else {
-        // Define boundaries for right placement with randomized distance
-        const x = inputPosition.x + inputWidth + NODE_DIMENSIONS.HORIZONTAL_SPACING + randomHorizontalOffset;
-        
-        // Random position vertically aligned with the input
-        const topBoundary = inputPosition.y - NODE_DIMENSIONS.HEIGHT / 2; // Slightly above
-        const bottomBoundary = inputPosition.y + inputHeight - NODE_DIMENSIONS.HEIGHT / 2; // Slightly below
-        const y = topBoundary + Math.random() * (bottomBoundary - topBoundary);
-        position = { x, y };
-      }
+      // Generate random position within the bounds
+      const x = minX + Math.random() * (maxX - minX);
+      const y = minY + Math.random() * (maxY - minY);
+      position = { x, y };
       
       attempts++;
       
       // Break after max attempts to avoid infinite loops
       if (attempts >= maxAttempts) {
-        // Try different positions around the input in sequence instead of immediately going to left
-        const positionOptions = [
-          // First try top-center with slight offset
-          { 
-            x: inputCenterX - (NODE_DIMENSIONS.WIDTH / 2) + (Math.random() * 60 - 30),
-            y: inputPosition.y - NODE_DIMENSIONS.HEIGHT - 20 - (Math.random() * 15)
-          },
-          // Then try right-middle with offset
-          {
-            x: inputPosition.x + inputWidth + 10 + (Math.random() * 20),
-            y: inputPosition.y + (inputHeight / 2) - (NODE_DIMENSIONS.HEIGHT / 2) + (Math.random() * 30 - 15)
-          },
-          // Only as last resort, try left side
-          {
-            x: inputPosition.x - NODE_DIMENSIONS.WIDTH - (Math.random() * 10),
-            y: inputPosition.y + (Math.random() * inputHeight) - NODE_DIMENSIONS.HEIGHT
-          }
-        ];
+        // Try a grid-based approach as backup
+        const gridPositions = generateGridPositions(bounds, existingNodes);
         
-        // Try each position option in sequence until we find one without overlap
-        for (const option of positionOptions) {
-          if (!hasOverlap(option, existingNodes)) {
-            position = option;
+        // Try each position in the grid until we find one without overlap
+        for (const gridPos of gridPositions) {
+          if (!hasOverlap(gridPos, existingNodes)) {
+            position = gridPos;
             break;
           }
         }
         
-        // If all else fails, use the last option with some randomness
+        // If all else fails, use a position with minimal overlap
         if (!position || hasOverlap(position, existingNodes)) {
-          position = positionOptions[Math.floor(Math.random() * positionOptions.length)];
+          position = findPositionWithMinimalOverlap(bounds, existingNodes);
         }
         
         break;
@@ -142,31 +92,162 @@ export const aboveInputStrategy: PositioningStrategy = {
 };
 
 /**
- * Main function to calculate thought node position using a selected strategy
+ * Generate a set of grid positions within the bounds
  */
-export const calculateThoughtNodePosition = (
-  textInputNode: ReactFlowNode,
+const generateGridPositions = (bounds: Bounds, existingNodes: ThoughtNode[]): XYPosition[] => {
+  const { topLeft, bottomRight } = bounds;
+  const positions: XYPosition[] = [];
+  
+  // Calculate area width and height
+  const areaWidth = bottomRight.x - topLeft.x;
+  const areaHeight = bottomRight.y - topLeft.y;
+  
+  // Calculate how many nodes can fit in the area
+  const nodeSpacing = 3;  
+  const cols = Math.max(1, Math.floor(areaWidth / (NODE_DIMENSIONS.WIDTH + nodeSpacing)));
+  const rows = Math.max(1, Math.floor(areaHeight / (NODE_DIMENSIONS.HEIGHT + nodeSpacing)));
+  
+  // Create a grid of positions
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const x = topLeft.x + col * (NODE_DIMENSIONS.WIDTH + nodeSpacing);
+      const y = topLeft.y + row * (NODE_DIMENSIONS.HEIGHT + nodeSpacing);
+      
+      // Add some small random offset for a more natural look
+      const randomX = x + (Math.random() * 10 - 5);
+      const randomY = y + (Math.random() * 10 - 5);
+      
+      positions.push({ x: randomX, y: randomY });
+    }
+  }
+  
+  // Shuffle the positions for random selection
+  return positions.sort(() => Math.random() - 0.5);
+};
+
+/**
+ * Find a position with minimal overlap as a last resort
+ */
+const findPositionWithMinimalOverlap = (bounds: Bounds, existingNodes: ThoughtNode[]): XYPosition => {
+  const { topLeft, bottomRight } = bounds;
+  
+  // Generate some candidate positions
+  const candidates: XYPosition[] = [];
+  
+  // Create a coarse grid of positions
+  const cols = 5;
+  const rows = 5;
+  
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const x = topLeft.x + col * ((bottomRight.x - topLeft.x) / cols);
+      const y = topLeft.y + row * ((bottomRight.y - topLeft.y) / rows);
+      candidates.push({ x, y });
+    }
+  }
+  
+  // Find position with minimal overlap
+  let bestPosition = candidates[0];
+  let minOverlapCount = countOverlaps(bestPosition, existingNodes);
+  
+  for (const position of candidates) {
+    const overlapCount = countOverlaps(position, existingNodes);
+    if (overlapCount < minOverlapCount) {
+      minOverlapCount = overlapCount;
+      bestPosition = position;
+      
+      // Break early if we find a position with no overlap
+      if (minOverlapCount === 0) break;
+    }
+  }
+  
+  return bestPosition;
+};
+
+/**
+ * Count how many nodes overlap with a position
+ */
+const countOverlaps = (position: XYPosition, existingNodes: ThoughtNode[]): number => {
+  if (!existingNodes || existingNodes.length === 0) {
+    return 0;
+  }
+  
+  return existingNodes.filter(node => 
+    Math.abs(position.x - node.position.x) < NODE_DIMENSIONS.WIDTH &&
+    Math.abs(position.y - node.position.y) < NODE_DIMENSIONS.HEIGHT
+  ).length;
+};
+
+/**
+ * Calculate node position using the current bounds from the global store
+ * Primary method for positioning nodes in the application
+ */
+export const calculateNodePosition = (
   existingNodes: ThoughtNode[],
-  strategy: PositioningStrategy = aboveInputStrategy
+  strategy: PositioningStrategy = boundedAreaStrategy
 ): XYPosition => {
-  return strategy.calculatePosition(textInputNode, existingNodes);
+  const bounds = useBoundsStore.getState().getBounds();
+  return strategy.calculatePosition(bounds, existingNodes);
 };
 
 // Export available strategies for easier access
 export const positioningStrategies = {
-  aboveInput: aboveInputStrategy,
+  boundedArea: boundedAreaStrategy,
+};
+
+/**
+ * Creates a bounded area above a given input node and updates the global bounds store
+ */
+export const setBoundsAboveNode = (node: ReactFlowNode): Bounds => {
+  if (!node) {
+    const defaultBounds = useBoundsStore.getState().defaultBounds;
+    useBoundsStore.getState().setBounds(defaultBounds);
+    return defaultBounds;
+  }
+  
+  const nodeX = node.position.x;
+  const nodeY = node.position.y;
+  const nodeWidth = node.width || 400;
+  
+  // Calculate bounds dimensions
+  // Width is 120% of the node width
+  const boundsWidth = nodeWidth * 1.2;
+  // Height is 3 times the thought node height
+  const boundsHeight = NODE_DIMENSIONS.HEIGHT * 2;
+  // X offset to center the bounds above the node (accounts for the extra width)
+  const xOffset = (boundsWidth - nodeWidth) / 2;
+  // Y is 5pt above the node
+  const boundsY = nodeY - boundsHeight - 5;
+  
+  const bounds = {
+    topLeft: { x: nodeX - xOffset, y: boundsY },
+    topRight: { x: nodeX + nodeWidth + xOffset, y: boundsY },
+    bottomLeft: { x: nodeX - xOffset, y: boundsY + boundsHeight },
+    bottomRight: { x: nodeX + nodeWidth + xOffset, y: boundsY + boundsHeight }
+  };
+  
+  // Update the store
+  useBoundsStore.getState().setBounds(bounds);
+  
+  return bounds;
+};
+
+/**
+ * Sets custom bounds and updates the global store
+ */
+export const setBounds = (bounds: Bounds): void => {
+  useBoundsStore.getState().setBounds(bounds);
 };
 
 /**
  * Checks if a potential position would overlap with any existing thought nodes
- * Allow a small buffer for overlap
  */
 const hasOverlap = (position: XYPosition, existingNodes: ThoughtNode[]): boolean => {
   if (!existingNodes || existingNodes.length === 0) {
     return false;
   }
   
-  const buffer = 0.20;   // Reduce buffer from 0.30 to 0.20 to allow closer placement
+  const buffer = 0.20;   // 20% buffer for overlap detection
   return existingNodes.some((node) => 
     Math.abs(position.x - node.position.x) < NODE_DIMENSIONS.WIDTH + (NODE_DIMENSIONS.WIDTH * buffer) &&
     Math.abs(position.y - node.position.y) < NODE_DIMENSIONS.HEIGHT + (NODE_DIMENSIONS.HEIGHT * buffer)

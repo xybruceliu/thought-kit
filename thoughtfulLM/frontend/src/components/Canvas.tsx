@@ -38,7 +38,7 @@ const CanvasContent: React.FC = () => {
   const [edges] = useState<Edge[]>([]);
   
   // Settings state
-  const [layoutType, setLayoutType] = useState<number>(1);
+  const [interfaceType, setInterfaceType] = useState<number>(1);
   const [maxThoughts, setMaxThoughts] = useState<number>(5);
 
   // Combine all nodes for the canvas
@@ -79,10 +79,10 @@ const CanvasContent: React.FC = () => {
   }, [onThoughtNodesChange, onInputNodesChange, onResponseNodesChange]);
 
   // Handlers for settings changes
-  const handleLayoutChange = useCallback((layout: number) => {
-    setLayoutType(layout);
-    // Additional logic to change layout can be added here
-    console.log(`Layout changed to: ${layout}`);
+  const handleInterfaceChange = useCallback((interfaceType: number) => {
+    setInterfaceType(interfaceType);
+    // Additional logic to change interface can be added here
+    console.log(`Interface changed to: ${interfaceType}`);
   }, []);
 
   const handleMaxThoughtsChange = useCallback((max: number) => {
