@@ -12,11 +12,12 @@ import { Box } from '@chakra-ui/react';
 import TextInputNode from './TextInputNode';
 import ThoughtBubbleNode from './ThoughtBubbleNode';
 import ResponseNode from './ResponseNode';
+import Settings from './Settings';
 import { useThoughtNodes, useInputNodes, useResponseNodes } from '../hooks';
 import { useTriggerDetection } from '../hooks';
-import { thoughtApi } from '../api/thoughtApi';
 import { useThoughtStore } from '../store/thoughtStore';
 import { useMemoryStore } from '../store/memoryStore';
+import { useSettingsStore } from '../store/settingsStore';
 
 // Define custom node types
 const nodeTypes: NodeTypes = {
@@ -35,6 +36,10 @@ const CanvasContent: React.FC = () => {
   
   // Initialize edges state
   const [edges] = useState<Edge[]>([]);
+  
+  // Settings state
+  const [layoutType, setLayoutType] = useState<number>(1);
+  const [maxThoughts, setMaxThoughts] = useState<number>(5);
 
   // Combine all nodes for the canvas
   const nodes = useMemo(() => {
@@ -73,23 +78,48 @@ const CanvasContent: React.FC = () => {
     onResponseNodesChange(changes);
   }, [onThoughtNodesChange, onInputNodesChange, onResponseNodesChange]);
 
+  // Handlers for settings changes
+  const handleLayoutChange = useCallback((layout: number) => {
+    setLayoutType(layout);
+    // Additional logic to change layout can be added here
+    console.log(`Layout changed to: ${layout}`);
+  }, []);
+
+  const handleMaxThoughtsChange = useCallback((max: number) => {
+    setMaxThoughts(max);
+    // Update the max thought count in the thought store
+    useThoughtStore.setState({ maxThoughtCount: max });
+    console.log(`Max thoughts set to: ${max}`);
+  }, []);
+
+  // Web Speech API implementation placeholder
+  const handleMicrophoneClick = useCallback(() => {
+    console.log('Microphone clicked - Web Speech API to be implemented');
+    // Toggle microphone state in settings
+    const { microphoneEnabled, setMicrophoneEnabled } = useSettingsStore.getState();
+    setMicrophoneEnabled(!microphoneEnabled);
+  }, []);
+
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      nodeTypes={nodeTypes}
-      onNodesChange={handleNodesChange}
-      onPaneClick={onPaneClick}
-      fitView
-      fitViewOptions={{
-        padding: 0.5,
-        minZoom: 1,
-        maxZoom: 1.5
-      }}
-    >
-      <Controls showInteractive={false} />
-      <Background gap={12} size={1} color="none" />
-    </ReactFlow>
+    <>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        onNodesChange={handleNodesChange}
+        onPaneClick={onPaneClick}
+        fitView
+        fitViewOptions={{
+          padding: 0.5,
+          minZoom: 1,
+          maxZoom: 1.5
+        }}
+      >
+        <Controls showInteractive={false} />
+        <Background gap={12} size={1} color="none" />
+      </ReactFlow>
+      <Settings onMicrophoneClick={handleMicrophoneClick} />
+    </>
   );
 };
 

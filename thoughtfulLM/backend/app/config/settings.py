@@ -18,6 +18,7 @@ API_VERSION = "0.1.0"
 CORS_ORIGINS = [
     "http://localhost:3000",  # React app
     "http://localhost:8000",  # FastAPI docs
+    "https://*.ngrok-free.app",  # Ngrok domains
 ]
 
 # Default model settings

@@ -5,5 +5,6 @@ import Canvas from './Canvas';
 import TextInputNode from './TextInputNode';
 import ThoughtBubbleNode from './ThoughtBubbleNode';
 import ResponseNode from './ResponseNode';
+import Settings from './Settings';
 
-export { Canvas, TextInputNode, ThoughtBubbleNode, ResponseNode }; 
+export { Canvas, TextInputNode, ThoughtBubbleNode, ResponseNode, Settings }; 

@@ -9,7 +9,7 @@ import {
 } from '../types/thought';
 import { EventType } from '../types/event';
 import { thoughtApi } from '../api/thoughtApi';
-import { ThoughtNode } from '../hooks/useThoughtNodes';
+import { useSettingsStore } from './settingsStore';
 
 // Define the store state
 interface ThoughtStoreState {
@@ -61,7 +61,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
   nodePositions: {}, // Store node positions by thought ID
   
   // SETTINGS
-  maxThoughtCount: 5, // Maximum number of thoughts to display
+  maxThoughtCount: 5, // Fallback default value (Settings component value takes precedence)
   decay: 0.1, // Time decay for saliency
   likeAmount: 0.2, // Amount to like a thought
 
@@ -172,7 +172,10 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       const { thoughts, removeThought } = get();
       let nonPersistentThoughts = thoughts.filter(t => !t.config.persistent);
       
-      if (nonPersistentThoughts.length > get().maxThoughtCount) {
+      // Get max thoughts count from settings store 
+      const { maxThoughtCount } = useSettingsStore.getState();
+      
+      if (nonPersistentThoughts.length > maxThoughtCount) {
         // Find and remove the thought with the lowest score
         const thoughtsWithScore = nonPersistentThoughts.map(t => ({
           id: t.id,
@@ -183,7 +186,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
           current.score < lowest.score ? current : lowest
         );
         
-        console.log(`🗑 Removing thought ${lowestScoreThought.id} due to exceeding max count`);
+        console.log(`🗑 Removing thought ${lowestScoreThought.id} due to exceeding max count (${maxThoughtCount})`);
         removeThought(lowestScoreThought.id);
       }
       
