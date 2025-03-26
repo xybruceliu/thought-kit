@@ -301,6 +301,10 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       });
       
       console.log('Response received:', response);
+
+      // Remove all thoughts that are not persistent
+      const nonPersistentThoughts = thoughts.filter(t => !t.config.persistent);
+      nonPersistentThoughts.forEach(t => get().removeThought(t.id));
       
       // Signal that response is ready
       const onResponseCreated = get().onResponseCreated;

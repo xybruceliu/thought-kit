@@ -69,11 +69,11 @@ export const useResponseNodes = () => {
         const inputWidth = inputNode.width || 500; // Default width if not available
         const inputHeight = inputNode.height || 200; // Default height if not available
         
-        // Position the response node above the input node
+        // Position the response node 
         position = {
           x: inputNode.position.x,
-          y: inputNode.position.y - 100 // Add some spacing
-        };
+          y: inputNode.position.y + inputHeight + 50
+        }
       }
       
       // Create the response node
