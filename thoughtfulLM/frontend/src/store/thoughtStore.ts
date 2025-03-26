@@ -20,6 +20,9 @@ interface ThoughtStoreState {
   // Node positions by thought ID
   nodePositions: Record<string, XYPosition>;
   
+  // Active thought IDs - thoughts that are currently active in the system
+  activeThoughtIds: string[];
+  
   // Settings
   maxThoughtCount: number; // Maximum number of thoughts to display
   decay: number; // Time decay for saliency
@@ -28,6 +31,12 @@ interface ThoughtStoreState {
   // Position Management
   setNodePosition: (thoughtId: string, position: XYPosition) => void;
   getNodePosition: (thoughtId: string) => XYPosition | undefined;
+  
+  // Active thought management
+  addActiveThought: (thoughtId: string) => void;
+  removeActiveThought: (thoughtId: string) => void;
+  clearActiveThoughts: () => void;
+  isThoughtActive: (thoughtId: string) => boolean;
   
   // Actions
   generateThought: (triggerType: EventType, position?: XYPosition) => Promise<Thought | null>;
@@ -59,6 +68,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
   removingThoughtIds: [], // Track thoughts being removed for animation
   isLoading: false, // Loading state
   nodePositions: {}, // Store node positions by thought ID
+  activeThoughtIds: [], // Track active thought IDs
   
   // SETTINGS
   maxThoughtCount: 5, // Fallback default value (Settings component value takes precedence)
@@ -77,6 +87,32 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
   
   getNodePosition: (thoughtId: string) => {
     return get().nodePositions[thoughtId];
+  },
+  
+  // Active thought management methods
+  addActiveThought: (thoughtId: string) => {
+    set((state) => {
+      // Only add if it doesn't already exist in the active list
+      if (state.activeThoughtIds.includes(thoughtId)) return state;
+      
+      return {
+        activeThoughtIds: [...state.activeThoughtIds, thoughtId]
+      };
+    });
+  },
+  
+  removeActiveThought: (thoughtId: string) => {
+    set((state) => ({
+      activeThoughtIds: state.activeThoughtIds.filter(id => id !== thoughtId)
+    }));
+  },
+  
+  clearActiveThoughts: () => {
+    set({ activeThoughtIds: [] });
+  },
+  
+  isThoughtActive: (thoughtId: string) => {
+    return get().activeThoughtIds.includes(thoughtId);
   },
   
   // Track thoughts being removed
@@ -147,6 +183,9 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
           isLoading: false
         });
         
+        // Make sure the thought is in the active list
+        get().addActiveThought(thoughtData.id);
+        
         return thoughtData;
       }
       
@@ -155,9 +194,10 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
         get().setNodePosition(thoughtData.id, position);
       }
       
-      // Add the new thought to state
+      // Add the new thought to state and the active thoughts list
       set((state) => ({
         thoughts: [...state.thoughts, thoughtData],
+        activeThoughtIds: [...state.activeThoughtIds, thoughtData.id],
         isLoading: false
       }));
 
@@ -268,6 +308,8 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
 
   handleThoughtDelete: async (thoughtId: string) => {
     try {
+      // When a thought is deleted, also remove it from active thoughts
+      get().removeActiveThought(thoughtId);
       await get().removeThought(thoughtId);
     } catch (error) {
       console.error(`Error handling thought deletion for ${thoughtId}:`, error);
@@ -279,7 +321,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
     try {
       set({ isLoading: true });
       
-      const { thoughts } = get();
+      const { thoughts, activeThoughtIds } = get();
       
       if (thoughts.length === 0) {
         console.log('No thoughts to articulate');
@@ -305,6 +347,9 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       // Remove all thoughts that are not persistent
       const nonPersistentThoughts = thoughts.filter(t => !t.config.persistent);
       nonPersistentThoughts.forEach(t => get().removeThought(t.id));
+      
+      // Clear all active thoughts after articulation
+      get().clearActiveThoughts();
       
       // Signal that response is ready
       const onResponseCreated = get().onResponseCreated;
@@ -336,6 +381,9 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       // Mark the thought as being removed (for animation)
       get().markThoughtAsRemoving(thoughtId);
       
+      // Also remove from active thoughts
+      get().removeActiveThought(thoughtId);
+      
       // Wait for animation to complete
       await new Promise(resolve => setTimeout(resolve, 1000));
       
@@ -355,7 +403,8 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
     set({
       thoughts: [],
       removingThoughtIds: [],
-      nodePositions: {}
+      nodePositions: {},
+      activeThoughtIds: []
     });
   }
 })); 
