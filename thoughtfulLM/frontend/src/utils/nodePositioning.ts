@@ -4,7 +4,7 @@ import { useBoundsStore } from '../store/boundsStore';
 
 // Constants for node dimensions
 export const NODE_DIMENSIONS = {
-  HEIGHT: 80,
+  HEIGHT: 50,
   WIDTH: 150
 };
 
@@ -26,7 +26,118 @@ export interface PositioningStrategy {
 }
 
 /**
- * Strategy that places thoughts randomly within a defined rectangular area
+ * Calculate the centroid (center of mass) of existing nodes
+ */
+const calculateCentroid = (existingNodes: ThoughtNode[]): XYPosition => {
+  if (!existingNodes || existingNodes.length === 0) {
+    return { x: 0, y: 0 };
+  }
+  
+  const sum = existingNodes.reduce(
+    (acc, node) => {
+      return {
+        x: acc.x + node.position.x,
+        y: acc.y + node.position.y
+      };
+    },
+    { x: 0, y: 0 }
+  );
+  
+  return {
+    x: sum.x / existingNodes.length,
+    y: sum.y / existingNodes.length
+  };
+};
+
+/**
+ * Find a balanced position for a new node based on existing nodes
+ */
+const findBalancedPosition = (
+  bounds: Bounds,
+  existingNodes: ThoughtNode[]
+): XYPosition => {
+  const { topLeft, bottomRight } = bounds;
+  
+  // If no existing nodes, place in the center of bounds
+  if (!existingNodes || existingNodes.length === 0) {
+    return {
+      x: topLeft.x + (bottomRight.x - topLeft.x) / 2 - NODE_DIMENSIONS.WIDTH / 2,
+      y: 0
+    };
+  }
+  
+  // For a single existing node, place adjacent to it
+  if (existingNodes.length === 1) {
+    const node = existingNodes[0];
+    const spacing = 3; // Distance between nodes (reduced from 30)
+    
+    // Try positions in different directions (right, bottom, left, top)
+    const candidatePositions = [
+      { x: node.position.x + NODE_DIMENSIONS.WIDTH + spacing, y: node.position.y },
+      { x: node.position.x, y: node.position.y + NODE_DIMENSIONS.HEIGHT + spacing },
+      { x: node.position.x - NODE_DIMENSIONS.WIDTH - spacing, y: node.position.y },
+      { x: node.position.x, y: node.position.y - NODE_DIMENSIONS.HEIGHT - spacing }
+    ];
+    
+    // Filter positions that are within bounds
+    const validPositions = candidatePositions.filter(pos => 
+      pos.x >= topLeft.x && 
+      pos.x + NODE_DIMENSIONS.WIDTH <= bottomRight.x &&
+      pos.y >= topLeft.y && 
+      pos.y + NODE_DIMENSIONS.HEIGHT <= bottomRight.y
+    );
+    
+    return validPositions.length > 0 ? validPositions[0] : candidatePositions[0];
+  }
+  
+  // For multiple nodes, use more advanced positioning
+  const centroid = calculateCentroid(existingNodes);
+  
+  // Find the node furthest from the centroid
+  let maxDistance = 0;
+  let furthestNode = existingNodes[0];
+  
+  existingNodes.forEach(node => {
+    const distance = Math.sqrt(
+      Math.pow(node.position.x - centroid.x, 2) + 
+      Math.pow(node.position.y - centroid.y, 2)
+    );
+    
+    if (distance > maxDistance) {
+      maxDistance = distance;
+      furthestNode = node;
+    }
+  });
+  
+  // Calculate angle from centroid to furthest node
+  const angleToFurthest = Math.atan2(
+    furthestNode.position.y - centroid.y,
+    furthestNode.position.x - centroid.x
+  );
+  
+  // Place new node on the opposite side of the centroid
+  const oppositeAngle = angleToFurthest + Math.PI;
+  const distance = Math.min(
+    maxDistance * 0.7, // Reduce distance to 70% of the original distance
+    NODE_DIMENSIONS.WIDTH * 1.5  // Reduced from 2x width to 1.5x width
+  );
+  
+  const newPosition = {
+    x: centroid.x + Math.cos(oppositeAngle) * distance,
+    y: centroid.y + Math.sin(oppositeAngle) * distance
+  };
+  
+  // Ensure position is within bounds
+  const adjustedPosition = {
+    x: Math.max(topLeft.x, Math.min(bottomRight.x - NODE_DIMENSIONS.WIDTH, newPosition.x)),
+    y: Math.max(topLeft.y, Math.min(bottomRight.y - NODE_DIMENSIONS.HEIGHT, newPosition.y))
+  };
+  
+  return adjustedPosition;
+};
+
+/**
+ * Strategy that places thoughts in a balanced way within a defined rectangular area
  * with overlap avoidance
  */
 export const boundedAreaStrategy: PositioningStrategy = {
@@ -40,54 +151,64 @@ export const boundedAreaStrategy: PositioningStrategy = {
     // Extract bounds information
     const { topLeft, bottomRight } = bounds;
     
-    // Define placement area
+    // Define placement area with some safeguards to ensure minimum viable area
     const minX = topLeft.x;
-    const maxX = bottomRight.x - NODE_DIMENSIONS.WIDTH; // Adjust for node width
+    const maxX = Math.max(bottomRight.x - NODE_DIMENSIONS.WIDTH, minX + NODE_DIMENSIONS.WIDTH);
     const minY = topLeft.y;
-    const maxY = bottomRight.y - NODE_DIMENSIONS.HEIGHT; // Adjust for node height
+    const maxY = Math.max(bottomRight.y - NODE_DIMENSIONS.HEIGHT, minY + NODE_DIMENSIONS.HEIGHT);
     
-    // Ensure valid area
+    // Only use fallback if we have truly invalid bounds (zero or negative area)
     if (maxX <= minX || maxY <= minY) {
-      console.warn('Invalid bounds provided for node positioning');
+      console.warn('Invalid bounds provided for node positioning, using fallback position');
       return { x: 300, y: 300 }; // Fallback position
     }
     
-    let position: XYPosition;
-    let attempts = 0;
-    const maxAttempts = 50;
+    // Calculate balanced position based on existing nodes
+    let position = findBalancedPosition(bounds, existingNodes);
     
-    // Try to find a non-overlapping position
-    do {
-      // Generate random position within the bounds
-      const x = minX + Math.random() * (maxX - minX);
-      const y = minY + Math.random() * (maxY - minY);
-      position = { x, y };
+    // Check if the balanced position overlaps with existing nodes
+    if (!hasOverlap(position, existingNodes)) {
+      return position;
+    }
+    
+    // If balanced position overlaps, try angular positions around the centroid
+    const centroid = calculateCentroid(existingNodes);
+    const baseDistance = NODE_DIMENSIONS.WIDTH + 3; // Reduced from 20 to 10
+    let attempts = 0;
+    const maxAttempts = 12; // Try 12 different angles around the centroid
+    
+    while (attempts < maxAttempts) {
+      const angle = (Math.PI * 2 / maxAttempts) * attempts;
+      const candidatePosition = {
+        x: centroid.x + Math.cos(angle) * baseDistance,
+        y: centroid.y + Math.sin(angle) * baseDistance
+      };
+      
+      // Adjust position to stay within bounds
+      const adjustedPosition = {
+        x: Math.max(minX, Math.min(maxX, candidatePosition.x)),
+        y: Math.max(minY, Math.min(maxY, candidatePosition.y))
+      };
+      
+      if (!hasOverlap(adjustedPosition, existingNodes)) {
+        return adjustedPosition;
+      }
       
       attempts++;
-      
-      // Break after max attempts to avoid infinite loops
-      if (attempts >= maxAttempts) {
-        // Try a grid-based approach as backup
-        const gridPositions = generateGridPositions(bounds, existingNodes);
-        
-        // Try each position in the grid until we find one without overlap
-        for (const gridPos of gridPositions) {
-          if (!hasOverlap(gridPos, existingNodes)) {
-            position = gridPos;
-            break;
-          }
-        }
-        
-        // If all else fails, use a position with minimal overlap
-        if (!position || hasOverlap(position, existingNodes)) {
-          position = findPositionWithMinimalOverlap(bounds, existingNodes);
-        }
-        
-        break;
-      }
-    } while (hasOverlap(position, existingNodes));
+    }
     
-    return position;
+    // If all else fails, fall back to grid approach and minimal overlap
+    const gridPositions = generateGridPositions(bounds, existingNodes);
+    
+    // Try each position in the grid until we find one without overlap
+    for (const gridPos of gridPositions) {
+      if (!hasOverlap(gridPos, existingNodes)) {
+        return gridPos;
+      }
+    }
+    
+    // Last resort: position with minimal overlap
+    return findPositionWithMinimalOverlap(bounds, existingNodes);
   }
 };
 
@@ -102,8 +223,8 @@ const generateGridPositions = (bounds: Bounds, existingNodes: ThoughtNode[]): XY
   const areaWidth = bottomRight.x - topLeft.x;
   const areaHeight = bottomRight.y - topLeft.y;
   
-  // Calculate how many nodes can fit in the area
-  const nodeSpacing = 3;  
+  // Node spacing for grid positions
+  const nodeSpacing = 3; // Reduced from 15 to 8 for closer positioning
   const cols = Math.max(1, Math.floor(areaWidth / (NODE_DIMENSIONS.WIDTH + nodeSpacing)));
   const rows = Math.max(1, Math.floor(areaHeight / (NODE_DIMENSIONS.HEIGHT + nodeSpacing)));
   
@@ -172,9 +293,12 @@ const countOverlaps = (position: XYPosition, existingNodes: ThoughtNode[]): numb
     return 0;
   }
   
+  // Use same buffer as hasOverlap for consistency
+  const buffer = 0.05;
+  
   return existingNodes.filter(node => 
-    Math.abs(position.x - node.position.x) < NODE_DIMENSIONS.WIDTH &&
-    Math.abs(position.y - node.position.y) < NODE_DIMENSIONS.HEIGHT
+    Math.abs(position.x - node.position.x) < NODE_DIMENSIONS.WIDTH + (NODE_DIMENSIONS.WIDTH * buffer) &&
+    Math.abs(position.y - node.position.y) < NODE_DIMENSIONS.HEIGHT + (NODE_DIMENSIONS.HEIGHT * buffer)
   ).length;
 };
 
@@ -210,7 +334,7 @@ export const setBoundsAboveNode = (node: ReactFlowNode): Bounds => {
   const nodeWidth = node.width || 400;
   
   // Calculate bounds dimensions
-  // Width is 120% of the node width
+  // Width is 150% of the node width
   const boundsWidth = nodeWidth * 1.2;
   // Height is 3 times the thought node height
   const boundsHeight = NODE_DIMENSIONS.HEIGHT * 2;
@@ -247,7 +371,9 @@ const hasOverlap = (position: XYPosition, existingNodes: ThoughtNode[]): boolean
     return false;
   }
   
-  const buffer = 0.20;   // 20% buffer for overlap detection
+  // Fix buffer to 5% to reduce overlap
+  const buffer = 0.05;
+  
   return existingNodes.some((node) => 
     Math.abs(position.x - node.position.x) < NODE_DIMENSIONS.WIDTH + (NODE_DIMENSIONS.WIDTH * buffer) &&
     Math.abs(position.y - node.position.y) < NODE_DIMENSIONS.HEIGHT + (NODE_DIMENSIONS.HEIGHT * buffer)

@@ -2,6 +2,7 @@
 export interface Content {
     text: string;
     // No embedding in frontend
+    embedding?: number[];
   }
 
 // Timestamp information

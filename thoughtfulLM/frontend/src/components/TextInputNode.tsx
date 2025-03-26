@@ -64,7 +64,7 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
 
   return (
     <Box
-      bg="gray.100"
+      bg="gray.50"
       borderRadius="2xl"
       boxShadow="sm"
       width="500px"
@@ -86,7 +86,7 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
         }}
         fontSize="md"
         color="gray.700"
-        bg="gray.100"
+        bg="gray.50"
         p={5}
         overflowY="hidden"
       />
