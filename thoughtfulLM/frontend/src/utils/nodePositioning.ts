@@ -4,7 +4,7 @@ import { useBoundsStore } from '../store/boundsStore';
 
 // Constants for node dimensions
 export const NODE_DIMENSIONS = {
-  HEIGHT: 50,
+  HEIGHT: 80,
   WIDTH: 150
 };
 
@@ -62,7 +62,7 @@ const findBalancedPosition = (
   if (!existingNodes || existingNodes.length === 0) {
     return {
       x: topLeft.x + (bottomRight.x - topLeft.x) / 2 - NODE_DIMENSIONS.WIDTH / 2,
-      y: 0
+      y: topLeft.y + (bottomRight.y - topLeft.y) / 2 - NODE_DIMENSIONS.HEIGHT / 2
     };
   }
   
@@ -353,7 +353,7 @@ export const createBoundsAboveNode = (node: ReactFlowNode): Bounds => {
 };
 
 /**
- * Creates a bounded area to the right of a given input node
+ * Creates a bounded area to the right of a given response node
  */
 export const createBoundsRightOfNode = (node: ReactFlowNode): Bounds => {
   if (!node) {
@@ -365,6 +365,11 @@ export const createBoundsRightOfNode = (node: ReactFlowNode): Bounds => {
   const nodeY = node.position.y;
   const nodeWidth = node.width || 500;
   const nodeHeight = node.height || 200;
+
+  console.log('DEBUG: nodeX', nodeX);
+  console.log('DEBUG: nodeY', nodeY);
+  console.log('DEBUG: nodeWidth', nodeWidth);
+  console.log('DEBUG: nodeHeight', nodeHeight);
 
   // Width is equivalent to the node height (for vertical positioning)
   const boundsWidth = nodeHeight;
@@ -382,14 +387,37 @@ export const createBoundsRightOfNode = (node: ReactFlowNode): Bounds => {
     bottomRight: { x: boundsX + boundsWidth, y: nodeY + nodeHeight + yOffset }
   };
 
+  console.log('DEBUG: Calculated bounds:', bounds);
+  
   return bounds;
 };
 
 /**
  * Sets custom bounds and updates the global store
  */
-export const setBounds = (bounds: Bounds): void => {
-  useBoundsStore.getState().setBounds(bounds);
+export const setBounds = (bounds: Bounds, showVisually = true): void => {
+  useBoundsStore.getState().setBounds(bounds, showVisually);
+};
+
+/**
+ * Sets bounds and ensures visibility is enabled
+ */
+export const setBoundsAndShow = (bounds: Bounds): void => {
+  useBoundsStore.getState().setBounds(bounds, true);
+};
+
+/**
+ * Hide the visual boundary indicator without changing the bounds
+ */
+export const hideBoundaryIndicator = (): void => {
+  useBoundsStore.getState().setShowBounds(false);
+};
+
+/**
+ * Show the visual boundary indicator for current bounds
+ */
+export const showBoundaryIndicator = (): void => {
+  useBoundsStore.getState().setShowBounds(true);
 };
 
 /**

@@ -13,8 +13,12 @@ interface BoundsStoreState {
   // Default bounds to use when no specific bounds are set
   defaultBounds: Bounds;
   
+  // Control whether to show bounds visually on the canvas
+  showBounds: boolean;
+  
   // Actions
-  setBounds: (bounds: Bounds) => void;
+  setBounds: (bounds: Bounds, showVisually?: boolean) => void;
+  setShowBounds: (show: boolean) => void;
   resetToDefault: () => void;
   getBounds: () => Bounds;
 }
@@ -35,10 +39,21 @@ export const useBoundsStore = create<BoundsStoreState>((set, get) => ({
   // Default bounds
   defaultBounds: createDefaultBounds(),
   
+  // Initially don't show bounds
+  showBounds: false,
+  
   // Set new bounds
-  setBounds: (bounds: Bounds) => {
+  setBounds: (bounds: Bounds, showVisually = true) => {
     console.log('🖼 Setting bounds for positioning thoughts', bounds);
-    set({ currentBounds: bounds });
+    set({ 
+      currentBounds: bounds,
+      showBounds: showVisually
+    });
+  },
+  
+  // Control bounds visibility
+  setShowBounds: (show: boolean) => {
+    set({ showBounds: show });
   },
   
   // Reset to default bounds

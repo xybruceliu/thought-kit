@@ -12,6 +12,7 @@ import { Box } from '@chakra-ui/react';
 import TextInputNode from './TextInputNode';
 import ThoughtBubbleNode from './ThoughtBubbleNode';
 import ResponseNode from './ResponseNode';
+import BoundaryIndicator from './BoundaryIndicator';
 import Settings from './Settings';
 import { useThoughtNodes, useInputNodes, useResponseNodes } from '../hooks';
 import { useTriggerDetection } from '../hooks';
@@ -117,6 +118,7 @@ const CanvasContent: React.FC = () => {
       >
         <Controls showInteractive={false} />
         <Background gap={12} size={1} color="none" />
+        <BoundaryIndicator />
       </ReactFlow>
       <Settings onMicrophoneClick={handleMicrophoneClick} />
     </>

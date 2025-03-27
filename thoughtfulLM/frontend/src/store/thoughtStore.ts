@@ -348,16 +348,13 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       const nonPersistentThoughts = thoughts.filter(t => !t.config.persistent);
       nonPersistentThoughts.forEach(t => get().removeThought(t.id));
       
-      // Clear all active thoughts after articulation
-      get().clearActiveThoughts();
-      
       // Signal that response is ready
       const onResponseCreated = get().onResponseCreated;
       if (onResponseCreated && response.response) {
         // Just pass the content, the hook will handle positioning
         onResponseCreated(response.response);
       }
-      
+
       set({ isLoading: false });
       return response.response;
     } catch (error) {
