@@ -19,7 +19,7 @@ export type Bounds = {
 // Position strategy interface
 export interface PositioningStrategy {
   name: string;
-  calculatePosition: (
+  calculateNodePosition: (
     bounds: Bounds,
     existingNodes: ThoughtNode[]
   ) => XYPosition;
@@ -142,7 +142,7 @@ const findBalancedPosition = (
  */
 export const boundedAreaStrategy: PositioningStrategy = {
   name: 'boundedArea',
-  calculatePosition: (bounds, existingNodes) => {
+  calculateNodePosition: (bounds, existingNodes) => {
     // Fallback position if bounds not provided correctly
     if (!bounds) {
       return { x: 300, y: 300 };
@@ -302,17 +302,6 @@ const countOverlaps = (position: XYPosition, existingNodes: ThoughtNode[]): numb
   ).length;
 };
 
-/**
- * Calculate node position using the current bounds from the global store
- * Primary method for positioning nodes in the application
- */
-export const calculateNodePosition = (
-  existingNodes: ThoughtNode[],
-  strategy: PositioningStrategy = boundedAreaStrategy
-): XYPosition => {
-  const bounds = useBoundsStore.getState().getBounds();
-  return strategy.calculatePosition(bounds, existingNodes);
-};
 
 // Export available strategies for easier access
 export const positioningStrategies = {
@@ -325,7 +314,6 @@ export const positioningStrategies = {
 export const createBoundsAboveNode = (node: ReactFlowNode, showVisually = true): Bounds => {
   if (!node) {
     const defaultBounds = useBoundsStore.getState().defaultBounds;
-    useBoundsStore.getState().setBounds(defaultBounds, showVisually);
     return defaultBounds;
   }
   
@@ -350,9 +338,6 @@ export const createBoundsAboveNode = (node: ReactFlowNode, showVisually = true):
     bottomRight: { x: nodeX + nodeWidth + xOffset, y: boundsY + boundsHeight }
   };
 
-  // Automatically set the bounds in the store
-  useBoundsStore.getState().setBounds(bounds, showVisually);
-
   return bounds;
 };
 
@@ -362,18 +347,17 @@ export const createBoundsAboveNode = (node: ReactFlowNode, showVisually = true):
 export const createBoundsRightOfNode = (node: ReactFlowNode, showVisually = true): Bounds => {
   if (!node) {
     const defaultBounds = useBoundsStore.getState().defaultBounds;
-    useBoundsStore.getState().setBounds(defaultBounds, showVisually);
     return defaultBounds;
   }
   
   const nodeX = node.position.x;
-  const nodeY = node.position.y;
-  const nodeWidth = node.width || 500;
-  const nodeHeight = node.height || 200;
+  const nodeY = node.position.y - 20;
+  const nodeWidth = 500;
+  const nodeHeight = 200;
 
   // Width is 50% of the node width
-  const boundsWidth = nodeWidth * 0.5;
-  const boundsHeight = nodeHeight * 3;
+  const boundsWidth = nodeWidth * 0.8;
+  const boundsHeight = nodeHeight;
   const boundsX = nodeX + nodeWidth + 10;
   const boundsY = nodeY + (nodeHeight / 2) - (boundsHeight / 2);
   
@@ -384,8 +368,6 @@ export const createBoundsRightOfNode = (node: ReactFlowNode, showVisually = true
     bottomRight: { x: boundsX + boundsWidth, y: boundsY + boundsHeight }
   };
   
-  // Automatically set the bounds in the store
-  useBoundsStore.getState().setBounds(bounds, showVisually);
   
   return bounds;
 };

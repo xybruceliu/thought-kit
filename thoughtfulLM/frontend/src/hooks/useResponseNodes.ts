@@ -9,10 +9,10 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 import { useThoughtStore } from '../store/thoughtStore';
 import { useInputStore } from '../store/inputStore';
-import { createBoundsRightOfNode, calculateNodePosition, boundedAreaStrategy } from '../utils/nodePositioning';
-import { useBoundsStore } from '../store/boundsStore';
+import { createBoundsRightOfNode, boundedAreaStrategy } from '../utils/nodePositioning';
 import { useThoughtNodes } from './useThoughtNodes';
 import { ThoughtNode } from './useThoughtNodes';
+import { useBoundsStore } from '../store/boundsStore';
 
 // Define the type for a response node
 export interface ResponseNode extends Node {
@@ -70,27 +70,85 @@ export const useResponseNodes = () => {
         return;
       }
       
-      // Move the first active thought to the right by 50px
-      // User updateThoughtNodePosition?
-      const firstThoughtId = activeThoughtIds[0];
-      const firstThoughtNode = reactFlowInstance.getNode(firstThoughtId);
-      if (firstThoughtNode) {
-        console.log('!!!DEBUG: Repositioning thought:', firstThoughtId);
-        updateThoughtNodePosition(firstThoughtId, { x: firstThoughtNode.position.x + 50, y: firstThoughtNode.position.y });
-      }
+      // Create bounds only once, outside the loop
+      const bounds = createBoundsRightOfNode(responseNode);
+      useBoundsStore.getState().setBounds(bounds, true);
       
-      // Clear active thoughts after a delay to ensure repositioning is complete
-      // and visual updates have been applied
-      setTimeout(() => {
-        thoughtStore.clearActiveThoughts();
-        console.log('Cleared active thoughts after repositioning');
-      }, 1000);
+      // Calculate all positions first before updating ReactFlow
+      const existingNodes: ThoughtNode[] = [];
+      const nodesToUpdate: { id: string, position: XYPosition }[] = [];
+
+      
+      // First, collect all nodes and calculate their positions
+      activeThoughtIds.forEach(thoughtId => {
+        const thoughtNode = reactFlowInstance.getNode(thoughtId);
+        
+        if (thoughtNode) {
+          // Calculate position with the currently positioned nodes
+          const position = boundedAreaStrategy.calculateNodePosition(bounds, existingNodes);
+          
+          // Add to positions to update
+          nodesToUpdate.push({ id: thoughtId, position });
+          
+          // Add to existing nodes to avoid overlap in future calculations
+          const newNodeCopy: ThoughtNode = {
+            id: thoughtId,
+            type: 'thoughtBubble',
+            position,
+            data: {
+              content: thoughtNode.data.content,
+              thoughtId: thoughtId,
+              blobVariant: 0
+            }
+          };
+          existingNodes.push(newNodeCopy);
+        }
+      });
+      
+      // Update each node with a small delay between updates to ensure ReactFlow processes them correctly
+      const updateNodesWithDelay = (index = 0) => {
+        if (index >= nodesToUpdate.length) {
+          console.log('All nodes repositioned successfully');
+          
+          // Clear active thoughts after all nodes have been updated
+          setTimeout(() => {
+            thoughtStore.clearActiveThoughts();
+            console.log('Cleared active thoughts after repositioning');
+          }, 2000); // Increased to allow transitions to complete
+          
+          return;
+        }
+        
+        const { id, position } = nodesToUpdate[index];
+        
+        // Update directly in ReactFlow with a slower animation for repositioning
+        reactFlowInstance.setNodes(nodes => 
+          nodes.map(node => {
+            if (node.id === id) {
+              return {
+                ...node,
+                position
+              };
+            }
+            return node;
+          })
+        );
+        
+        // Update in our state management - pass special flag for repositioning
+        updateThoughtNodePosition(id, position, true);
+        
+        // Schedule the next update with a delay - increased for more staggered effect
+        setTimeout(() => updateNodesWithDelay(index + 1), 150); // More staggered positioning
+      };
+      
+      // Start the sequential update process
+      updateNodesWithDelay();
     } catch (error) {
       console.error('Error repositioning active thoughts:', error);
     }
   }, [reactFlowInstance, updateThoughtNodePosition]);
 
-  // Create a response node from content and calculate position
+  // Helper function to create a response node from content
   const createResponseNode = useCallback((content: string) => {
     try {
       // Clear all existing response nodes
@@ -125,7 +183,8 @@ export const useResponseNodes = () => {
       
       // Reposition active thoughts to the right of the new response node
       if (nodeId) {
-        setTimeout(() => repositionActiveThoughts(nodeId), 100);
+        // Add a small delay to allow rendering before repositioning
+        setTimeout(() => repositionActiveThoughts(nodeId), 200);
       }
       
       // Refit the view to include the new node
@@ -140,10 +199,10 @@ export const useResponseNodes = () => {
         reactFlowInstance.fitView({
           padding: 0.5,
           includeHiddenNodes: false,
-          duration: 800, // Smooth animation duration in ms
+          duration: 1000, // Longer animation for smoother experience
           nodes: nodesToFit // Only fit view to input and response nodes
         });
-      }, 300); // Small delay to ensure node is rendered
+      }, 400); // Increased delay to ensure node transitions complete
       
       return nodeId;
     } catch (error) {

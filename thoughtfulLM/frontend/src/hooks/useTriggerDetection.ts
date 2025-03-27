@@ -191,7 +191,6 @@ export const useTriggerDetection = () => {
       // Generate a thought at the clicked position with offsets
       try {
         console.log(`Trigger: Pane click 🖱️ for node ${activeInputId}`);
-        console.log(`DEBUG Position: (${finalPosition.x}, ${finalPosition.y})`);
         const thought = await createThoughtNodeAtPosition('CLICK', finalPosition, activeInputNode);
         
         if (thought) {

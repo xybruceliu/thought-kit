@@ -3,7 +3,7 @@ import { Node, NodeChange, applyNodeChanges, XYPosition, useReactFlow } from 're
 import { useThoughtStore } from '../store/thoughtStore';
 import { Thought } from '../types/thought';
 import { EventType } from '../types/event';
-import { boundedAreaStrategy, calculateNodePosition, createBoundsAboveNode } from '../utils/nodePositioning';
+import { boundedAreaStrategy, createBoundsAboveNode } from '../utils/nodePositioning';
 import { useBoundsStore } from '../store/boundsStore';
 
 // ReactFlow node for thought bubble visualization
@@ -95,6 +95,13 @@ export const useThoughtNodes = () => {
         blobVariant: existingNode?.data.blobVariant || Math.floor(Math.random() * 5),
         isRemoving: removingThoughtIds.includes(thought.id)
       },
+      // Add transition property for smooth animations when position changes
+      style: { 
+        transitionProperty: 'transform, left, top',
+        transitionDuration: '600ms',
+        transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+        transitionDelay: '0ms'
+      },
       // Preserve any other ReactFlow properties
       ...(existingNode && { 
         selected: existingNode.selected,
@@ -115,6 +122,7 @@ export const useThoughtNodes = () => {
     if (!finalPosition && textInputNode) {
       // Set bounds above the input node - this now automatically updates the global store
       const bounds = createBoundsAboveNode(textInputNode);
+      useBoundsStore.getState().setBounds(bounds, true);
       
       // Get the list of active thought IDs from the thought store
       const activeThoughtIds = useThoughtStore.getState().activeThoughtIds;
@@ -126,7 +134,7 @@ export const useThoughtNodes = () => {
       
       // Use active nodes for positioning so we avoid overlaps with existing thoughts
       // but ignore nodes that have been submitted and moved to the right
-      finalPosition = calculateNodePosition(activeNodes, boundedAreaStrategy);
+      finalPosition = boundedAreaStrategy.calculateNodePosition(bounds, activeNodes);
     }
     
     // Generate thought through the store
@@ -175,8 +183,7 @@ export const useThoughtNodes = () => {
   }, []);
   
   // Update a node's position in state and store
-  const updateThoughtNodePosition = useCallback((nodeId: string, position: XYPosition) => {
-    console.log(`DEBUG 💭 Updating thought node position for ${nodeId} to (${position.x.toFixed(2)}, ${position.y.toFixed(2)})`);
+  const updateThoughtNodePosition = useCallback((nodeId: string, position: XYPosition, isRepositioning: boolean = false) => {
     // Queue the position update for the store
     pendingPositionUpdatesRef.current.set(nodeId, position);
     
@@ -184,7 +191,6 @@ export const useThoughtNodes = () => {
     setNodes(currentNodes => 
       currentNodes.map(node => {
         if (node.id === nodeId) {
-          console.log('!!!YES DEBUG: Updating node position:', { ...node, position });
           return { ...node, position };
         }
         return node;
@@ -201,7 +207,18 @@ export const useThoughtNodes = () => {
           if (node.id === nodeId) {
             return {
               ...node,
-              position
+              position,
+              // Ensure style is preserved/included for transition
+              style: {
+                ...node.style,
+                // Use slower transition for repositioning, regular transition otherwise
+                transitionProperty: 'transform, left, top',
+                transitionDuration: isRepositioning ? '1500ms' : '600ms',
+                transitionTimingFunction: isRepositioning 
+                  ? 'cubic-bezier(0.16, 1, 0.3, 1)' 
+                  : 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+                transitionDelay: '0ms'
+              }
             };
           }
           return node;

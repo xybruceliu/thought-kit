@@ -231,9 +231,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
 
       // Remove excess non-persistent thoughts if needed
       const { thoughts, removeThought } = get();
-      console.log('DEBUG: 💭 Thoughts:', thoughts);
       let nonPersistentThoughts = thoughts.filter(t => !t.config.persistent);
-      console.log('DEBUG: 💭 Non-persistent thoughts:', nonPersistentThoughts);
       // Get max thoughts count from settings store 
       const { maxThoughtCount } = useSettingsStore.getState();
       
@@ -386,11 +384,9 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
   
   removeThought: async (thoughtId: string) => {
     try {
-      console.log('DEBUG: 💭 Removing thought:', thoughtId);
       // Mark the thought as being removed (for animation)
       get().markThoughtAsRemoving(thoughtId);
         
-      console.log('DEBUG: 💭 Removing thought from activeThoughtIds:', get().activeThoughtIds);
       // Also remove from active thoughts if it's still active
       get().removeActiveThought(thoughtId);
       
@@ -404,8 +400,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
         removingThoughtIds: state.removingThoughtIds.filter(id => id !== thoughtId)
       }));
 
-      console.log('DEBUG: 💭 Removed thought from thoughts:', get().thoughts);
-      console.log('DEBUG: 💭 Removing thought from removingThoughtIds:', get().removingThoughtIds);
+
     } catch (error) {
       console.error(`Error removing thought ${thoughtId}:`, error);
       get().unmarkThoughtAsRemoving(thoughtId);
