@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -31,7 +31,11 @@ const nodeTypes: NodeTypes = {
 const CanvasContent: React.FC = () => {
   // Use our custom hooks for nodes
   const { thoughtNodes, onThoughtNodesChange } = useThoughtNodes();
-  const { inputNodes, onInputNodesChange, addInputNode } = useInputNodes();
+  const { 
+    inputNodes, 
+    onInputNodesChange, 
+    addInputNode, 
+  } = useInputNodes();
   const { responseNodes, onResponseNodesChange } = useResponseNodes();
   const { onPaneClick } = useTriggerDetection();
   
@@ -42,13 +46,34 @@ const CanvasContent: React.FC = () => {
   const [interfaceType, setInterfaceType] = useState<number>(1);
   const [maxThoughts, setMaxThoughts] = useState<number>(5);
 
+  // Use a ref to track initialization status across renders
+  // For react strict mode
+  const hasInitializedRef = useRef(false);
+
   // Combine all nodes for the canvas
   const nodes = useMemo(() => {
     return [...inputNodes, ...thoughtNodes, ...responseNodes];
   }, [inputNodes, thoughtNodes, responseNodes]);
 
+  // Initialize the canvas with a first input node when the component mounts
+  useEffect(() => {
+    // Only run initialization if we haven't done it before
+    if (!hasInitializedRef.current && inputNodes.length === 0) {
+      console.log('Canvas: Creating initial input node');
+      // Create first input node at default position
+      addInputNode({ x: 50, y: 50 });
+      // Mark as initialized so we don't do it again
+      hasInitializedRef.current = true;
+    }
+  }, [addInputNode, inputNodes.length]);
+
   // Clear all data when the component mounts (page loads/refreshes)
   useEffect(() => {
+    // Make sure we only clear data once
+    if (hasInitializedRef.current) {
+      return; // Skip if we've already initialized
+    }
+    
     const clearDataOnLoad = async () => {
       try {
         // Get the store actions directly from the imported hooks

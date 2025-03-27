@@ -35,10 +35,10 @@ export const useTriggerDetection = () => {
     }
     
     const now = Date.now();
-    if ((now - inputData.lastActivityTimestamp) > idleTimeThreshold) {
-      console.log(`Trigger: Idle time > ${idleTimeThreshold}ms ⏱️ for node ${nodeId}`);
-      return true;
-    }
+    // if ((now - inputData.lastActivityTimestamp) > idleTimeThreshold) {
+    //   console.log(`Trigger: Idle time > ${idleTimeThreshold}ms ⏱️ for node ${nodeId}`);
+    //   return true;
+    // }
     return false;
   }, [getInputData, idleTimeThreshold]);
   
