@@ -59,6 +59,10 @@ interface ThoughtStoreState {
   
   // Signal for response creation
   onResponseCreated?: (content: string) => string;
+  
+  // Callback for ReactFlow integration
+  onThoughtRemoving?: (thoughtId: string) => void;
+  setThoughtRemovingCallback: (callback: (thoughtId: string) => void) => void;
 }
 
 // Create the store
@@ -71,9 +75,9 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
   activeThoughtIds: [], // Track active thought IDs
   
   // SETTINGS
-  maxThoughtCount: 5, // Fallback default value (Settings component value takes precedence)
-  decay: 0.1, // Time decay for saliency
-  likeAmount: 0.2, // Amount to like a thought
+  maxThoughtCount: useSettingsStore.getState().maxThoughtCount,
+  decay: useSettingsStore.getState().decay,
+  likeAmount: useSettingsStore.getState().likeAmount, 
 
   // Node Position methods
   setNodePosition: (thoughtId: string, position: XYPosition) => {
@@ -120,6 +124,12 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
     set((state) => ({
       removingThoughtIds: [...state.removingThoughtIds, thoughtId]
     }));
+    
+    // Call the ReactFlow integration callback if it exists
+    const callback = get().onThoughtRemoving;
+    if (callback) {
+      callback(thoughtId);
+    }
   },
   
   unmarkThoughtAsRemoving: (thoughtId: string) => {
@@ -221,8 +231,9 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
 
       // Remove excess non-persistent thoughts if needed
       const { thoughts, removeThought } = get();
+      console.log('DEBUG: 💭 Thoughts:', thoughts);
       let nonPersistentThoughts = thoughts.filter(t => !t.config.persistent);
-      
+      console.log('DEBUG: 💭 Non-persistent thoughts:', nonPersistentThoughts);
       // Get max thoughts count from settings store 
       const { maxThoughtCount } = useSettingsStore.getState();
       
@@ -345,8 +356,8 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       console.log('Response received:', response);
 
       // Remove all thoughts that are not persistent
-      const nonPersistentThoughts = thoughts.filter(t => !t.config.persistent);
-      nonPersistentThoughts.forEach(t => get().removeThought(t.id));
+      // const nonPersistentThoughts = thoughts.filter(t => !t.config.persistent);
+      // nonPersistentThoughts.forEach(t => get().removeThought(t.id));
       
       // Signal that response is ready
       const onResponseCreated = get().onResponseCreated;
@@ -375,10 +386,12 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
   
   removeThought: async (thoughtId: string) => {
     try {
+      console.log('DEBUG: 💭 Removing thought:', thoughtId);
       // Mark the thought as being removed (for animation)
       get().markThoughtAsRemoving(thoughtId);
-      
-      // Also remove from active thoughts
+        
+      console.log('DEBUG: 💭 Removing thought from activeThoughtIds:', get().activeThoughtIds);
+      // Also remove from active thoughts if it's still active
       get().removeActiveThought(thoughtId);
       
       // Wait for animation to complete
@@ -390,6 +403,9 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
         // Also remove from removingThoughtIds in the same state update
         removingThoughtIds: state.removingThoughtIds.filter(id => id !== thoughtId)
       }));
+
+      console.log('DEBUG: 💭 Removed thought from thoughts:', get().thoughts);
+      console.log('DEBUG: 💭 Removing thought from removingThoughtIds:', get().removingThoughtIds);
     } catch (error) {
       console.error(`Error removing thought ${thoughtId}:`, error);
       get().unmarkThoughtAsRemoving(thoughtId);
@@ -403,5 +419,11 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       nodePositions: {},
       activeThoughtIds: []
     });
+  },
+
+  // Callback for ReactFlow integration
+  onThoughtRemoving: undefined,
+  setThoughtRemovingCallback: (callback: (thoughtId: string) => void) => {
+    set({ onThoughtRemoving: callback });
   }
 })); 

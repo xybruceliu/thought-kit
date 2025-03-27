@@ -322,9 +322,10 @@ export const positioningStrategies = {
 /**
  * Creates a bounded area above a given input node and updates the global bounds store
  */
-export const createBoundsAboveNode = (node: ReactFlowNode): Bounds => {
+export const createBoundsAboveNode = (node: ReactFlowNode, showVisually = true): Bounds => {
   if (!node) {
     const defaultBounds = useBoundsStore.getState().defaultBounds;
+    useBoundsStore.getState().setBounds(defaultBounds, showVisually);
     return defaultBounds;
   }
   
@@ -336,11 +337,11 @@ export const createBoundsAboveNode = (node: ReactFlowNode): Bounds => {
   // Width is 120% of the node width
   const boundsWidth = nodeWidth * 1.2;
   // Height is 3 times the thought node height
-  const boundsHeight =  nodeHeight;
+  const boundsHeight =  nodeHeight * 0.7;
   // X offset to center the bounds above the node (accounts for the extra width)
   const xOffset = (boundsWidth - nodeWidth) / 2;
   // Y is 5pt above the input node upper bound
-  const boundsY = nodeY - boundsHeight - 5;
+  const boundsY = nodeY - boundsHeight - 10;
   
   const bounds = {
     topLeft: { x: nodeX - xOffset, y: boundsY },
@@ -349,15 +350,19 @@ export const createBoundsAboveNode = (node: ReactFlowNode): Bounds => {
     bottomRight: { x: nodeX + nodeWidth + xOffset, y: boundsY + boundsHeight }
   };
 
+  // Automatically set the bounds in the store
+  useBoundsStore.getState().setBounds(bounds, showVisually);
+
   return bounds;
 };
 
 /**
  * Creates a bounded area to the right of a given response node
  */
-export const createBoundsRightOfNode = (node: ReactFlowNode): Bounds => {
+export const createBoundsRightOfNode = (node: ReactFlowNode, showVisually = true): Bounds => {
   if (!node) {
     const defaultBounds = useBoundsStore.getState().defaultBounds;
+    useBoundsStore.getState().setBounds(defaultBounds, showVisually);
     return defaultBounds;
   }
   
@@ -366,28 +371,21 @@ export const createBoundsRightOfNode = (node: ReactFlowNode): Bounds => {
   const nodeWidth = node.width || 500;
   const nodeHeight = node.height || 200;
 
-  console.log('DEBUG: nodeX', nodeX);
-  console.log('DEBUG: nodeY', nodeY);
-  console.log('DEBUG: nodeWidth', nodeWidth);
-  console.log('DEBUG: nodeHeight', nodeHeight);
-
-  // Width is equivalent to the node height (for vertical positioning)
-  const boundsWidth = nodeHeight;
-  // Height is 120% of the node height
-  const boundsHeight = nodeHeight * 1.2;
-  // X is 5pt to the right of the input node right bound
-  const boundsX = nodeX + nodeWidth + 5;
-  // Y offset to center the bounds to the right of the node (accounts for the extra height)
-  const yOffset = (boundsHeight - nodeHeight) / 2;
+  // Width is 50% of the node width
+  const boundsWidth = nodeWidth * 0.5;
+  const boundsHeight = nodeHeight * 3;
+  const boundsX = nodeX + nodeWidth + 10;
+  const boundsY = nodeY + (nodeHeight / 2) - (boundsHeight / 2);
   
   const bounds = {
-    topLeft: { x: boundsX, y: nodeY - yOffset },
-    topRight: { x: boundsX + boundsWidth, y: nodeY - yOffset },
-    bottomLeft: { x: boundsX, y: nodeY + nodeHeight + yOffset },
-    bottomRight: { x: boundsX + boundsWidth, y: nodeY + nodeHeight + yOffset }
+    topLeft: { x: boundsX, y: boundsY },
+    topRight: { x: boundsX + boundsWidth, y: boundsY },
+    bottomLeft: { x: boundsX, y: boundsY + boundsHeight },
+    bottomRight: { x: boundsX + boundsWidth, y: boundsY + boundsHeight }
   };
-
-  console.log('DEBUG: Calculated bounds:', bounds);
+  
+  // Automatically set the bounds in the store
+  useBoundsStore.getState().setBounds(bounds, showVisually);
   
   return bounds;
 };

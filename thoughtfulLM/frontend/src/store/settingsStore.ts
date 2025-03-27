@@ -9,6 +9,8 @@ interface SettingsStoreState {
   
   // Thought-related settings
   maxThoughtCount: number;
+  decay: number;
+  likeAmount: number;
   
   // Audio settings
   microphoneEnabled: boolean;
@@ -22,7 +24,9 @@ interface SettingsStoreState {
 export const useSettingsStore = create<SettingsStoreState>((set) => ({
   // Default values
   interfaceType: 1,
-  maxThoughtCount: 5,
+  maxThoughtCount: 1,
+  decay: 0.1,
+  likeAmount: 0.2,
   microphoneEnabled: false,
   
   // Actions to update settings

@@ -1,9 +1,9 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Node, NodeChange, applyNodeChanges, XYPosition } from 'reactflow';
+import { Node, NodeChange, applyNodeChanges, XYPosition, useReactFlow } from 'reactflow';
 import { useThoughtStore } from '../store/thoughtStore';
 import { Thought } from '../types/thought';
 import { EventType } from '../types/event';
-import { calculateNodePosition, createBoundsAboveNode } from '../utils/nodePositioning';
+import { boundedAreaStrategy, calculateNodePosition, createBoundsAboveNode } from '../utils/nodePositioning';
 import { useBoundsStore } from '../store/boundsStore';
 
 // ReactFlow node for thought bubble visualization
@@ -28,14 +28,17 @@ export const useThoughtNodes = () => {
     removingThoughtIds,
     generateThought,
     setNodePosition,
-    getNodePosition
+    getNodePosition,
+    setThoughtRemovingCallback
   } = useThoughtStore();
   
   const [nodes, setNodes] = useState<ThoughtNode[]>([]);
   // Store pending position updates to avoid state updates during render
   const pendingPositionUpdatesRef = useRef<Map<string, XYPosition>>(new Map());
+  // Get access to the ReactFlow instance
+  const reactFlowInstance = useReactFlow();
   
-  // Effect to apply pending position updates outside of render cycle
+  // Store pending position updates to avoid state updates during render
   useEffect(() => {
     const pendingUpdates = pendingPositionUpdatesRef.current;
     if (pendingUpdates.size > 0) {
@@ -45,6 +48,27 @@ export const useThoughtNodes = () => {
       pendingPositionUpdatesRef.current.clear();
     }
   });
+  
+  // Watch for changes in removingThoughtIds and update ReactFlow accordingly
+  useEffect(() => {
+    if (removingThoughtIds.length > 0) {
+      // Set isRemoving flag directly in ReactFlow instance as well
+      reactFlowInstance.setNodes(nodes => 
+        nodes.map(node => {
+          if (removingThoughtIds.includes(node.id)) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                isRemoving: true
+              }
+            };
+          }
+          return node;
+        })
+      );
+    }
+  }, [removingThoughtIds, reactFlowInstance]);
   
   // Create a node from a thought
   const thoughtToNode = useCallback((
@@ -89,13 +113,20 @@ export const useThoughtNodes = () => {
     let finalPosition = position;
     
     if (!finalPosition && textInputNode) {
-      // Set bounds above the input node and update the global store
+      // Set bounds above the input node - this now automatically updates the global store
       const bounds = createBoundsAboveNode(textInputNode);
-      // Update the store
-      useBoundsStore.getState().setBounds(bounds);
       
-      // Calculate position using the bounds from the store
-      finalPosition = calculateNodePosition(nodes);
+      // Get the list of active thought IDs from the thought store
+      const activeThoughtIds = useThoughtStore.getState().activeThoughtIds;
+      
+      // Filter nodes to only include active ones that haven't been submitted yet
+      const activeNodes = nodes.filter(node => 
+        activeThoughtIds.includes(node.id)
+      );
+      
+      // Use active nodes for positioning so we avoid overlaps with existing thoughts
+      // but ignore nodes that have been submitted and moved to the right
+      finalPosition = calculateNodePosition(activeNodes, boundedAreaStrategy);
     }
     
     // Generate thought through the store
@@ -145,24 +176,101 @@ export const useThoughtNodes = () => {
   
   // Update a node's position in state and store
   const updateThoughtNodePosition = useCallback((nodeId: string, position: XYPosition) => {
-    // Queue the position update
+    console.log(`DEBUG 💭 Updating thought node position for ${nodeId} to (${position.x.toFixed(2)}, ${position.y.toFixed(2)})`);
+    // Queue the position update for the store
     pendingPositionUpdatesRef.current.set(nodeId, position);
     
+    // Update the node in local state
     setNodes(currentNodes => 
       currentNodes.map(node => {
         if (node.id === nodeId) {
+          console.log('!!!YES DEBUG: Updating node position:', { ...node, position });
           return { ...node, position };
         }
         return node;
       })
     );
-  }, []);
+    
+    // Update the node position directly in ReactFlow instance
+    // This ensures the visual update happens immediately
+    const rfNode = reactFlowInstance.getNode(nodeId);
+    if (rfNode) {
+      console.log('🔄 Directly updating ReactFlow node:', nodeId);
+      reactFlowInstance.setNodes(nodes => 
+        nodes.map(node => {
+          if (node.id === nodeId) {
+            return {
+              ...node,
+              position
+            };
+          }
+          return node;
+        })
+      );
+    } else {
+      console.warn('⚠️ ReactFlow node not found:', nodeId);
+    }
+  }, [reactFlowInstance]);
+
+  // Function to mark a thought node as removing in ReactFlow directly
+  const markThoughtNodeAsRemoving = useCallback((thoughtId: string) => {
+    console.log(`🗑️ Marking ReactFlow node for removal: ${thoughtId}`);
+    
+    // Update in ReactFlow instance directly
+    const rfNode = reactFlowInstance.getNode(thoughtId);
+    if (rfNode) {
+      reactFlowInstance.setNodes(nodes => 
+        nodes.map(node => {
+          if (node.id === thoughtId) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                isRemoving: true
+              }
+            };
+          }
+          return node;
+        })
+      );
+    } else {
+      console.warn(`⚠️ ReactFlow node not found for removal: ${thoughtId}`);
+    }
+    
+    // Also update in our local state
+    setNodes(currentNodes => 
+      currentNodes.map(node => {
+        if (node.id === thoughtId) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              isRemoving: true
+            }
+          };
+        }
+        return node;
+      })
+    );
+  }, [reactFlowInstance]);
+
+  // Register the function to mark a thought node as removing with the store
+  useEffect(() => {
+    // This function will be called by the store when a thought is being removed
+    setThoughtRemovingCallback(markThoughtNodeAsRemoving);
+    
+    // Cleanup function
+    return () => {
+      setThoughtRemovingCallback(() => {});
+    };
+  }, [markThoughtNodeAsRemoving, setThoughtRemovingCallback]);
 
   return {
     thoughtNodes: nodes,
     onThoughtNodesChange: onNodesChange,
     updateThoughtNodePosition,
-    createThoughtNodeAtPosition
+    createThoughtNodeAtPosition,
+    markThoughtNodeAsRemoving
   };
 }; 
 

@@ -11,6 +11,7 @@ import { useThoughtStore } from '../store/thoughtStore';
 import { useInputStore } from '../store/inputStore';
 import { createBoundsRightOfNode, calculateNodePosition, boundedAreaStrategy } from '../utils/nodePositioning';
 import { useBoundsStore } from '../store/boundsStore';
+import { useThoughtNodes } from './useThoughtNodes';
 import { ThoughtNode } from './useThoughtNodes';
 
 // Define the type for a response node
@@ -26,7 +27,7 @@ export const useResponseNodes = () => {
   // State for response nodes
   const [responseNodes, setResponseNodes] = useState<ResponseNode[]>([]);
   const reactFlowInstance = useReactFlow();
-
+  const { updateThoughtNodePosition } = useThoughtNodes();
   // Handle changes to response nodes
   const onResponseNodesChange = useCallback((changes: NodeChange[]) => {
     setResponseNodes((nds) => applyNodeChanges(changes, nds) as ResponseNode[]);
@@ -69,72 +70,25 @@ export const useResponseNodes = () => {
         return;
       }
       
-      // Create bounds to the right of the response node
-      const rightBounds = createBoundsRightOfNode(responseNode);
-      useBoundsStore.getState().setBounds(rightBounds);
-      
-      // Start with an empty list of nodes for positioning
-      // We'll build this up as we position each thought
-      let existingNodes: ThoughtNode[] = [];
-      
-      // Store position updates for all nodes to apply at once
-      const updatedPositions: Record<string, XYPosition> = {};
-      
-      // For each active thought, calculate a new position and update it
-      activeThoughtIds.forEach((thoughtId, index) => {
-        // Calculate position using current bounds
-        const newPosition = calculateNodePosition(existingNodes, boundedAreaStrategy);
-        
-        // Update the position in the thought store
-        thoughtStore.setNodePosition(thoughtId, newPosition);
-        
-        // Store the new position for the ReactFlow update
-        updatedPositions[thoughtId] = newPosition;
-        
-        console.log(`Calculated new position for thought ${thoughtId}: (${newPosition.x.toFixed(2)}, ${newPosition.y.toFixed(2)})`);
-        
-        // Create a temporary node with the new position and add it to existingNodes
-        // This ensures the next thought won't be placed at the same position
-        const tempNode: ThoughtNode = {
-          id: thoughtId,
-          type: 'thoughtBubble',
-          position: newPosition,
-          data: {
-            content: '',
-            thoughtId: thoughtId,
-            blobVariant: 0
-          }
-        };
-        
-        // Add this node to the existing nodes for the next calculation
-        existingNodes.push(tempNode);
-      });
-      
-      // Apply all node position updates at once
-      reactFlowInstance.setNodes(nodes => 
-        nodes.map(node => {
-          if (updatedPositions[node.id]) {
-            return {
-              ...node,
-              position: updatedPositions[node.id]
-            };
-          }
-          return node;
-        })
-      );
-      
-      console.log('Updated all thought nodes with new positions');
+      // Move the first active thought to the right by 50px
+      // User updateThoughtNodePosition?
+      const firstThoughtId = activeThoughtIds[0];
+      const firstThoughtNode = reactFlowInstance.getNode(firstThoughtId);
+      if (firstThoughtNode) {
+        console.log('!!!DEBUG: Repositioning thought:', firstThoughtId);
+        updateThoughtNodePosition(firstThoughtId, { x: firstThoughtNode.position.x + 50, y: firstThoughtNode.position.y });
+      }
       
       // Clear active thoughts after a delay to ensure repositioning is complete
       // and visual updates have been applied
       setTimeout(() => {
         thoughtStore.clearActiveThoughts();
         console.log('Cleared active thoughts after repositioning');
-      }, 500);
+      }, 1000);
     } catch (error) {
       console.error('Error repositioning active thoughts:', error);
     }
-  }, [reactFlowInstance]);
+  }, [reactFlowInstance, updateThoughtNodePosition]);
 
   // Create a response node from content and calculate position
   const createResponseNode = useCallback((content: string) => {
