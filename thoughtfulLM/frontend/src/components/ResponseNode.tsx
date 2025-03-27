@@ -1,15 +1,17 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { NodeProps } from 'reactflow';
 import { Box, Text, keyframes, usePrefersReducedMotion } from '@chakra-ui/react';
 
 type ResponseNodeProps = NodeProps<{
   content: string;
+  onRenderComplete?: (nodeId: string) => void;
 }>;
 
-const ResponseNode: React.FC<ResponseNodeProps> = ({ data }) => {
+const ResponseNode: React.FC<ResponseNodeProps> = ({ data, id }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const prefersReducedMotion = usePrefersReducedMotion();
   const [displayedContent, setDisplayedContent] = useState<string>('');
+  const [renderCompleted, setRenderCompleted] = useState<boolean>(false);
   
   // Define the fade-in animation
   const fadeIn = keyframes`
@@ -27,6 +29,7 @@ const ResponseNode: React.FC<ResponseNodeProps> = ({ data }) => {
     if (prefersReducedMotion || !data.content) {
       // Skip animation for accessibility or if content is empty
       setDisplayedContent(data.content || '');
+      setRenderCompleted(true);
       return;
     }
 
@@ -36,7 +39,8 @@ const ResponseNode: React.FC<ResponseNodeProps> = ({ data }) => {
     
     // Reset the displayed content when the actual content changes
     setDisplayedContent('');
-    
+    setRenderCompleted(false);
+
     const typingInterval = setInterval(() => {
       if (currentWordIndex < words.length) {
         const word = words[currentWordIndex];
@@ -48,11 +52,19 @@ const ResponseNode: React.FC<ResponseNodeProps> = ({ data }) => {
         currentWordIndex++;
       } else {
         clearInterval(typingInterval);
+        setRenderCompleted(true);
       }
     }, 50); // Adjust speed as needed
     
     return () => clearInterval(typingInterval);
-  }, [data.content, prefersReducedMotion]);
+  }, [data.content, prefersReducedMotion, id]);
+
+  // Call onRenderComplete when animation is finished
+  useEffect(() => {
+    if (renderCompleted && data.onRenderComplete) {
+      data.onRenderComplete(id);
+    }
+  }, [renderCompleted, data.onRenderComplete, id]);
 
   // Auto-resize functionality
   useEffect(() => {

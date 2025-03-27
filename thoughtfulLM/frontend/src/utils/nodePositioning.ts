@@ -373,7 +373,7 @@ export const createBoundsRightOfNode = (node: ReactFlowNode, showVisually = true
 
   // Width is 50% of the node width
   const boundsWidth = nodeWidth * 0.5;
-  const boundsHeight = nodeHeight * 3;
+  const boundsHeight = nodeHeight * 2;
   const boundsX = nodeX + nodeWidth + 10;
   const boundsY = nodeY + (nodeHeight / 2) - (boundsHeight / 2);
   

@@ -137,10 +137,20 @@ export const useThoughtNodes = () => {
   // Handle ReactFlow node changes and update positions in the store
   const onNodesChange = useCallback((changes: NodeChange[]) => {
     setNodes(nds => {
-      const updatedNodes = applyNodeChanges(changes, nds) as ThoughtNode[];
+      // Filter changes to only apply to thought nodes
+      const filteredChanges = changes.filter(change => {
+        // For each change, check if it affects our thought nodes
+        if ('id' in change) {
+          // It's a change with an ID property (position, remove, select)
+          return nds.some(node => node.id === change.id);
+        }
+        return false; // Ignore other types of changes
+      });
+      
+      const updatedNodes = applyNodeChanges(filteredChanges, nds) as ThoughtNode[];
       
       // Queue position updates instead of updating immediately
-      changes.forEach(change => {
+      filteredChanges.forEach(change => {
         if (change.type === 'position' && change.position) {
           pendingPositionUpdatesRef.current.set(change.id, change.position);
         }

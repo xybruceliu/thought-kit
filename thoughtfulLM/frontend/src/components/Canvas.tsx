@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import ReactFlow, {
   Background,
   Controls,
   ReactFlowProvider,
   NodeTypes,
   Edge,
-  NodeChange
+  NodeChange,
+  useReactFlow,
+  ReactFlowInstance
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Box } from '@chakra-ui/react';
@@ -33,8 +35,9 @@ const CanvasContent: React.FC = () => {
   // Use our custom hooks for nodes
   const { thoughtNodes, onThoughtNodesChange } = useThoughtNodes();
   const { inputNodes, onInputNodesChange, addInputNode } = useInputNodes();
-  const { responseNodes, onResponseNodesChange } = useResponseNodes();
+  const { responseNodes, onResponseNodesChange, setReactFlowInstance } = useResponseNodes();
   const { onPaneClick } = useTriggerDetection();
+  const reactFlowInstance = useReactFlow();
   
   // Initialize edges state
   const [edges] = useState<Edge[]>([]);
@@ -42,6 +45,13 @@ const CanvasContent: React.FC = () => {
   // Settings state
   const [interfaceType, setInterfaceType] = useState<number>(1);
   const [maxThoughts, setMaxThoughts] = useState<number>(5);
+
+  // Set ReactFlow instance for the response nodes hook
+  useEffect(() => {
+    if (reactFlowInstance) {
+      setReactFlowInstance(reactFlowInstance);
+    }
+  }, [reactFlowInstance, setReactFlowInstance]);
 
   // Combine all nodes for the canvas
   const nodes = useMemo(() => {
@@ -74,10 +84,23 @@ const CanvasContent: React.FC = () => {
 
   // Combined nodes change handler
   const handleNodesChange = useCallback((changes: NodeChange[]) => {
-    // Determine which nodes are being changed and call the appropriate handler
-    onThoughtNodesChange(changes);
-    onInputNodesChange(changes);
-    onResponseNodesChange(changes);
+    // Filter changes by node type based on ID prefix
+    const thoughtChanges = changes.filter(change => 
+      'id' in change && !change.id.startsWith('input-') && !change.id.startsWith('response-')
+    );
+    
+    const inputChanges = changes.filter(change => 
+      'id' in change && change.id.startsWith('input-')
+    );
+    
+    const responseChanges = changes.filter(change => 
+      'id' in change && change.id.startsWith('response-')
+    );
+    
+    // Only pass relevant changes to each handler
+    if (thoughtChanges.length > 0) onThoughtNodesChange(thoughtChanges);
+    if (inputChanges.length > 0) onInputNodesChange(inputChanges);
+    if (responseChanges.length > 0) onResponseNodesChange(responseChanges);
   }, [onThoughtNodesChange, onInputNodesChange, onResponseNodesChange]);
 
   // Handlers for settings changes
