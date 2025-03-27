@@ -14,6 +14,7 @@ import ThoughtBubbleNode from './ThoughtBubbleNode';
 import ResponseNode from './ResponseNode';
 import BoundaryIndicator from './BoundaryIndicator';
 import Settings from './Settings';
+import ReactFlowSynchronizer from './ReactFlowSynchronizer';
 import { useThoughtNodes, useInputNodes, useResponseNodes } from '../hooks';
 import { useTriggerDetection } from '../hooks';
 import { useThoughtStore } from '../store/thoughtStore';
@@ -119,6 +120,7 @@ const CanvasContent: React.FC = () => {
         <Controls showInteractive={false} />
         <Background gap={12} size={1} color="none" />
         <BoundaryIndicator />
+        <ReactFlowSynchronizer />
       </ReactFlow>
       <Settings onMicrophoneClick={handleMicrophoneClick} />
     </>
