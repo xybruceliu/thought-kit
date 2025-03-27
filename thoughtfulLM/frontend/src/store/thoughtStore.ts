@@ -59,6 +59,10 @@ interface ThoughtStoreState {
   
   // Signal for response creation
   onResponseCreated?: (content: string) => string;
+  
+  // Callback for ReactFlow integration
+  onThoughtRemoving?: (thoughtId: string) => void;
+  setThoughtRemovingCallback: (callback: (thoughtId: string) => void) => void;
 }
 
 // Create the store
@@ -120,6 +124,12 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
     set((state) => ({
       removingThoughtIds: [...state.removingThoughtIds, thoughtId]
     }));
+    
+    // Call the ReactFlow integration callback if it exists
+    const callback = get().onThoughtRemoving;
+    if (callback) {
+      callback(thoughtId);
+    }
   },
   
   unmarkThoughtAsRemoving: (thoughtId: string) => {
@@ -221,9 +231,9 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
 
       // Remove excess non-persistent thoughts if needed
       const { thoughts, removeThought } = get();
-      // console.log('DEBUG: 💭 Thoughts:', thoughts);
+      console.log('DEBUG: 💭 Thoughts:', thoughts);
       let nonPersistentThoughts = thoughts.filter(t => !t.config.persistent);
-      // console.log('DEBUG: 💭 Non-persistent thoughts:', nonPersistentThoughts);
+      console.log('DEBUG: 💭 Non-persistent thoughts:', nonPersistentThoughts);
       // Get max thoughts count from settings store 
       const { maxThoughtCount } = useSettingsStore.getState();
       
@@ -376,11 +386,11 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
   
   removeThought: async (thoughtId: string) => {
     try {
-      // console.log('DEBUG: 💭 Removing thought:', thoughtId);
+      console.log('DEBUG: 💭 Removing thought:', thoughtId);
       // Mark the thought as being removed (for animation)
       get().markThoughtAsRemoving(thoughtId);
         
-      // console.log('DEBUG: 💭 Removing thought from activeThoughtIds:', get().activeThoughtIds);
+      console.log('DEBUG: 💭 Removing thought from activeThoughtIds:', get().activeThoughtIds);
       // Also remove from active thoughts if it's still active
       get().removeActiveThought(thoughtId);
       
@@ -394,8 +404,8 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
         removingThoughtIds: state.removingThoughtIds.filter(id => id !== thoughtId)
       }));
 
-      // console.log('DEBUG: 💭 Removed thought from thoughts:', get().thoughts);
-      // console.log('DEBUG: 💭 Removing thought from removingThoughtIds:', get().removingThoughtIds);
+      console.log('DEBUG: 💭 Removed thought from thoughts:', get().thoughts);
+      console.log('DEBUG: 💭 Removing thought from removingThoughtIds:', get().removingThoughtIds);
     } catch (error) {
       console.error(`Error removing thought ${thoughtId}:`, error);
       get().unmarkThoughtAsRemoving(thoughtId);
@@ -409,5 +419,11 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       nodePositions: {},
       activeThoughtIds: []
     });
+  },
+
+  // Callback for ReactFlow integration
+  onThoughtRemoving: undefined,
+  setThoughtRemovingCallback: (callback: (thoughtId: string) => void) => {
+    set({ onThoughtRemoving: callback });
   }
 })); 

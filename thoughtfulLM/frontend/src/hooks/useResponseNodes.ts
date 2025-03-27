@@ -1,24 +1,24 @@
-import { useCallback, useState, useEffect, useRef } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { 
   Node, 
   NodeChange,
   applyNodeChanges,
   XYPosition,
-  ReactFlowInstance
+  useReactFlow
 } from 'reactflow';
 import { v4 as uuidv4 } from 'uuid';
 import { useThoughtStore } from '../store/thoughtStore';
 import { useInputStore } from '../store/inputStore';
 import { createBoundsRightOfNode, calculateNodePosition, boundedAreaStrategy } from '../utils/nodePositioning';
 import { useBoundsStore } from '../store/boundsStore';
-import { useThoughtNodes, ThoughtNode } from './useThoughtNodes';
+import { useThoughtNodes } from './useThoughtNodes';
+import { ThoughtNode } from './useThoughtNodes';
 
 // Define the type for a response node
 export interface ResponseNode extends Node {
   type: 'response';
   data: {
     content: string;
-    onRenderComplete?: (nodeId: string) => void;
   };
 }
 
@@ -26,131 +26,69 @@ export interface ResponseNode extends Node {
 export const useResponseNodes = () => {
   // State for response nodes
   const [responseNodes, setResponseNodes] = useState<ResponseNode[]>([]);
-  const { updateThoughtNodePosition, thoughtNodes } = useThoughtNodes();
-  
-  // Keep a ref to the current nodes to avoid stale closures
-  const responseNodesRef = useRef<ResponseNode[]>([]);
-  
-  // Store a reference to the ReactFlow instance
-  const reactFlowInstanceRef = useRef<ReactFlowInstance | null>(null);
-  
-  // Update the ref whenever responseNodes changes
-  useEffect(() => {
-    responseNodesRef.current = responseNodes;
-  }, [responseNodes]);
-  
-  // Method to set the reactFlow instance - should be called from component
-  const setReactFlowInstance = useCallback((instance: ReactFlowInstance) => {
-    reactFlowInstanceRef.current = instance;
-  }, []);
-  
+  const reactFlowInstance = useReactFlow();
+  const { updateThoughtNodePosition } = useThoughtNodes();
   // Handle changes to response nodes
   const onResponseNodesChange = useCallback((changes: NodeChange[]) => {
-    setResponseNodes((nds) => applyNodeChanges(
-      // Only apply changes to response nodes - filter out changes for other node types
-      changes.filter(change => {
-        // For each change, check if it affects our response nodes
-        if ('id' in change) {
-          // It's a change with an ID property (position, remove, select)
-          return nds.some(node => node.id === change.id);
-        }
-        return false; // Ignore other types of changes
-      }),
-      nds
-    ) as ResponseNode[]);
+    setResponseNodes((nds) => applyNodeChanges(changes, nds) as ResponseNode[]);
   }, []);
-
-  // Reposition active thoughts after a response is created
-  const repositionActiveThoughts = useCallback((responseNodeId: string, responseNodePosition: XYPosition) => {
-    try {
-      console.log("DEBUG: Repositioning active thoughts");
-      const thoughtStore = useThoughtStore.getState();
-      console.log("DEBUG: Thought store:", thoughtStore);
-      const activeThoughtIds = thoughtStore.activeThoughtIds;
-      console.log("DEBUG: Active thought IDs:", activeThoughtIds);
-      
-      if (activeThoughtIds.length === 0) {
-        console.log("DEBUG: No active thoughts to reposition");
-        return; // No active thoughts to reposition
-      }
-      
-      // Get the current responseNodes from our ref
-      const currentNodes = responseNodesRef.current;
-      const responseNode = currentNodes.find(node => node.id === responseNodeId);
-      console.log("DEBUG: Response node:", responseNode);
-      
-      if (!responseNode) {
-        console.error('Response node not found');
-        return;
-      }
-      
-      // Create bounds to the right of the response node
-      const bounds = createBoundsRightOfNode(responseNode);
-
-      // For testing, just move the first active thought to the right of the response node
-      const firstThoughtId = activeThoughtIds[0];
-      const firstThought = thoughtStore.thoughts.find(t => t.id === firstThoughtId);
-      console.log("DEBUG: First thought:", firstThought);
-      if (firstThought) {
-        const firstThoughtNode = thoughtNodes.find(node => node.id === firstThought.id);
-        console.log("DEBUG: First thought node:", firstThoughtNode);
-        if (firstThoughtNode) {
-          const position = calculateNodePosition([firstThoughtNode]);
-          console.log("DEBUG: Calculated position:", position);
-          
-          // Use ReactFlow's direct node manipulation for immediate update
-          // Only do this if we have a ReactFlow instance
-          if (reactFlowInstanceRef.current) {
-            reactFlowInstanceRef.current.setNodes(nodes => 
-              nodes.map(node => {
-                if (node.id === firstThoughtId) {
-                  return { ...node, position };
-                }
-                return node;
-              })
-            );
-            console.log("DEBUG: Position updated via ReactFlow direct manipulation");
-          }
-          
-          // Also update our position tracking in the store
-          updateThoughtNodePosition(firstThoughtId, position);
-        }
-      }
-      
-      // Clear active thoughts after a delay to ensure repositioning is complete
-      setTimeout(() => {
-        thoughtStore.clearActiveThoughts();
-      }, 500);
-    } catch (error) {
-      console.error('Error repositioning active thoughts:', error);
-    }
-  }, [thoughtNodes, updateThoughtNodePosition]);
 
   // Add a new response node
   const addResponseNode = useCallback((content: string, position: XYPosition) => {
-    const id = `response-${uuidv4().substring(0, 8)}`;
-    
-    // Handle render completion callback - uses the ref value to avoid stale closures
-    const handleRenderComplete = (nodeId: string) => {
-      console.log("DEBUG: Render complete called for node:", nodeId);
-      console.log("DEBUG: Current nodes in ref:", responseNodesRef.current);
-      repositionActiveThoughts(nodeId, position);
-    };
-    
+    const id = uuidv4();
     const newNode: ResponseNode = {
       id,
       type: 'response',
       position,
       draggable: false,
       data: {
-        content,
-        onRenderComplete: handleRenderComplete
+        content
       }
     };
 
     setResponseNodes((nds) => [...nds, newNode]);
     return id;
-  }, [repositionActiveThoughts]);
+  }, []);
+
+  // Reposition active thoughts to the right of the response node
+  const repositionActiveThoughts = useCallback((responseNodeId: string) => {
+    try {
+      const thoughtStore = useThoughtStore.getState();
+      const activeThoughtIds = thoughtStore.activeThoughtIds;
+
+      console.log('DEBUG: Active thoughts to reposition:', activeThoughtIds);
+      
+      if (activeThoughtIds.length === 0) {
+        console.log('No active thoughts to reposition');  
+        return; // No active thoughts to reposition
+      }
+      
+      // Get the response node from ReactFlow
+      const responseNode = reactFlowInstance.getNode(responseNodeId);
+      if (!responseNode) {
+        console.error('Response node not found for repositioning thoughts');
+        return;
+      }
+      
+      // Move the first active thought to the right by 50px
+      // User updateThoughtNodePosition?
+      const firstThoughtId = activeThoughtIds[0];
+      const firstThoughtNode = reactFlowInstance.getNode(firstThoughtId);
+      if (firstThoughtNode) {
+        console.log('!!!DEBUG: Repositioning thought:', firstThoughtId);
+        updateThoughtNodePosition(firstThoughtId, { x: firstThoughtNode.position.x + 50, y: firstThoughtNode.position.y });
+      }
+      
+      // Clear active thoughts after a delay to ensure repositioning is complete
+      // and visual updates have been applied
+      setTimeout(() => {
+        thoughtStore.clearActiveThoughts();
+        console.log('Cleared active thoughts after repositioning');
+      }, 1000);
+    } catch (error) {
+      console.error('Error repositioning active thoughts:', error);
+    }
+  }, [reactFlowInstance, updateThoughtNodePosition]);
 
   // Create a response node from content and calculate position
   const createResponseNode = useCallback((content: string) => {
@@ -166,20 +104,53 @@ export const useResponseNodes = () => {
         return null;
       }
       
-      // Use a default position - this is a simplification since we can't
-      // directly access the input node's position from the store
-      const position: XYPosition = { x: 50, y: 300 };
+      // Get the input node from ReactFlow instead of DOM
+      const inputNode = reactFlowInstance.getNode(activeInputId);
+      let position: XYPosition = { x: 0, y: 0 }; // Default position
+      
+      if (inputNode) {
+        // Calculate position based on ReactFlow node properties
+        const inputWidth = inputNode.width || 500; // Default width if not available
+        const inputHeight = inputNode.height || 200; // Default height if not available
+        
+        // Position the response node 
+        position = {
+          x: inputNode.position.x,
+          y: inputNode.position.y + inputHeight + 50
+        }
+      }
       
       // Create the response node
       const nodeId = addResponseNode(content, position);
-      console.log("DEBUG: Created response node:", nodeId);
+      
+      // Reposition active thoughts to the right of the new response node
+      if (nodeId) {
+        setTimeout(() => repositionActiveThoughts(nodeId), 100);
+      }
+      
+      // Refit the view to include the new node
+      setTimeout(() => {
+        // Get all nodes from ReactFlow
+        const allNodes = reactFlowInstance.getNodes();
+        // Filter to only include input and response nodes
+        const nodesToFit = allNodes.filter(node => 
+          node.type === 'textInput' || node.type === 'response'
+        );
+        
+        reactFlowInstance.fitView({
+          padding: 0.5,
+          includeHiddenNodes: false,
+          duration: 800, // Smooth animation duration in ms
+          nodes: nodesToFit // Only fit view to input and response nodes
+        });
+      }, 300); // Small delay to ensure node is rendered
       
       return nodeId;
     } catch (error) {
       console.error('Error creating response node:', error);
       return null;
     }
-  }, [addResponseNode]);
+  }, [addResponseNode, reactFlowInstance, repositionActiveThoughts]);
 
   // Register callback with thought store
   useEffect(() => {
@@ -231,8 +202,7 @@ export const useResponseNodes = () => {
     createResponseNode,
     updateResponseContent,
     getResponseNode,
-    repositionActiveThoughts,
-    setReactFlowInstance
+    repositionActiveThoughts
   };
 };
 
