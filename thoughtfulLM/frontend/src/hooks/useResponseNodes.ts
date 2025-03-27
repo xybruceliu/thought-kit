@@ -9,7 +9,7 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 import { useThoughtStore } from '../store/thoughtStore';
 import { useInputStore } from '../store/inputStore';
-import { createBoundsRightOfNode, boundedAreaStrategy, createBoundsLeftOfNode } from '../utils/nodePositioning';
+import { createBoundsRightOfNode, boundedAreaStrategy } from '../utils/nodePositioning';
 import { useThoughtNodes } from './useThoughtNodes';
 import { ThoughtNode } from './useThoughtNodes';
 import { useBoundsStore } from '../store/boundsStore';
@@ -63,10 +63,6 @@ export const useResponseNodes = () => {
         return; // No active thoughts to reposition
       }
       
-      // Store all input nodes before making changes to ensure they're preserved
-      const allNodes = reactFlowInstance.getNodes();
-      const inputNodes = allNodes.filter(node => node.type === 'textInput');
-      
       // Get the response node from ReactFlow
       const responseNode = reactFlowInstance.getNode(responseNodeId);
       if (!responseNode) {
@@ -114,18 +110,6 @@ export const useResponseNodes = () => {
         if (index >= nodesToUpdate.length) {
           console.log('All nodes repositioned successfully');
           
-          // Ensure input nodes are preserved when we're done repositioning
-          reactFlowInstance.setNodes(nodes => {
-            // Filter out any duplicate input nodes
-            const currentInputNodeIds = inputNodes.map(node => node.id);
-            const nonDuplicateCurrentNodes = nodes.filter(node => 
-              node.type !== 'textInput' || !currentInputNodeIds.includes(node.id)
-            );
-            
-            // Combine input nodes with other nodes
-            return [...inputNodes, ...nonDuplicateCurrentNodes.filter(node => node.type !== 'textInput')];
-          });
-          
           // Clear active thoughts after all nodes have been updated
           setTimeout(() => {
             thoughtStore.clearActiveThoughts();
@@ -138,10 +122,8 @@ export const useResponseNodes = () => {
         const { id, position } = nodesToUpdate[index];
         
         // Update directly in ReactFlow with a slower animation for repositioning
-        reactFlowInstance.setNodes(nodes => {
-          // Preserve input nodes in each update
-          const currentInputNodes = nodes.filter(node => node.type === 'textInput');
-          const updatedNodes = nodes.map(node => {
+        reactFlowInstance.setNodes(nodes => 
+          nodes.map(node => {
             if (node.id === id) {
               return {
                 ...node,
@@ -149,15 +131,8 @@ export const useResponseNodes = () => {
               };
             }
             return node;
-          });
-          
-          // If for some reason input nodes were filtered out, add them back
-          if (currentInputNodes.length === 0 && inputNodes.length > 0) {
-            return [...inputNodes, ...updatedNodes.filter(node => node.type !== 'textInput')];
-          }
-          
-          return updatedNodes;
-        });
+          })
+        );
         
         // Update in our state management - pass special flag for repositioning
         updateThoughtNodePosition(id, position, true);
@@ -178,6 +153,7 @@ export const useResponseNodes = () => {
     try {
       // Clear all existing response nodes
       // TODO: Temporary, may change later
+      setResponseNodes([]);
       
       // Get the active input node ID
       const activeInputId = useInputStore.getState().activeInputId;
@@ -185,9 +161,6 @@ export const useResponseNodes = () => {
         console.error('No active input node found');
         return null;
       }
-      
-      // Store all nodes from ReactFlow before making changes to ensure consistency
-      const allNodes = reactFlowInstance.getNodes();
       
       // Get the input node from ReactFlow instead of DOM
       const inputNode = reactFlowInstance.getNode(activeInputId);
@@ -208,40 +181,28 @@ export const useResponseNodes = () => {
       // Create the response node
       const nodeId = addResponseNode(content, position);
       
-      // Directly add the response node to ReactFlow's state to ensure it exists
-      const responseNode: ResponseNode = {
-        id: nodeId,
-        type: 'response',
-        position,
-        draggable: false,
-        data: {
-          content
-        }
-      };
-      
-      // Make sure we preserve all input nodes and add the new response node in ReactFlow's internal state
-      reactFlowInstance.setNodes((nodes) => {
-        // Get all input nodes from current nodes
-        const inputNodes = allNodes.filter(node => node.type === 'textInput');
-        // Keep all non-input and non-response nodes from the current state
-        const otherNodes = nodes.filter(node => node.type !== 'textInput' && node.type !== 'response');
-        // Combine them to ensure input nodes aren't lost and add the new response node
-        return [...inputNodes, ...otherNodes, responseNode];
-      });
-      
       // Reposition active thoughts to the right of the new response node
       if (nodeId) {
-        // Increase delay to ensure rendering before repositioning
-        setTimeout(() => {
-          // Double-check the node exists before repositioning
-          const checkNodeExists = reactFlowInstance.getNode(nodeId);
-          if (checkNodeExists) {
-            repositionActiveThoughts(nodeId);
-          } else {
-            console.error('Response node still not found after delay, cannot reposition thoughts');
-          }
-        }, 500);
+        // Add a small delay to allow rendering before repositioning
+        setTimeout(() => repositionActiveThoughts(nodeId), 200);
       }
+      
+      // Refit the view to include the new node
+      setTimeout(() => {
+        // Get all nodes from ReactFlow
+        const allNodes = reactFlowInstance.getNodes();
+        // Filter to only include input and response nodes
+        const nodesToFit = allNodes.filter(node => 
+          node.type === 'textInput' || node.type === 'response'
+        );
+        
+        reactFlowInstance.fitView({
+          padding: 0.5,
+          includeHiddenNodes: false,
+          duration: 1000, // Longer animation for smoother experience
+          nodes: nodesToFit // Only fit view to input and response nodes
+        });
+      }, 400); // Increased delay to ensure node transitions complete
       
       return nodeId;
     } catch (error) {

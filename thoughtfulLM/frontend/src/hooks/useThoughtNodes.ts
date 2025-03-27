@@ -3,7 +3,7 @@ import { Node, NodeChange, applyNodeChanges, XYPosition, useReactFlow } from 're
 import { useThoughtStore } from '../store/thoughtStore';
 import { Thought } from '../types/thought';
 import { EventType } from '../types/event';
-import { boundedAreaStrategy, createBoundsAboveNode, createBoundsBelowNode } from '../utils/nodePositioning';
+import { boundedAreaStrategy, createBoundsAboveNode } from '../utils/nodePositioning';
 import { useBoundsStore } from '../store/boundsStore';
 
 // ReactFlow node for thought bubble visualization
@@ -120,8 +120,8 @@ export const useThoughtNodes = () => {
     let finalPosition = position;
     
     if (!finalPosition && textInputNode) {
-      // Set bounds below the input node - this now automatically updates the global store
-      const bounds = createBoundsBelowNode(textInputNode);
+      // Set bounds above the input node - this now automatically updates the global store
+      const bounds = createBoundsAboveNode(textInputNode);
       useBoundsStore.getState().setBounds(bounds, true);
       
       // Get the list of active thought IDs from the thought store

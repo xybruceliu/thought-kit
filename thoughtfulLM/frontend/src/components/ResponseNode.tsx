@@ -1,19 +1,15 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { NodeProps, useReactFlow } from 'reactflow';
-import { Box, Text, keyframes, usePrefersReducedMotion, IconButton } from '@chakra-ui/react';
-import { AddIcon } from '@chakra-ui/icons';
-import { useInputNodes } from '../hooks';
+import { NodeProps } from 'reactflow';
+import { Box, Text, keyframes, usePrefersReducedMotion } from '@chakra-ui/react';
 
 type ResponseNodeProps = NodeProps<{
   content: string;
 }>;
 
-const ResponseNode: React.FC<ResponseNodeProps> = ({ data, id }) => {
+const ResponseNode: React.FC<ResponseNodeProps> = ({ data }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const prefersReducedMotion = usePrefersReducedMotion();
   const [displayedContent, setDisplayedContent] = useState<string>('');
-  const { addInputNode } = useInputNodes();
-  const reactFlowInstance = useReactFlow();
   
   // Define the fade-in animation
   const fadeIn = keyframes`
@@ -68,25 +64,6 @@ const ResponseNode: React.FC<ResponseNodeProps> = ({ data, id }) => {
     contentDiv.style.height = `${newHeight}px`;
   }, [displayedContent]);
 
-  // Handle add button click to start a new input
-  const handleAddClick = () => {
-    // Get the current node position using the node's id
-    const currentNode = reactFlowInstance.getNode(id);
-    
-    if (currentNode) {
-      // Calculate position below this response node
-      const newPosition = {
-        x: currentNode.position.x,
-        y: currentNode.position.y + (currentNode.height || 150) + 50
-      };
-
-      console.log('DEBUG: newPosition', newPosition);
-      
-      // Add a new input node at the calculated position
-      addInputNode(newPosition);
-    }
-  };
-
   return (
     <Box
       bg="gray.50"
@@ -111,26 +88,6 @@ const ResponseNode: React.FC<ResponseNodeProps> = ({ data, id }) => {
         <Box fontSize="2xs" color="gray.400" display="flex" alignItems="center">
           AI's Response
         </Box>
-      </Box>
-      <Box 
-        position="absolute" 
-        bottom="-20" 
-        left="0">
-        <IconButton
-          aria-label="New conversation"
-          icon={<AddIcon />}
-          size="sm"
-          boxShadow="sm"
-          isRound
-          variant="ghost"
-          color="gray.500"
-          backgroundColor="gray.50"
-          onClick={handleAddClick}
-          _hover={{
-            bg: "gray.100",
-            color: "gray.700"
-          }}
-        />
       </Box>
     </Box>
   );

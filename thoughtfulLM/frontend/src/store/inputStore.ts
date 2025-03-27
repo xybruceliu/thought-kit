@@ -33,7 +33,7 @@ interface InputStoreState {
   updateInputBaseline: (nodeId: string, input: string) => void;
   setActiveInputId: (nodeId: string) => void;
   getInputData: (nodeId: string) => InputData;
-  registerInputNode: (nodeId: string) => void;
+  addInputNode: (nodeId: string) => void;
   removeInputNode: (nodeId: string) => void;
 }
 
@@ -60,7 +60,7 @@ export const useInputStore = create<InputStoreState>((set, get) => ({
   sentenceWordThreshold: 2, // Words in a sentence to trigger
   
   // Add a new input node to the store
-  registerInputNode: (nodeId: string) => {
+  addInputNode: (nodeId: string) => {
     set((state) => {
       // Only add if it doesn't already exist
       if (state.inputs[nodeId]) return state;
@@ -102,7 +102,7 @@ export const useInputStore = create<InputStoreState>((set, get) => ({
     const state = get();
     if (!state.inputs[nodeId]) {
       // Create it if it doesn't exist
-      get().registerInputNode(nodeId);
+      get().addInputNode(nodeId);
     }
     set({ activeInputId: nodeId });
   },
@@ -112,7 +112,7 @@ export const useInputStore = create<InputStoreState>((set, get) => ({
     const state = get();
     // Create input data if it doesn't exist
     if (!state.inputs[nodeId]) {
-      get().registerInputNode(nodeId);
+      get().addInputNode(nodeId);
       return get().inputs[nodeId];
     }
     return state.inputs[nodeId];

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Node, NodeChange, applyNodeChanges, XYPosition, useReactFlow } from 'reactflow';
+import { Node, NodeChange, applyNodeChanges, XYPosition } from 'reactflow';
 import { useInputStore } from '../store/inputStore';
 import { useTriggerDetection } from './useTriggerDetection';
 import { v4 as uuidv4 } from 'uuid';
@@ -19,36 +19,29 @@ export interface InputNode extends Node {
  * Custom hook that manages input nodes and their text input functionality
  * Combines node management with input text handling
  */
-export const useInputNodes = (initialNodes: InputNode[] = []) => {
+export const useInputNodes = () => {
   // Get input store methods
   const {
     getInputData,
     updateInput,
-    registerInputNode,
+    addInputNode: registerInputInStore,
     setActiveInputId,
     activeInputId
   } = useInputStore();
 
-  // Get ReactFlow instance
-  const reactFlowInstance = useReactFlow();
-
   // Get trigger detection functionality
   const { checkTriggersAndGenerate } = useTriggerDetection();
   
-  // State for input nodes - can be initialized from props
-  const [inputNodes, setInputNodes] = useState<InputNode[]>(initialNodes);
+  // State for input nodes
+  const [inputNodes, setInputNodes] = useState<InputNode[]>([]);
   const [currentNodeRefs, setCurrentNodeRefs] = useState<Record<string, Node | null>>({});
   
   // Create a new input node at the specified position
   const createInputNodeAtPosition = useCallback((position: XYPosition): InputNode => {
     const nodeId = `input-${uuidv4().substring(0, 8)}`;
-
-    console.log('DEBUG Input Nodes:', inputNodes);
-    console.log('DEBUG Creating input node at position:', position);
-    console.log('DEBUG Node ID:', nodeId);
     
     // Register this input with the input store
-    registerInputNode(nodeId);
+    registerInputInStore(nodeId);
     
     return {
       id: nodeId,
@@ -59,24 +52,20 @@ export const useInputNodes = (initialNodes: InputNode[] = []) => {
       },
       draggable: false,
     };
-  }, [registerInputNode]);
+  }, [registerInputInStore]);
   
   // Add a new input node to the canvas
   const addInputNode = useCallback((position: XYPosition = { x: 0, y: 0 }) => {
     const newNode = createInputNodeAtPosition(position);
     
-    // Use ReactFlow's API directly to add the node
-    reactFlowInstance.addNodes(newNode);
-    
-    // Update our local state to stay in sync with ReactFlow
     setInputNodes(prevInputNodes => [...prevInputNodes, newNode]);
     
     // Set as active input
     setActiveInputId(newNode.id);
-
+    
     // Return the created node ID so it can be used if needed
     return newNode.id;
-  }, [createInputNodeAtPosition, reactFlowInstance, setActiveInputId]);
+  }, [createInputNodeAtPosition, setActiveInputId]);
   
   // Remove an input node from the canvas
   const removeInputNode = useCallback((nodeId: string) => {
@@ -103,9 +92,18 @@ export const useInputNodes = (initialNodes: InputNode[] = []) => {
     return true;
   }, [inputNodes.length]);
   
+  // Initialize with a single input node if none exists
+  useEffect(() => {
+    if (inputNodes.length === 0) {
+      // Create first input node at default position
+      addInputNode({ x: 50, y: 50 });
+    }
+  }, [addInputNode, inputNodes.length]);
+  
   // Handle node changes including position updates
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
+      // Apply position changes to our input nodes
       setInputNodes(prevNodes => 
         applyNodeChanges(
           // Only apply changes to input nodes - filter without direct id checks
@@ -177,7 +175,6 @@ export const useInputNodes = (initialNodes: InputNode[] = []) => {
     inputNodes,
     onInputNodesChange: onNodesChange,
     addInputNode,
-    createInputNodeAtPosition,
     removeInputNode,
     handleTextChange,
     getInputText,
