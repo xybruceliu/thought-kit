@@ -3,6 +3,7 @@ import { useThoughtStore } from '../store/thoughtStore';
 import { useInputStore } from '../store/inputStore';
 import { Node as ReactFlowNode, useReactFlow } from 'reactflow';
 import { createThoughtNode, getNodeByEntityId } from './nodeConnectors';
+import { useNodeStore } from '../store/nodeStore';
 
 /**
  * Custom hook that handles thought trigger detection logic
@@ -201,8 +202,8 @@ export const useTriggerDetection = () => {
       });
       
       // Apply offset to position bubbles to the top left of cursor
-      const offsetX = 0;  // pixels to the left
-      const offsetY = 0;  // pixels to the top
+      const offsetX = 75;  // pixels to the left
+      const offsetY = 25;  // pixels to the top
       
       // Calculate final position with offsets
       const finalPosition = {
@@ -218,12 +219,19 @@ export const useTriggerDetection = () => {
         const thought = await useThoughtStore.getState().generateThought('CLICK', finalPosition);
         
         if (thought) {
-          // Create visualization for the thought
-          createThoughtNode(thought, finalPosition);
+          // If thought id already in node store, do not create a new node
+          const existingThought = useNodeStore.getState().nodes.find((n: any) => n.data.thoughtId === thought.id);
+          if (existingThought) {
+            console.log(`Thought ${thought.id} already exists in node store, not creating a new node`);
+          }
+          else {
+            // Create visualization for the thought
+            createThoughtNode(thought, finalPosition);
+          }
           
+          // Update input baseline any way
           // Get the current input for this node
           const inputData = inputStore.getInputData(activeInputId);
-          
           // Save the input at the time of click generation
           inputStore.updateInputBaseline(activeInputId, inputData.currentInput);
         }

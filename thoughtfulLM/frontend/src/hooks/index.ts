@@ -32,6 +32,4 @@ export {
   doesNodeExistByEntityId,
   getNodeByEntityId,
   
-  // Node-thought mapping
-  ensureNodesForThoughts
 } from './nodeConnectors'; 

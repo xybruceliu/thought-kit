@@ -9,6 +9,7 @@ import {
 import { EventType } from '../types/event';
 import { thoughtApi } from '../api/thoughtApi';
 import { useSettingsStore } from './settingsStore';
+import { deleteThoughtNode, markNodeForRemoval } from '../hooks/nodeConnectors';
 
 // Define the store state
 interface ThoughtStoreState {
@@ -33,7 +34,7 @@ interface ThoughtStoreState {
   // Actions
   generateThought: (triggerType: EventType, position?: { x: number, y: number }) => Promise<Thought | null>;
   updateThought: (thoughtId: string, updatedThought: Thought) => void;
-  removeThought: (thoughtId: string) => Promise<void>;
+  removeThought: (thoughtId: string) => void;
   clearThoughts: () => void;
   
   // Thought operations
@@ -44,24 +45,14 @@ interface ThoughtStoreState {
   handleThoughtDelete: (thoughtId: string) => Promise<void>;
   handleThoughtsSubmit: () => Promise<string | null>;
   
-  // Track thoughts being removed for animation (just the ids, not the nodes)
-  removingThoughtIds: string[];
-  markThoughtAsRemoving: (thoughtId: string) => void;
-  unmarkThoughtAsRemoving: (thoughtId: string) => void;
-  
   // Signal for response creation
   onResponseCreated?: (content: string) => string;
-  
-  // Callback for ReactFlow integration
-  onThoughtRemoving?: (thoughtId: string) => void;
-  setThoughtRemovingCallback: (callback: (thoughtId: string) => void) => void;
 }
 
 // Create the store
 export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
   // Data
   thoughts: [],
-  removingThoughtIds: [], // Track thoughts being removed for animation
   isLoading: false, // Loading state
   activeThoughtIds: [], // Track active thought IDs
   
@@ -96,25 +87,6 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
     return get().activeThoughtIds.includes(thoughtId);
   },
   
-  // Track thoughts being removed
-  markThoughtAsRemoving: (thoughtId: string) => {
-    set((state) => ({
-      removingThoughtIds: [...state.removingThoughtIds, thoughtId]
-    }));
-    
-    // Call the ReactFlow integration callback if it exists
-    const callback = get().onThoughtRemoving;
-    if (callback) {
-      callback(thoughtId);
-    }
-  },
-  
-  unmarkThoughtAsRemoving: (thoughtId: string) => {
-    set((state) => ({
-      removingThoughtIds: state.removingThoughtIds.filter(id => id !== thoughtId)
-    }));
-  },
-
   generateThought: async (triggerType: EventType, position?: { x: number, y: number }) => {
     try {
       set({ isLoading: true });
@@ -156,17 +128,17 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       }
       
       // Check if this thought already exists (update case)
+      // Since our backend returns the same thought id if the thought is similar, with updated saliency
       const existingThoughtIndex = get().thoughts.findIndex(t => t.id === thoughtData.id);
       const isUpdate = existingThoughtIndex >= 0;
       
       if (isUpdate) {
         console.log(`🫵 Found similar thought in store: ${thoughtData.id}`);
         
-        const updatedThoughts = [...get().thoughts]; 
-        updatedThoughts[existingThoughtIndex] = thoughtData;
+        // Update the thought in the store
+        get().updateThought(thoughtData.id, thoughtData);
         
         set({
-          thoughts: updatedThoughts,
           isLoading: false
         });
         
@@ -219,7 +191,10 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
         );
         
         console.log(`🗑 Removing thought ${lowestScoreThought.id} due to exceeding max count (${maxThoughtCount})`);
-        removeThought(lowestScoreThought.id);
+        markNodeForRemoval(lowestScoreThought.id);
+        setTimeout(() => {
+          deleteThoughtNode(lowestScoreThought.id);
+        }, 1000);
       }
       
       // Apply time decay to older thoughts
@@ -289,9 +264,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
 
   handleThoughtDelete: async (thoughtId: string) => {
     try {
-      // When a thought is deleted, also remove it from active thoughts
-      get().removeActiveThought(thoughtId);
-      await get().removeThought(thoughtId);
+      get().removeThought(thoughtId);
     } catch (error) {
       console.error(`Error handling thought deletion for ${thoughtId}:`, error);
     }
@@ -354,42 +327,27 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
     }));
   },
   
-  removeThought: async (thoughtId: string) => {
+  removeThought: (thoughtId: string) => {
     try {
-      // Mark the thought as being removed (for animation)
-      get().markThoughtAsRemoving(thoughtId);
-        
-      // Also remove from active thoughts if it's still active
+      // Remove from active thoughts if it's still active
       get().removeActiveThought(thoughtId);
-      
-      // Wait for animation to complete
-      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Remove the thought from state
       set((state) => ({
-        thoughts: state.thoughts.filter(t => t.id !== thoughtId),
-        // Also remove from removingThoughtIds in the same state update
-        removingThoughtIds: state.removingThoughtIds.filter(id => id !== thoughtId)
+        thoughts: state.thoughts.filter(t => t.id !== thoughtId)
       }));
-
-
     } catch (error) {
       console.error(`Error removing thought ${thoughtId}:`, error);
-      get().unmarkThoughtAsRemoving(thoughtId);
     }
   },
 
   clearThoughts: () => {
     set({
       thoughts: [],
-      removingThoughtIds: [],
       activeThoughtIds: []
     });
   },
 
-  // Callback for ReactFlow integration
-  onThoughtRemoving: undefined,
-  setThoughtRemovingCallback: (callback: (thoughtId: string) => void) => {
-    set({ onThoughtRemoving: callback });
-  }
+  // Signal for response creation
+  onResponseCreated: undefined
 })); 

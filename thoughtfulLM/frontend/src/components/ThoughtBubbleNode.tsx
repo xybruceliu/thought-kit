@@ -4,6 +4,7 @@ import { Box, Text, keyframes, IconButton, Fade, Icon } from '@chakra-ui/react';
 import { useThoughtStore } from '../store/thoughtStore';
 import { DeleteIcon, StarIcon } from '@chakra-ui/icons';
 import { ThoughtBubbleNodeData, useNodeStore } from '../store/nodeStore';
+import { deleteThoughtNode } from '../hooks/nodeConnectors';
 
 // Update the type to use our unified node data type
 type ThoughtBubbleNodeProps = NodeProps<ThoughtBubbleNodeData>;
@@ -141,13 +142,11 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
     if (!thoughtId) return;
     
     console.log(`Deleting thought: ${thoughtId}`);
-    
-    // Mark the node as removing in the node store first (for animation)
+    // mark the node as removing in the node store for animation
     markNodeAsRemoving(id);
-    
     // Then schedule the actual deletion after animation completes
     setTimeout(() => {
-      handleThoughtDelete(thoughtId);
+      deleteThoughtNode(thoughtId);
     }, 1000); // Match with exit animation duration
   };
   

@@ -13,7 +13,7 @@ import ThoughtBubbleNode from './ThoughtBubbleNode';
 import ResponseNode from './ResponseNode';
 import BoundaryIndicator from './BoundaryIndicator';
 import Settings from './Settings';
-import { createInputNode, useTriggerDetection, ensureNodesForThoughts } from '../hooks';
+import { createInputNode, useTriggerDetection } from '../hooks';
 import { useThoughtStore } from '../store/thoughtStore';
 import { useMemoryStore } from '../store/memoryStore';
 import { useSettingsStore } from '../store/settingsStore';
@@ -74,10 +74,6 @@ const CanvasContent: React.FC = () => {
     // This effect should only run once when the component mounts
   }, []);
 
-  // Ensure nodes exist for all thoughts when component mounts or thoughts change
-  useEffect(() => {
-    ensureNodesForThoughts();
-  }, [thoughts]);
 
   // Handlers for settings changes
   const handleInterfaceChange = useCallback((interfaceType: number) => {

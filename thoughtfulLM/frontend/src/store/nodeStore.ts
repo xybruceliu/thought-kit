@@ -27,7 +27,7 @@ interface BaseNodeData {
 // Thought bubble node data
 export interface ThoughtBubbleNodeData extends BaseNodeData {
   type: 'thoughtBubble';
-  thoughtId: string;
+  thoughtId: string; // The ID of the thought this node represents
   blobVariant?: number;
   // Add other thought-specific properties here
 }
@@ -87,7 +87,6 @@ interface NodeStoreState {
   // Track nodes being removed (for animations)
   removingNodeIds: string[];
   markNodeAsRemoving: (nodeId: string) => void;
-  unmarkNodeAsRemoving: (nodeId: string) => void;
 }
 
 export const useNodeStore = create<NodeStoreState>((set, get) => ({
@@ -235,11 +234,6 @@ export const useNodeStore = create<NodeStoreState>((set, get) => ({
     }));
   },
   
-  unmarkNodeAsRemoving: (nodeId) => {
-    set((state) => ({
-      removingNodeIds: state.removingNodeIds.filter((id) => id !== nodeId),
-    }));
-  },
 }));
 
 export default useNodeStore; 

@@ -72,25 +72,6 @@ export function createResponseNode(responseText: string, position: XYPosition): 
   });
 }
 
-/**
- * Ensures that a node exists for each thought in the ThoughtStore
- * This is useful when loading a saved state or when thoughts are generated
- * in ways other than through the UI
- */
-export function ensureNodesForThoughts() {
-  const thoughts = useThoughtStore.getState().thoughts;
-  const getNodeByEntityId = useNodeStore.getState().getNodeByEntityId;
-  const addNode = useNodeStore.getState().addNode;
-  
-  thoughts.forEach(thought => {
-    // Check if a node already exists for this thought
-    const existingNode = getNodeByEntityId('thought', thought.id);
-    if (!existingNode) {
-      // Error if no node exists for this thought
-      console.error(`❗️ No node found for thought ${thought.id}`);
-    }
-  });
-}
 
 /**
  * Checks if a node exists for a specific entity (thought, input, or response)
@@ -124,11 +105,8 @@ export function deleteThoughtNode(thoughtId: string): void {
   if (node) {
     // Remove from NodeStore
     useNodeStore.getState().removeNode(node.id);
-    
     // Remove from ThoughtStore
-    // Note: This depends on your application's needs - whether deleting the visualization
-    // should also delete the underlying data
-    useThoughtStore.getState().handleThoughtDelete(thoughtId);
+    useThoughtStore.getState().removeThought(thoughtId)
   }
 }
 
