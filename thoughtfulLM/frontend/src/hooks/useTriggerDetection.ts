@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useThoughtStore } from '../store/thoughtStore';
 import { useInputStore } from '../store/inputStore';
 import { Node as ReactFlowNode, useReactFlow } from 'reactflow';
-import { createThoughtNode } from './nodeConnectors';
+import { createThoughtNode, getNodeByEntityId } from './nodeConnectors';
 
 /**
  * Custom hook that handles thought trigger detection logic
@@ -84,98 +84,98 @@ export const useTriggerDetection = () => {
     return false;
   }, [inputStore]);
 
-  // Create a thought node at the specified position
-  const createThoughtNodeAtPosition = useCallback(async (
-    triggerType: 'CLICK' | 'IDLE_TIME' | 'WORD_COUNT_CHANGE' | 'SENTENCE_END' | 'NAMED_ENTITY',
-    position?: { x: number, y: number },
-    sourceNode?: ReactFlowNode
-  ) => {
-    try {
-      // Get thought position from parameters or calculate relative to source node
-      const thoughtPosition = position || (sourceNode ? {
-        x: sourceNode.position.x + 250,
-        y: sourceNode.position.y - 50
-      } : { x: 100, y: 100 });
-      
-      // Generate the thought using the thought store
-      const thought = await useThoughtStore.getState().generateThought(triggerType, thoughtPosition);
-      
-      if (thought) {
-        // Create a node for the thought using our new createThoughtNode function
-        createThoughtNode(thought, thoughtPosition);
-        return thought;
-      }
-      
-      return null;
-    } catch (error) {
-      console.error('Error creating thought node:', error);
-      return null;
-    }
-  }, []);
-
-  // Function to check all triggers and generate thoughts
-  const checkTriggersAndGenerate = useCallback(async (textInputNode: ReactFlowNode, nodeId: string) => {
-    let thoughtGenerated = false;
-    
+  // Function that checks all triggers and returns the activated trigger type and relevant data
+  const checkTriggers = useCallback((nodeId: string): { 
+    triggerType: 'SENTENCE_END' | 'WORD_COUNT_CHANGE' | 'IDLE_TIME' | 'NAMED_ENTITY' | null;
+    inputAtCheckTime: string;
+  } => {
     // Get input data for this specific node
     const inputData = inputStore.getInputData(nodeId);
     
     // Save the current input at the time we check triggers
     const inputAtCheckTime = inputData.currentInput;
     
-    // Check for sentence end trigger
+    // Check each trigger in priority order
     if (checkSentenceEndTrigger(nodeId)) {
-      // Update the input baseline BEFORE generating a thought
-      inputStore.updateInputBaseline(nodeId, inputAtCheckTime);
-
-      const thought = await createThoughtNodeAtPosition('SENTENCE_END', undefined, textInputNode);
-      if (thought) {
-        thoughtGenerated = true;
-      }
+      return { triggerType: 'SENTENCE_END', inputAtCheckTime };
     }
-    // Check for word count trigger
     else if (checkWordCountTrigger(nodeId)) {
-      inputStore.updateInputBaseline(nodeId, inputAtCheckTime);
-      
-      const thought = await createThoughtNodeAtPosition('WORD_COUNT_CHANGE', undefined, textInputNode);
-      if (thought) {
-        thoughtGenerated = true;
-      }
+      return { triggerType: 'WORD_COUNT_CHANGE', inputAtCheckTime };
     }
-    // Check for idle trigger
     else if (checkIdleTrigger(nodeId)) {
-      // Set the idle trigger fired state to true BEFORE generating a thought to prevent repeat triggers
+      // Set the idle trigger fired state to true for idle triggers
       inputStore.setIdleTriggerFired(nodeId, true);
-      inputStore.updateInputBaseline(nodeId, inputAtCheckTime);
-
-      const thought = await createThoughtNodeAtPosition('IDLE_TIME', undefined, textInputNode);
-      if (thought) {
-        thoughtGenerated = true;
-      }
+      return { triggerType: 'IDLE_TIME', inputAtCheckTime };
     }
-    // Check for test trigger
     else if (checkAstTrigger(nodeId)) {
-      inputStore.updateInputBaseline(nodeId, inputAtCheckTime);
-      const thought = await createThoughtNodeAtPosition('NAMED_ENTITY', undefined, textInputNode);
-      if (thought) {
-        thoughtGenerated = true;    
-      }
+      return { triggerType: 'NAMED_ENTITY', inputAtCheckTime };
     }
     
-    // Update activity timestamp if a thought was generated
-    if (thoughtGenerated) {
+    // No trigger activated
+    return { triggerType: null, inputAtCheckTime };
+  }, [
+    checkSentenceEndTrigger,
+    checkWordCountTrigger,
+    checkIdleTrigger,
+    checkAstTrigger,
+    inputStore
+  ]);
+  
+  // Function that handles thought generation and node creation based on trigger type
+  const handleTriggerActivation = useCallback(async (
+    nodeId: string,
+    triggerType: 'SENTENCE_END' | 'WORD_COUNT_CHANGE' | 'IDLE_TIME' | 'NAMED_ENTITY',
+    inputAtCheckTime: string
+  ): Promise<boolean> => {
+    // Get the node using our connector function
+    const textInputNode = getNodeByEntityId('input', nodeId);
+    if (!textInputNode) {
+      console.warn(`Could not find input node with ID ${nodeId}`);
+      return false;
+    }
+    
+    // Update input baseline
+    inputStore.updateInputBaseline(nodeId, inputAtCheckTime);
+    
+    // Calculate position relative to the input node
+    const thoughtPosition = {
+      x: textInputNode.position.x + 250,
+      y: textInputNode.position.y - 50
+    };
+    
+    // Generate the thought
+    const thought = await useThoughtStore.getState().generateThought(triggerType, thoughtPosition);
+    
+    if (thought) {
+      // Create visualization for the thought
+      createThoughtNode(thought, thoughtPosition);
+      
+      // Update activity timestamp
       inputStore.updateActivityTimestamp(nodeId);
       return true;
     }
     
     return false;
   }, [
-    checkSentenceEndTrigger, 
-    checkWordCountTrigger, 
-    checkIdleTrigger, 
-    checkAstTrigger, 
-    createThoughtNodeAtPosition, 
+    getNodeByEntityId,
     inputStore
+  ]);
+  
+  // Function that checks triggers and generates thoughts using the separated functions
+  const checkTriggersAndGenerate = useCallback(async (nodeId: string): Promise<boolean> => {
+    // Get the trigger information
+    const { triggerType, inputAtCheckTime } = checkTriggers(nodeId);
+    
+    // If no trigger is activated, return false
+    if (!triggerType) {
+      return false;
+    }
+    
+    // Handle the trigger by generating thought and creating node
+    return handleTriggerActivation(nodeId, triggerType, inputAtCheckTime);
+  }, [
+    checkTriggers,
+    handleTriggerActivation
   ]);
 
   // Handle clicks on the pane to generate thoughts
@@ -187,9 +187,8 @@ export const useTriggerDetection = () => {
         console.warn('No active input node to associate with click event');
         return;
       }
-      
-      // Find the active input node from the nodes
-      const activeInputNode = reactFlowInstance.getNode(activeInputId);
+
+      const activeInputNode = getNodeByEntityId('input', activeInputId);
       if (!activeInputNode) {
         console.warn('Could not find active input node');
         return;
@@ -214,9 +213,14 @@ export const useTriggerDetection = () => {
       // Generate a thought at the clicked position with offsets
       try {
         console.log(`Trigger: Pane click 🖱️ for node ${activeInputId}`);
-        const thought = await createThoughtNodeAtPosition('CLICK', finalPosition, activeInputNode);
+        
+        // Generate the thought
+        const thought = await useThoughtStore.getState().generateThought('CLICK', finalPosition);
         
         if (thought) {
+          // Create visualization for the thought
+          createThoughtNode(thought, finalPosition);
+          
           // Get the current input for this node
           const inputData = inputStore.getInputData(activeInputId);
           
@@ -227,12 +231,11 @@ export const useTriggerDetection = () => {
         console.error('Error generating thought from click:', error);
       }
     },
-    [reactFlowInstance, createThoughtNodeAtPosition, inputStore]
+    [reactFlowInstance, inputStore]
   );
 
   return {
     onPaneClick,
-    checkTriggersAndGenerate,
-    createThoughtNodeAtPosition
+    checkTriggersAndGenerate
   };
 }; 

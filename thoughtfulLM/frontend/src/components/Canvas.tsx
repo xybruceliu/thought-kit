@@ -4,9 +4,7 @@ import ReactFlow, {
   Controls,
   ReactFlowProvider,
   NodeTypes,
-  Edge,
-  NodeChange,
-  ConnectionMode
+  NodeChange
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Box } from '@chakra-ui/react';
@@ -33,9 +31,7 @@ const CanvasContent: React.FC = () => {
   // Use the new unified node store instead of individual hooks
   const { 
     nodes, 
-    edges, 
-    onNodesChange, 
-    onEdgesChange 
+    onNodesChange 
   } = useNodeStore();
   
   // Still use the trigger detection hook for pane clicks
@@ -109,12 +105,9 @@ const CanvasContent: React.FC = () => {
     <>
       <ReactFlow
         nodes={nodes}
-        edges={edges}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
         onPaneClick={onPaneClick}
-        connectionMode={ConnectionMode.Loose}
         fitView
         fitViewOptions={{
           padding: 0.5,

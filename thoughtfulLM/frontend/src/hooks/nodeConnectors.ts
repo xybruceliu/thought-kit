@@ -1,7 +1,7 @@
 // Node Connectors
 // Core functions that connect data stores with node visualization
 
-import { XYPosition, Node } from 'reactflow';
+import { XYPosition, Node as ReactFlowNode } from 'reactflow';
 import { Thought } from '../types/thought';
 import { useNodeStore, NodeType, ThoughtBubbleNodeData, TextInputNodeData, ResponseNodeData, NodeData } from '../store/nodeStore';
 import { useThoughtStore } from '../store/thoughtStore';
@@ -14,7 +14,7 @@ import { v4 as uuidv4 } from 'uuid';
  * @param position The position for the node on the canvas
  * @returns The created ReactFlow node
  */
-export function createThoughtNode(thought: Thought, position: XYPosition): Node {
+export function createThoughtNode(thought: Thought, position: XYPosition): ReactFlowNode<NodeData> {
   // Get the node store instance
   const nodeStore = useNodeStore.getState();
   
@@ -34,7 +34,7 @@ export function createThoughtNode(thought: Thought, position: XYPosition): Node 
  * @param onChange Optional callback for text changes
  * @returns The created ReactFlow node
  */
-export function createInputNode(position: XYPosition, onChange?: (value: string) => void): Node {
+export function createInputNode(position: XYPosition, onChange?: (value: string) => void): ReactFlowNode<NodeData> {
   // Get the stores
   const nodeStore = useNodeStore.getState();
   const inputStore = useInputStore.getState();
@@ -43,7 +43,7 @@ export function createInputNode(position: XYPosition, onChange?: (value: string)
   const inputId = uuidv4();
   
   // Register the input with the input store
-  inputStore.addInputNode(inputId);
+  inputStore.addInput(inputId);
   
   // Add the input node
   return nodeStore.addNode('textInput', position, {
@@ -58,7 +58,7 @@ export function createInputNode(position: XYPosition, onChange?: (value: string)
  * @param position The position for the node on the canvas
  * @returns The created ReactFlow node
  */
-export function createResponseNode(responseText: string, position: XYPosition): Node {
+export function createResponseNode(responseText: string, position: XYPosition): ReactFlowNode<NodeData> {
   // Get the node store instance
   const nodeStore = useNodeStore.getState();
   
@@ -108,7 +108,7 @@ export function doesNodeExistByEntityId(entityType: 'thought' | 'input' | 'respo
  * @param entityId The ID of the entity
  * @returns The node associated with the entity, or undefined if not found
  */
-export function getNodeByEntityId(entityType: 'thought' | 'input' | 'response', entityId: string): Node | undefined {
+export function getNodeByEntityId(entityType: 'thought' | 'input' | 'response', entityId: string): ReactFlowNode<NodeData> | undefined {
   return useNodeStore.getState().getNodeByEntityId(entityType, entityId);
 }
 
@@ -144,7 +144,7 @@ export function deleteInputNode(inputId: string): void {
     useNodeStore.getState().removeNode(node.id);
     
     // Remove from InputStore
-    useInputStore.getState().removeInputNode(inputId);
+    useInputStore.getState().removeInput(inputId);
   }
 }
 

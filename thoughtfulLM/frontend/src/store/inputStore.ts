@@ -4,7 +4,7 @@
 import { create } from 'zustand';
 import { detectNewContent } from '../utils/textDiff';
 
-// Input data structure for each input node
+// Input data structure for each input
 interface InputData {
   currentInput: string;
   inputAtLastGeneration: string; // Track input text at last thought generation
@@ -15,10 +15,10 @@ interface InputData {
 
 // Define the store state
 interface InputStoreState {
-  // Map of input node IDs to their respective data
+  // Map of input IDs to their respective data
   inputs: Record<string, InputData>;
   
-  // Currently active input node ID
+  // Currently active input ID
   activeInputId: string | null;
   
   // Global settings (shared across all inputs)
@@ -27,17 +27,17 @@ interface InputStoreState {
   sentenceWordThreshold: number; // Threshold for sentence word count
 
   // Actions
-  updateInput: (nodeId: string, inputText: string) => void;
-  updateActivityTimestamp: (nodeId: string) => void;
-  setIdleTriggerFired: (nodeId: string, fired: boolean) => void;
-  updateInputBaseline: (nodeId: string, input: string) => void;
-  setActiveInputId: (nodeId: string) => void;
-  getInputData: (nodeId: string) => InputData;
-  addInputNode: (nodeId: string) => void;
-  removeInputNode: (nodeId: string) => void;
+  updateInput: (inputId: string, inputText: string) => void;
+  updateActivityTimestamp: (inputId: string) => void;
+  setIdleTriggerFired: (inputId: string, fired: boolean) => void;
+  updateInputBaseline: (inputId: string, input: string) => void;
+  setActiveInputId: (inputId: string) => void;
+  getInputData: (inputId: string) => InputData;
+  addInput: (inputId: string) => void;
+  removeInput: (inputId: string) => void;
 }
 
-// Default input data for new input nodes
+// Default input data for new inputs
 const createDefaultInputData = (): InputData => ({
   currentInput: "",
   inputAtLastGeneration: "",
@@ -59,32 +59,32 @@ export const useInputStore = create<InputStoreState>((set, get) => ({
   wordCountChangeThreshold: 7, // Words added/removed to trigger
   sentenceWordThreshold: 2, // Words in a sentence to trigger
   
-  // Add a new input node to the store
-  addInputNode: (nodeId: string) => {
+  // Add a new input to the store
+  addInput: (inputId: string) => {
     set((state) => {
       // Only add if it doesn't already exist
-      if (state.inputs[nodeId]) return state;
+      if (state.inputs[inputId]) return state;
       
       return {
         inputs: {
           ...state.inputs,
-          [nodeId]: createDefaultInputData(),
+          [inputId]: createDefaultInputData(),
         },
-        // If this is the first input, set it as active
-        activeInputId: state.activeInputId || nodeId,
+        // Set the input as active
+        activeInputId: inputId,
       };
     });
   },
   
-  // Remove an input node from the store
-  removeInputNode: (nodeId: string) => {
+  // Remove an input from the store
+  removeInput: (inputId: string) => {
     set((state) => {
       const newInputs = { ...state.inputs };
-      delete newInputs[nodeId];
+      delete newInputs[inputId];
       
       // If the active input is being removed, set to null or another input
       let newActiveId = state.activeInputId;
-      if (state.activeInputId === nodeId) {
+      if (state.activeInputId === inputId) {
         const remainingIds = Object.keys(newInputs);
         newActiveId = remainingIds.length > 0 ? remainingIds[0] : null;
       }
@@ -96,33 +96,33 @@ export const useInputStore = create<InputStoreState>((set, get) => ({
     });
   },
   
-  // Set the active input node
-  setActiveInputId: (nodeId: string) => {
+  // Set the active input
+  setActiveInputId: (inputId: string) => {
     // Ensure the input exists before setting it as active
     const state = get();
-    if (!state.inputs[nodeId]) {
+    if (!state.inputs[inputId]) {
       // Create it if it doesn't exist
-      get().addInputNode(nodeId);
+      get().addInput(inputId);
     }
-    set({ activeInputId: nodeId });
+    set({ activeInputId: inputId });
   },
   
   // Helper to get input data, creating it if it doesn't exist
-  getInputData: (nodeId: string) => {
+  getInputData: (inputId: string) => {
     const state = get();
     // Create input data if it doesn't exist
-    if (!state.inputs[nodeId]) {
-      get().addInputNode(nodeId);
-      return get().inputs[nodeId];
+    if (!state.inputs[inputId]) {
+      get().addInput(inputId);
+      return get().inputs[inputId];
     }
-    return state.inputs[nodeId];
+    return state.inputs[inputId];
   },
   
-  // Update input text and reset activity timestamp for a specific node
-  updateInput: (nodeId: string, inputText: string) => {
+  // Update input text and reset activity timestamp for a specific input
+  updateInput: (inputId: string, inputText: string) => {
     set((state) => {
       // Get existing input data or create defaults
-      const inputData = state.inputs[nodeId] || createDefaultInputData();
+      const inputData = state.inputs[inputId] || createDefaultInputData();
       
       // Use the utility function to detect what's new
       const deltaInput = detectNewContent(inputData.inputAtLastGeneration, inputText);
@@ -130,7 +130,7 @@ export const useInputStore = create<InputStoreState>((set, get) => ({
       return {
         inputs: {
           ...state.inputs,
-          [nodeId]: {
+          [inputId]: {
             ...inputData,
             currentInput: inputText,
             newInput: deltaInput,
@@ -143,15 +143,15 @@ export const useInputStore = create<InputStoreState>((set, get) => ({
   },
   
   // Updates the activity timestamp without changing idle trigger state
-  updateActivityTimestamp: (nodeId: string) => {
+  updateActivityTimestamp: (inputId: string) => {
     set((state) => {
-      const inputData = state.inputs[nodeId];
+      const inputData = state.inputs[inputId];
       if (!inputData) return state;
       
       return {
         inputs: {
           ...state.inputs,
-          [nodeId]: {
+          [inputId]: {
             ...inputData,
             lastActivityTimestamp: Date.now(),
           }
@@ -160,16 +160,16 @@ export const useInputStore = create<InputStoreState>((set, get) => ({
     });
   },
   
-  // Set idle trigger fired state for a specific node
-  setIdleTriggerFired: (nodeId: string, fired: boolean) => {
+  // Set idle trigger fired state for a specific input
+  setIdleTriggerFired: (inputId: string, fired: boolean) => {
     set((state) => {
-      const inputData = state.inputs[nodeId];
+      const inputData = state.inputs[inputId];
       if (!inputData) return state;
       
       return {
         inputs: {
           ...state.inputs,
-          [nodeId]: {
+          [inputId]: {
             ...inputData,
             idleTriggerFired: fired,
           }
@@ -179,15 +179,15 @@ export const useInputStore = create<InputStoreState>((set, get) => ({
   },
   
   // Update the input text baseline after a thought has been generated
-  updateInputBaseline: (nodeId: string, input: string) => {
+  updateInputBaseline: (inputId: string, input: string) => {
     set((state) => {
-      const inputData = state.inputs[nodeId];
+      const inputData = state.inputs[inputId];
       if (!inputData) return state;
       
       return {
         inputs: {
           ...state.inputs,
-          [nodeId]: {
+          [inputId]: {
             ...inputData,
             inputAtLastGeneration: input,
             newInput: "" // Reset the new input when we update the baseline
