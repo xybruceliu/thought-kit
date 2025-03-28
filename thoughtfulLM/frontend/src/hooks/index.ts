@@ -23,20 +23,15 @@ export {
   
   // Position methods
   repositionNode,
+  repositionNodeByEntityId,
   
   // State transition methods
   markNodeForRemoval,
   
   // Utility methods
   doesNodeExistByEntityId,
-  getNodeByEntityId
-} from './nodeConnectors';
-
-// Node Store synchronization
-export {
-  useNodeStoreSync,
-  ensureNodesForAllEntities,
-  ensureNodesForThoughts,
-  ensureNodesForInputs,
-  updateNodePosition
-} from './nodeStoreSync'; 
+  getNodeByEntityId,
+  
+  // Node-thought mapping
+  ensureNodesForThoughts
+} from './nodeConnectors'; 

@@ -15,13 +15,11 @@ import ThoughtBubbleNode from './ThoughtBubbleNode';
 import ResponseNode from './ResponseNode';
 import BoundaryIndicator from './BoundaryIndicator';
 import Settings from './Settings';
-import { createInputNode, useTriggerDetection } from '../hooks';
+import { createInputNode, useTriggerDetection, ensureNodesForThoughts } from '../hooks';
 import { useThoughtStore } from '../store/thoughtStore';
 import { useMemoryStore } from '../store/memoryStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { useNodeStore } from '../store/nodeStore';
-import { useInputStore } from '../store/inputStore';
-import { useNodeStoreSync, ensureNodesForAllEntities } from '../hooks/nodeStoreSync';
 
 // Define custom node types
 const nodeTypes: NodeTypes = {
@@ -43,8 +41,8 @@ const CanvasContent: React.FC = () => {
   // Still use the trigger detection hook for pane clicks
   const { onPaneClick } = useTriggerDetection();
   
-  // Use our new unified synchronization hook to keep all nodes in sync with data stores
-  useNodeStoreSync();
+  // Get thoughts to monitor for changes
+  const thoughts = useThoughtStore(state => state.thoughts);
   
   // Settings state
   const [interfaceType, setInterfaceType] = useState<number>(1);
@@ -58,7 +56,6 @@ const CanvasContent: React.FC = () => {
         const thoughtStore = useThoughtStore.getState();
         const memoryStore = useMemoryStore.getState();
         const nodeStore = useNodeStore.getState();
-        const inputStore = useInputStore.getState();
         
         // Clear thoughts, memories and nodes
         thoughtStore.clearThoughts();
@@ -68,8 +65,6 @@ const CanvasContent: React.FC = () => {
         // Create an initial input node
         const position = { x: 250, y: 250 };
         const newNode = createInputNode(position);
-        
-        // Update position in input store (automatically handled by createInputNode now)
         
         console.log('All data cleared on page refresh');
       } catch (error) {
@@ -83,10 +78,10 @@ const CanvasContent: React.FC = () => {
     // This effect should only run once when the component mounts
   }, []);
 
-  // Ensure nodes exist for all data entities when component mounts or data changes
+  // Ensure nodes exist for all thoughts when component mounts or thoughts change
   useEffect(() => {
-    ensureNodesForAllEntities();
-  }, []);
+    ensureNodesForThoughts();
+  }, [thoughts]);
 
   // Handlers for settings changes
   const handleInterfaceChange = useCallback((interfaceType: number) => {

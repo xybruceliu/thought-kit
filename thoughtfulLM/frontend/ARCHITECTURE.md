@@ -42,8 +42,9 @@ ThoughtKit's frontend follows a clean, multi-layered architecture to ensure sepa
 │  │  - Create: createThoughtNode, createInputNode           │   │
 │  │  - Delete: deleteThoughtNode, deleteInputNode           │   │
 │  │  - Update: updateThoughtNode, updateInputNode           │   │
-│  │  - Position: repositionNode                             │   │
+│  │  - Position: repositionNode, repositionNodeByEntityId   │   │
 │  │  - State: markNodeForRemoval                            │   │
+│  │  - Consistency: ensureNodesForThoughts                  │   │
 │  └────────────────────────────────────────────────────────┘   │
 └────────────────────────────────────────────────────────────────┘
                              ▲
@@ -57,19 +58,6 @@ ThoughtKit's frontend follows a clean, multi-layered architecture to ensure sepa
 │  │ - API calls   │  │ - Text state  │  │ - Context     │      │
 │  │ - Thought data│  │ - Triggers    │  │ - History     │      │
 │  └───────────────┘  └───────────────┘  └───────────────┘      │
-└────────────────────────────────────────────────────────────────┘
-                             ▲
-                             │
-                             ▼
-┌────────────────────────────────────────────────────────────────┐
-│                   Synchronization Layer                         │
-│                                                                │
-│  ┌────────────────────────────────────────────────────────┐   │
-│  │               nodeStoreSync.ts                        │   │
-│  │  - Keeps NodeStore and ThoughtStore in sync             │   │
-│  │  - Bidirectional position updates                       │   │
-│  │  - Ensures node exists for each thought                 │   │
-│  └────────────────────────────────────────────────────────┘   │
 └────────────────────────────────────────────────────────────────┘
 ```
 
@@ -100,25 +88,31 @@ ThoughtKit's frontend follows a clean, multi-layered architecture to ensure sepa
 ### 2. Node Interaction Flow
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  User Drags  │────►│   Canvas    │────►│  NodeStore  │────►│NodeThoughtSync│
-│    Node      │     │  (ReactFlow) │     │  (position) │     │             │
-└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
-                                                                   │
-                                                                   ▼
-                                                            ┌─────────────┐
-                                                            │ThoughtStore │
-                                                            │  (position) │
-                                                            └─────────────┘
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  User Drags  │────►│   Canvas    │────►│  NodeStore  │
+│    Node      │     │  (ReactFlow) │     │  (position) │
+└─────────────┘     └─────────────┘     └─────────────┘
 ```
 
 1. User drags node on canvas
 2. Canvas (ReactFlow) updates node position
-3. NodeStore position is updated
-4. NodeThoughtSync detects change
-5. ThoughtStore position is updated
+3. NodeStore position is updated through onNodesChange
 
-### 3. Deletion Flow
+### 3. Data Integrity Flow
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ThoughtStore │────►│  Thoughts   │────►│ensureNodesFor│────►│  NodeStore  │
+│  Updates    │     │   Change    │     │  Thoughts    │     │ Creates Node│
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+```
+
+1. ThoughtStore updates (new thoughts added)
+2. Canvas detects thought changes
+3. ensureNodesForThoughts called
+4. NodeStore creates visualization for any missing thoughts
+
+### 4. Deletion Flow
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
@@ -183,7 +177,6 @@ ThoughtStore
 ├── thoughts: Thought[]
 │   ├── id: string
 │   ├── content: {text: string}
-│   ├── position: {x: number, y: number}
 │   ├── weight: number
 │   └── persistent: boolean
 ├── Methods
@@ -244,42 +237,28 @@ The nodeConnectors.ts file serves as a bridge between data and visualization lay
 | createResponseNode | Creates visualization node for AI response |
 | deleteThoughtNode | Handles removal animation and deletion |
 | updateThoughtNode | Updates node data with thought changes |
+| repositionNode | Updates node position by node ID |
+| repositionNodeByEntityId | Updates node position by entity ID |
 | markNodeForRemoval | Initiates removal animation |
+| ensureNodesForThoughts | Creates nodes for thoughts without visualization |
 | doesNodeExistByEntityId | Checks if visualization exists for data entity |
 | getNodeByEntityId | Retrieves node by associated entity ID |
 
-## Synchronization
+## Data Consistency
 
-The nodeStoreSync.ts module provides complete bidirectional synchronization for all node types:
+The Canvas component directly monitors changes in the ThoughtStore and ensures that every thought has a corresponding node visualization:
 
-1. **NodeStore → Data Stores**: 
-   - Updates thought positions in ThoughtStore when thought nodes move
-   - Updates other data stores as needed when their corresponding nodes change
+```typescript
+// In Canvas.tsx
+const thoughts = useThoughtStore(state => state.thoughts);
 
-2. **Data Stores → NodeStore**: 
-   - Ensures nodes exist for all thoughts and inputs
-   - Updates node positions when data store positions change
-   - Removes orphaned nodes when entities are removed from data stores
+// Ensure nodes exist for all thoughts when component mounts or thoughts change
+useEffect(() => {
+  ensureNodesForThoughts();
+}, [thoughts]);
+```
 
-This unified synchronization system provides several benefits:
-
-1. **Complete State Consistency**: All visualization nodes stay in sync with their corresponding data entities, regardless of which layer initiates the change.
-
-2. **Automatic Cleanup**: When entities are removed from data stores, their visualization nodes are automatically removed, preventing orphaned visual elements.
-
-3. **Automatic Creation**: When new entities are added to data stores, visualization nodes are automatically created, ensuring complete visual representation.
-
-4. **Type Safety**: Each node type is properly handled according to its specific data requirements and store relationships.
-
-The sync system uses these hooks and functions:
-
-- **useNodeStoreSync**: Main hook that handles all synchronization effects
-- **ensureNodesForAllEntities**: Ensures visualization nodes exist for all data entities
-- **ensureNodesForThoughts**: Creates nodes for thoughts that don't have visual representation
-- **ensureNodesForInputs**: Creates nodes for inputs that don't have visual representation
-- **updateNodePosition**: Updates a node's position based on entity type and ID
-
-This ensures that the visual representation stays in sync with the underlying data model, regardless of which layer initiates the change.
+This approach maintains data integrity between the data layer and visualization layer without complex synchronization mechanisms.
 
 ## Future Architecture Improvements
 

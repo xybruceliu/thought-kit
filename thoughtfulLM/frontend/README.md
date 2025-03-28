@@ -35,7 +35,6 @@ thoughtfulLM/frontend/
 │   │   └── thought.ts       # Types for thought-related data
 │   ├── hooks/               # Custom React hooks
 │   │   ├── nodeConnectors.ts # Connector functions between data and visualization
-│   │   ├── nodeThoughtSync.ts # Synchronization between stores
 │   │   ├── useTriggerDetection.ts # Hook for detecting input triggers
 │   │   └── index.ts         # Hook exports
 │   ├── utils/               # Utility functions
@@ -49,7 +48,7 @@ thoughtfulLM/frontend/
 
 ## Architecture Overview
 
-The application follows a layered architecture with clear separation of concerns:
+The application follows a clean, layered architecture with clear separation of concerns:
 
 1. **Data Layer**: Manages the application data
    - `thoughtStore.ts`: Manages thought content and properties
@@ -63,15 +62,12 @@ The application follows a layered architecture with clear separation of concerns
    - `nodeStore.ts`: Single source of truth for ReactFlow nodes
    - `Canvas.tsx`: ReactFlow canvas as a controlled component
 
-4. **Synchronization**: Keeps layers in sync
-   - `nodeThoughtSync.ts`: Synchronizes positions between stores
-
 ## State Management Architecture
 
 ### Stores
 
 - **NodeStore**: Unified store for all visual nodes (thoughtBubble, textInput, response)
-  - Single source of truth for ReactFlow visualization
+  - Single source of truth for visualization including node positions
   - Contains properly typed node data for each node type
   - Manages node operations (add, update, remove, position)
 
@@ -98,29 +94,21 @@ The application follows a layered architecture with clear separation of concerns
 2. **User Interaction with Nodes**:
    ```
    User drags node → ReactFlow updates → 
-   NodeStore position updated → nodeStoreSync → 
-   ThoughtStore position updated
+   NodeStore position updated → ReactFlow renders updated position
    ```
 
-3. **Node Deletion**:
+3. **Data Integrity**:
+   ```
+   Thoughts change in ThoughtStore → ensureNodesForThoughts → 
+   Missing nodes created in NodeStore → ReactFlow renders new nodes
+   ```
+
+4. **Node Deletion**:
    ```
    User clicks delete → deleteThoughtNode called → 
    markNodeForRemoval → Animation plays → 
    NodeStore.removeNode called → ThoughtStore updated
    ```
-
-4. **Bidirectional Synchronization**:
-   ```
-   Data Store updated (add/remove/move) → nodeStoreSync → 
-   NodeStore updated → ReactFlow renders changes
-   
-   OR
-   
-   NodeStore updated (add/remove/move) → nodeStoreSync → 
-   Data Stores updated → Application state consistent
-   ```
-
-The unified `nodeStoreSync` system ensures that all node types (thought bubbles, text inputs, and responses) stay synchronized between their data stores and visual representations. This maintains a consistent state regardless of which layer initiates the change.
 
 ## Connector Functions
 
@@ -129,9 +117,10 @@ The nodeConnectors.ts file provides a clean API for operations between data and 
 - **Create Functions**: createThoughtNode, createInputNode, createResponseNode
 - **Delete Functions**: deleteThoughtNode, deleteInputNode, deleteResponseNode
 - **Update Functions**: updateThoughtNode, updateInputNode, updateResponseNode
-- **Position Functions**: repositionNode
+- **Position Functions**: repositionNode, repositionNodeByEntityId
 - **State Functions**: markNodeForRemoval
 - **Utility Functions**: doesNodeExistByEntityId, getNodeByEntityId
+- **Consistency Functions**: ensureNodesForThoughts
 
 ## Code Examples
 
@@ -167,16 +156,21 @@ deleteThoughtNode(thoughtId);
 // 3. Removal from ThoughtStore
 ```
 
-### Position Synchronization
+### Position Management
 
 ```typescript
-// Automatic synchronization via the useNodeStoreSync hook
-useNodeStoreSync();
+// Update position by node ID
+repositionNode(nodeId, newPosition);
 
-// Manual repositioning for any entity type
-updateNodePosition('thought', thoughtId, newPosition);
-updateNodePosition('input', inputId, newPosition);
-updateNodePosition('response', responseId, newPosition);
+// Update position by entity ID
+repositionNodeByEntityId('thought', thoughtId, newPosition);
+```
+
+### Ensuring Data Consistency
+
+```typescript
+// Ensure visualization nodes exist for all thoughts
+ensureNodesForThoughts();
 ```
 
 ## Development

@@ -7,7 +7,6 @@ import { useNodeStore, NodeType, ThoughtBubbleNodeData, TextInputNodeData, Respo
 import { useThoughtStore } from '../store/thoughtStore';
 import { useInputStore } from '../store/inputStore';
 import { v4 as uuidv4 } from 'uuid';
-import { updateNodePosition as syncNodePosition } from './nodeStoreSync';
 
 /**
  * Creates a node in the NodeStore to represent a thought from the ThoughtStore
@@ -33,24 +32,18 @@ export function createThoughtNode(thought: Thought, position: XYPosition): Node 
  * Creates a node in the NodeStore to represent a text input field
  * @param position The position for the node on the canvas
  * @param onChange Optional callback for text changes
- * @param existingInputId Optional existing inputId to use (for synchronization)
  * @returns The created ReactFlow node
  */
-export function createInputNode(position: XYPosition, onChange?: (value: string) => void, existingInputId?: string): Node {
+export function createInputNode(position: XYPosition, onChange?: (value: string) => void): Node {
   // Get the stores
   const nodeStore = useNodeStore.getState();
   const inputStore = useInputStore.getState();
   
-  // Use provided inputId or generate a new one
-  const inputId = existingInputId || uuidv4();
+  // Generate a unique ID for the input
+  const inputId = uuidv4();
   
-  // Register the input with the input store if it doesn't exist already
-  if (!inputStore.inputs[inputId]) {
-    inputStore.addInputNode(inputId, position);
-  } else if (position) {
-    // Update position if it's provided and the input already exists
-    inputStore.setNodePosition(inputId, position);
-  }
+  // Register the input with the input store
+  inputStore.addInputNode(inputId);
   
   // Add the input node
   return nodeStore.addNode('textInput', position, {
@@ -63,20 +56,39 @@ export function createInputNode(position: XYPosition, onChange?: (value: string)
  * Creates a node in the NodeStore to represent a response
  * @param responseText The text content for the response
  * @param position The position for the node on the canvas
- * @param existingResponseId Optional existing responseId to use (for synchronization)
  * @returns The created ReactFlow node
  */
-export function createResponseNode(responseText: string, position: XYPosition, existingResponseId?: string): Node {
+export function createResponseNode(responseText: string, position: XYPosition): Node {
   // Get the node store instance
   const nodeStore = useNodeStore.getState();
   
-  // Use provided responseId or generate a new one
-  const responseId = existingResponseId || `response-${Date.now()}`;
+  // Generate a unique response ID
+  const responseId = `response-${Date.now()}`;
   
   // Add the response node
   return nodeStore.addNode('response', position, {
     responseId,
     responseText
+  });
+}
+
+/**
+ * Ensures that a node exists for each thought in the ThoughtStore
+ * This is useful when loading a saved state or when thoughts are generated
+ * in ways other than through the UI
+ */
+export function ensureNodesForThoughts() {
+  const thoughts = useThoughtStore.getState().thoughts;
+  const getNodeByEntityId = useNodeStore.getState().getNodeByEntityId;
+  const addNode = useNodeStore.getState().addNode;
+  
+  thoughts.forEach(thought => {
+    // Check if a node already exists for this thought
+    const existingNode = getNodeByEntityId('thought', thought.id);
+    if (!existingNode) {
+      // Error if no node exists for this thought
+      console.error(`❗️ No node found for thought ${thought.id}`);
+    }
   });
 }
 
@@ -222,22 +234,24 @@ export function repositionNode(nodeId: string, position: XYPosition): void {
   const node = nodeStore.getNodeById(nodeId);
   
   if (node) {
-    // Update the ReactFlow node position
+    // Update the node's position in NodeStore
     const updatedNodes = nodeStore.nodes.map(n => 
       n.id === nodeId ? { ...n, position } : n
     );
     nodeStore.setNodes(updatedNodes);
-    
-    // Sync position to appropriate data store based on node type
-    if (node.type === 'thoughtBubble' && node.data.type === 'thoughtBubble') {
-      syncNodePosition('thought', node.data.thoughtId, position);
-    }
-    else if (node.type === 'textInput' && node.data.type === 'textInput') {
-      syncNodePosition('input', node.data.inputId, position);
-    }
-    else if (node.type === 'response' && node.data.type === 'response') {
-      syncNodePosition('response', node.data.responseId, position);
-    }
+  }
+}
+
+/**
+ * Repositions a node by its associated entity ID
+ * @param entityType The type of entity to reposition
+ * @param entityId The ID of the entity
+ * @param position The new position
+ */
+export function repositionNodeByEntityId(entityType: 'thought' | 'input' | 'response', entityId: string, position: XYPosition): void {
+  const node = getNodeByEntityId(entityType, entityId);
+  if (node) {
+    repositionNode(node.id, position);
   }
 }
 

@@ -217,21 +217,18 @@ The frontend follows a clean, multi-layered architecture for separation of conce
 
 2. **Connector Layer**: Bridges data and visualization
    - `nodeConnectors.ts`: Functions that connect data operations to visualization
-   - Handles creation, deletion, and updates across both layers
+   - Handles creation, deletion, updates, and consistency checks
 
 3. **Visualization Layer**: Manages the UI representation
-   - `nodeStore.ts`: Single source of truth for ReactFlow nodes
+   - `nodeStore.ts`: Single source of truth for ReactFlow nodes and positions
    - Implements properly typed node data for each node type
-
-4. **Synchronization Layer**: Keeps layers in sync
-   - `nodeThoughtSync.ts`: Synchronizes positions between stores
 
 ### State Management
 
 The application uses Zustand for state management with specialized stores:
 
 - **NodeStore**: Unified store for all visual nodes (thoughtBubble, textInput, response)
-  - Single source of truth for ReactFlow nodes
+  - Single source of truth for ReactFlow nodes and their positions
   - Handles node operations (add, update, delete, position)
 
 - **ThoughtStore**: Manages thought data and API operations
@@ -255,11 +252,16 @@ The application uses Zustand for state management with specialized stores:
 2. **User Interaction with Nodes**:
    ```
    User drags node → ReactFlow updates → 
-   NodeStore position updated → nodeThoughtSync → 
-   ThoughtStore position updated
+   NodeStore position updated
    ```
 
-The architecture ensures a clear separation between data management and visualization, making the codebase more maintainable and extensible.
+3. **Data Integrity**:
+   ```
+   ThoughtStore updates → Canvas detects thought changes →
+   ensureNodesForThoughts → NodeStore creates missing nodes
+   ```
+
+The architecture ensures a clean separation between data management and visualization, making the codebase more maintainable and extensible.
 
 ### Node Types
 

@@ -2,7 +2,6 @@
 // This file will handle global state management for the application
 
 import { create } from 'zustand';
-import { XYPosition } from 'reactflow';
 import { getRandomInt } from '../utils';
 import { 
   Thought, 
@@ -17,9 +16,6 @@ interface ThoughtStoreState {
   thoughts: Thought[];
   isLoading: boolean; // Track API loading state
   
-  // Node positions by thought ID
-  nodePositions: Record<string, XYPosition>;
-  
   // Active thought IDs - thoughts that are currently active in the system
   activeThoughtIds: string[];
   
@@ -28,10 +24,6 @@ interface ThoughtStoreState {
   decay: number; // Time decay for saliency
   likeAmount: number; // Amount to like a thought
 
-  // Position Management
-  setNodePosition: (thoughtId: string, position: XYPosition) => void;
-  getNodePosition: (thoughtId: string) => XYPosition | undefined;
-  
   // Active thought management
   addActiveThought: (thoughtId: string) => void;
   removeActiveThought: (thoughtId: string) => void;
@@ -39,7 +31,7 @@ interface ThoughtStoreState {
   isThoughtActive: (thoughtId: string) => boolean;
   
   // Actions
-  generateThought: (triggerType: EventType, position?: XYPosition) => Promise<Thought | null>;
+  generateThought: (triggerType: EventType, position?: { x: number, y: number }) => Promise<Thought | null>;
   updateThought: (thoughtId: string, updatedThought: Thought) => void;
   removeThought: (thoughtId: string) => Promise<void>;
   clearThoughts: () => void;
@@ -71,27 +63,12 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
   thoughts: [],
   removingThoughtIds: [], // Track thoughts being removed for animation
   isLoading: false, // Loading state
-  nodePositions: {}, // Store node positions by thought ID
   activeThoughtIds: [], // Track active thought IDs
   
   // SETTINGS
   maxThoughtCount: useSettingsStore.getState().maxThoughtCount,
   decay: useSettingsStore.getState().decay,
   likeAmount: useSettingsStore.getState().likeAmount, 
-
-  // Node Position methods
-  setNodePosition: (thoughtId: string, position: XYPosition) => {
-    set((state) => ({
-      nodePositions: {
-        ...state.nodePositions,
-        [thoughtId]: position
-      }
-    }));
-  },
-  
-  getNodePosition: (thoughtId: string) => {
-    return get().nodePositions[thoughtId];
-  },
   
   // Active thought management methods
   addActiveThought: (thoughtId: string) => {
@@ -138,7 +115,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
     }));
   },
 
-  generateThought: async (triggerType: EventType, position?: XYPosition) => {
+  generateThought: async (triggerType: EventType, position?: { x: number, y: number }) => {
     try {
       set({ isLoading: true });
 
@@ -197,11 +174,6 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
         get().addActiveThought(thoughtData.id);
         
         return thoughtData;
-      }
-      
-      // Save position for new thoughts
-      if (position && thoughtData.id) {
-        get().setNodePosition(thoughtData.id, position);
       }
       
       // Add the new thought to state and the active thoughts list
@@ -411,7 +383,6 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
     set({
       thoughts: [],
       removingThoughtIds: [],
-      nodePositions: {},
       activeThoughtIds: []
     });
   },
