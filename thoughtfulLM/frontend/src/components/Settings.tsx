@@ -120,6 +120,8 @@ const Settings: React.FC<SettingsProps> = ({
                   >
                     <option value={1}>Interface 1</option>
                     <option value={2}>Interface 2</option>
+                    <option value={3}>Interface 3</option>
+                    <option value={4}>Interface 4</option>
                   </Select>
                 </Box>
                 

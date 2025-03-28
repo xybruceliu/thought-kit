@@ -28,11 +28,11 @@ interface SettingsStoreState {
 export const useSettingsStore = create<SettingsStoreState>((set) => ({
   // Default values
   interfaceType: 1,
-  maxThoughtCount: 5,
+  maxThoughtCount: 2,
   decay: 0.1,
   likeAmount: 0.2,
   microphoneEnabled: false,
-  debugMode: false,
+  debugMode: true,
   
   // Actions to update settings
   setInterfaceType: (interfaceType: number) => set({ interfaceType }),

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import { useThoughtStore } from '../store/thoughtStore';
 import { useInputStore } from '../store/inputStore';
 import { Node as ReactFlowNode, useReactFlow } from 'reactflow';
@@ -140,7 +140,7 @@ export const useTriggerDetection = () => {
 
     // Create a bounds object for the thought
     const thoughtBounds = createBoundsAboveNode(textInputNode);
-    setBounds(thoughtBounds);
+    // No need to call setBounds again as createBoundsAboveNode already sets bounds in the store
     const activeThoughtIds = useThoughtStore.getState().activeThoughtIds;
     // use getNodeByEntityId to get the active thoughts
     const activeThoughts = activeThoughtIds
@@ -249,5 +249,60 @@ export const useTriggerDetection = () => {
   return {
     onPaneClick,
     checkTriggersAndGenerate
+  };
+};
+
+/**
+ * Hook that automatically monitors for trigger conditions on an input
+ * and handles debouncing of trigger checks
+ * 
+ * @param inputId The ID of the input to monitor
+ * @param debounceMs The amount of milliseconds to debounce trigger checking
+ * @returns An object indicating if trigger detection is currently active
+ */
+export const useAutomaticTriggerDetection = (
+  inputId: string,
+  debounceMs: number = 300
+) => {
+  // Get the base trigger detection functions
+  const { checkTriggersAndGenerate } = useTriggerDetection();
+  
+  // Track the timer for debounced trigger checking
+  const triggerTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Determine if the input is currently active
+  const isActive = useInputStore(state => state.activeInputId === inputId);
+  
+  // Subscribe to input changes
+  const inputText = useInputStore(state => {
+    const inputData = state.inputs[inputId];
+    return inputData ? inputData.currentInput : '';
+  });
+  
+  // Set up effect to check triggers when input changes
+  useEffect(() => {
+    // Only check triggers if the input is active
+    if (!isActive) return;
+    
+    // Clear any existing timer
+    if (triggerTimerRef.current) {
+      clearTimeout(triggerTimerRef.current);
+    }
+    
+    // Set a debounce timer to avoid excessive checking during rapid typing
+    triggerTimerRef.current = setTimeout(() => {
+      checkTriggersAndGenerate(inputId);
+    }, debounceMs);
+    
+    // Clean up timer when component unmounts or dependencies change
+    return () => {
+      if (triggerTimerRef.current) {
+        clearTimeout(triggerTimerRef.current);
+      }
+    };
+  }, [inputId, inputText, isActive, checkTriggersAndGenerate, debounceMs]);
+  
+  return {
+    isMonitoring: isActive
   };
 }; 

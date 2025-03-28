@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useCallback } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -13,11 +13,10 @@ import ThoughtBubbleNode from './ThoughtBubbleNode';
 import ResponseNode from './ResponseNode';
 import BoundaryIndicator from './BoundaryIndicator';
 import Settings from './Settings';
-import { createInputNode, useTriggerDetection } from '../hooks';
-import { useThoughtStore } from '../store/thoughtStore';
-import { useMemoryStore } from '../store/memoryStore';
+import { useTriggerDetection, useAppInitialization } from '../hooks';
 import { useSettingsStore } from '../store/settingsStore';
 import { useNodeStore } from '../store/nodeStore';
+import { useThoughtStore } from '../store/thoughtStore';
 
 // Define custom node types
 const nodeTypes: NodeTypes = {
@@ -34,46 +33,18 @@ const CanvasContent: React.FC = () => {
     onNodesChange 
   } = useNodeStore();
   
-  // Still use the trigger detection hook for pane clicks
+  // Use the trigger detection hook for pane clicks
   const { onPaneClick } = useTriggerDetection();
+  
+  // Get current interface type from settings store
+  const interfaceType = useSettingsStore(state => state.interfaceType);
+  
+  // Initialize the application with default settings
+  // This will respond to interface type changes
+  useAppInitialization();
   
   // Get thoughts to monitor for changes
   const thoughts = useThoughtStore(state => state.thoughts);
-  
-  // Settings state
-  const [interfaceType, setInterfaceType] = useState<number>(1);
-  const [maxThoughts, setMaxThoughts] = useState<number>(5);
-
-  // Clear all data when the component mounts (page loads/refreshes)
-  useEffect(() => {
-    const clearDataOnLoad = async () => {
-      try {
-        // Get the store actions directly from the imported hooks
-        const thoughtStore = useThoughtStore.getState();
-        const memoryStore = useMemoryStore.getState();
-        const nodeStore = useNodeStore.getState();
-        
-        // Clear thoughts, memories and nodes
-        thoughtStore.clearThoughts();
-        memoryStore.clearMemories();
-        nodeStore.clearAllNodes();
-
-        // Create an initial input node
-        const position = { x: 250, y: 250 };
-        const newNode = createInputNode(position);
-        
-        console.log('All data cleared on page refresh');
-      } catch (error) {
-        console.error('Error clearing data on page load:', error);
-      }
-    };
-    
-    // Execute the clear operation
-    clearDataOnLoad();
-    
-    // This effect should only run once when the component mounts
-  }, []);
-
 
   // Web Speech API implementation placeholder
   const handleMicrophoneClick = useCallback(() => {
