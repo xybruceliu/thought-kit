@@ -97,6 +97,9 @@ export const useResponseHandling = () => {
           // Reposition the node
           repositionNodeByEntityId('thought', thoughtId, position);
         });
+
+        // clear active thoughts
+        useThoughtStore.getState().clearActiveThoughts(); 
       }, 100); // Short delay to ensure the response node is fully rendered
 
       return responseId;
