@@ -276,7 +276,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
         style={{
           transform: `scale(${sizeScale * hoverScaleModifier})`,
           backdropFilter: "blur(5px)",
-          transition: "border-radius 0.5s ease-in-out, opacity 0.3s ease-in-out, transform 0.3s ease-in-out",
+          transition: "border-radius 0.6s ease-in-out, opacity 0.5s ease-in-out, transform 0.5s ease-in-out, left 1s cubic-bezier(0.34, 1.56, 0.64, 1), top 1s cubic-bezier(0.34, 1.56, 0.64, 1)",
         }}
         animation={
           isExiting

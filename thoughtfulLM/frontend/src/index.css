@@ -14,6 +14,16 @@ code {
 
 /* Simple class for thought bubble transitions */
 .thought-bubble {
-  transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.8s ease-in-out !important;
-  will-change: transform, opacity;
+  transition: transform 1.2s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 1s ease-in-out, left 1s cubic-bezier(0.34, 1.56, 0.64, 1), top 1s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  will-change: transform, opacity, left, top;
+}
+
+/* Add transitions to ReactFlow nodes for smoother movement */
+.react-flow__node {
+  transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+}
+
+/* Smoother drag transitions when actively dragging */
+.react-flow__node.dragging {
+  transition: none !important;
 }

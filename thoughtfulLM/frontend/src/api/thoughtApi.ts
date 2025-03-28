@@ -5,15 +5,25 @@
 // The backend expects a simplified format for generating thoughts:
 // - Only requires event_text and event_type
 
-import axios, { AxiosResponse } from 'axios';
+import axios, { AxiosResponse, AxiosError } from 'axios';
 
 // Import types from the types directory
 import { Thought } from '../types/thought';
 import { EventType } from '../types/event';
 import { Memory, MemoryItem } from '../types/memory';
 
-// Base API URL
-const BASE_URL = 'http://localhost:8000/api/v1';
+// Base API URL - dynamically determine based on environment
+const BASE_URL = process.env.NODE_ENV === 'production' 
+  ? '/api/v1'  // Use relative URL in production (when served by FastAPI)
+  : 'http://localhost:8000/api/v1';  // Use absolute URL in development
+
+// Maximum number of retries for API requests
+const MAX_RETRIES = 5;
+// Delay between retries (in milliseconds)
+const RETRY_DELAY = 500;
+
+// Helper function to delay execution
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Request types
 export interface GenerateThoughtRequest {
@@ -48,12 +58,38 @@ export interface CreateMemoryRequest {
 
 // API client class
 class ThoughtApi {
+  // Retry wrapper for API calls
+  private async retryRequest<T>(
+    requestFn: () => Promise<AxiosResponse<T>>,
+    retries = MAX_RETRIES
+  ): Promise<AxiosResponse<T>> {
+    let lastError: any;
+    
+    for (let attempt = 0; attempt < retries; attempt++) {
+      try {
+        return await requestFn();
+      } catch (error) {
+        lastError = error;
+        // Only retry on 503 Service Unavailable or network errors
+        if (axios.isAxiosError(error) && 
+            (error.response?.status === 503 || !error.response)) {
+          console.log(`Request failed, retrying (${attempt + 1}/${retries})...`);
+          // Wait before retrying
+          await delay(RETRY_DELAY * (attempt + 1));
+          continue;
+        }
+        throw error; // For other errors, don't retry
+      }
+    }
+    
+    throw lastError; // If we've exhausted all retries
+  }
+
   // Generate a thought using the ThoughtKit API
   async generateThought(request: GenerateThoughtRequest): Promise<Thought | null> {
     try {
-      const response: AxiosResponse<Thought> = await axios.post(
-        `${BASE_URL}/thoughts/generate`,
-        request
+      const response = await this.retryRequest<Thought>(() => 
+        axios.post(`${BASE_URL}/thoughts/generate`, request)
       );
       return response.data;
     } catch (error) {
@@ -65,9 +101,8 @@ class ThoughtApi {
   // Perform an operation on thoughts
   async operateOnThought(request: OperateOnThoughtRequest): Promise<Thought | Thought[]> {
     try {
-      const response: AxiosResponse<Thought | Thought[]> = await axios.post(
-        `${BASE_URL}/thoughts/operate`,
-        request
+      const response = await this.retryRequest<Thought | Thought[]>(() => 
+        axios.post(`${BASE_URL}/thoughts/operate`, request)
       );
       return response.data;
     } catch (error) {
@@ -79,9 +114,8 @@ class ThoughtApi {
   // Articulate thoughts into a coherent response
   async articulateThoughts(request: ArticulateThoughtsRequest): Promise<ArticulateThoughtsResponse> {
     try {
-      const response: AxiosResponse<ArticulateThoughtsResponse> = await axios.post(
-        `${BASE_URL}/thoughts/articulate`,
-        request
+      const response = await this.retryRequest<ArticulateThoughtsResponse>(() => 
+        axios.post(`${BASE_URL}/thoughts/articulate`, request)
       );
       return response.data;
     } catch (error) {
@@ -93,9 +127,8 @@ class ThoughtApi {
   // Create a memory item
   async createMemory(request: CreateMemoryRequest): Promise<MemoryItem> {
     try {
-      const response: AxiosResponse<MemoryItem> = await axios.post(
-        `${BASE_URL}/memories/`,
-        request
+      const response = await this.retryRequest<MemoryItem>(() => 
+        axios.post(`${BASE_URL}/memories/`, request)
       );
       return response.data;
     } catch (error) {
