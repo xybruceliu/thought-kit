@@ -3,6 +3,7 @@
 
 import { create } from 'zustand';
 import { detectNewContent } from '../utils/textDiff';
+import { XYPosition } from 'reactflow';
 
 // Input data structure for each input node
 interface InputData {
@@ -11,6 +12,7 @@ interface InputData {
   newInput: string; // Track what's new since last generation
   lastActivityTimestamp: number;
   idleTriggerFired: boolean; // Flag to track if idle trigger has fired
+  position?: XYPosition; // Store the position of the input node
 }
 
 // Define the store state
@@ -33,18 +35,26 @@ interface InputStoreState {
   updateInputBaseline: (nodeId: string, input: string) => void;
   setActiveInputId: (nodeId: string) => void;
   getInputData: (nodeId: string) => InputData;
-  addInputNode: (nodeId: string) => void;
+  addInputNode: (nodeId: string, position?: XYPosition) => void;
   removeInputNode: (nodeId: string) => void;
+  
+  // Position management
+  setNodePosition: (nodeId: string, position: XYPosition) => void;
+  getNodePosition: (nodeId: string) => XYPosition | undefined;
 }
 
 // Default input data for new input nodes
-const createDefaultInputData = (): InputData => ({
+const createDefaultInputData = (position?: XYPosition): InputData => ({
   currentInput: "",
   inputAtLastGeneration: "",
   newInput: "",
   lastActivityTimestamp: Date.now(),
   idleTriggerFired: false,
+  position
 });
+
+// Default position for input nodes
+const DEFAULT_POSITION: XYPosition = { x: 250, y: 250 };
 
 // Create the store
 export const useInputStore = create<InputStoreState>((set, get) => ({
@@ -60,7 +70,7 @@ export const useInputStore = create<InputStoreState>((set, get) => ({
   sentenceWordThreshold: 2, // Words in a sentence to trigger
   
   // Add a new input node to the store
-  addInputNode: (nodeId: string) => {
+  addInputNode: (nodeId: string, position = DEFAULT_POSITION) => {
     set((state) => {
       // Only add if it doesn't already exist
       if (state.inputs[nodeId]) return state;
@@ -68,7 +78,7 @@ export const useInputStore = create<InputStoreState>((set, get) => ({
       return {
         inputs: {
           ...state.inputs,
-          [nodeId]: createDefaultInputData(),
+          [nodeId]: createDefaultInputData(position),
         },
         // If this is the first input, set it as active
         activeInputId: state.activeInputId || nodeId,
@@ -116,6 +126,29 @@ export const useInputStore = create<InputStoreState>((set, get) => ({
       return get().inputs[nodeId];
     }
     return state.inputs[nodeId];
+  },
+  
+  // Position management methods
+  setNodePosition: (nodeId: string, position: XYPosition) => {
+    set((state) => {
+      const inputData = state.inputs[nodeId];
+      if (!inputData) return state;
+      
+      return {
+        inputs: {
+          ...state.inputs,
+          [nodeId]: {
+            ...inputData,
+            position
+          }
+        }
+      };
+    });
+  },
+  
+  getNodePosition: (nodeId: string) => {
+    const inputData = get().inputs[nodeId];
+    return inputData?.position;
   },
   
   // Update input text and reset activity timestamp for a specific node

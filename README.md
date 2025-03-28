@@ -11,6 +11,7 @@ A modular Python toolkit for generating, manipulating, and articulating AI thoug
 - [Core Components](#core-components)
 - [Thought Generation](#thought-generation)
 - [Thought Operations](#thought-operations)
+- [Frontend Architecture](#frontend-architecture)
 - [Examples](#examples)
 - [Development Status](#development-status)
 - [License](#license)
@@ -199,6 +200,74 @@ def my_operation(thoughts: List[Thought], memory: Optional[Memory] = None, **opt
 
 The operation will be automatically discovered and loaded when the ThoughtKit API is initialized.
 
+## Frontend Architecture
+
+ThoughtKit includes a modern React frontend for visualizing thoughts on an interactive canvas.
+
+For a detailed architectural overview with visual diagrams, see the [Frontend Architecture Document](/thoughtfulLM/frontend/ARCHITECTURE.md).
+
+### Multi-layered Architecture
+
+The frontend follows a clean, multi-layered architecture for separation of concerns:
+
+1. **Data Layer**: Manages the application data
+   - `thoughtStore.ts`: Manages thought content, properties, API communication
+   - `inputStore.ts`: Manages input field state and text
+   - `memoryStore.ts`: Manages context for thought generation
+
+2. **Connector Layer**: Bridges data and visualization
+   - `nodeConnectors.ts`: Functions that connect data operations to visualization
+   - Handles creation, deletion, and updates across both layers
+
+3. **Visualization Layer**: Manages the UI representation
+   - `nodeStore.ts`: Single source of truth for ReactFlow nodes
+   - Implements properly typed node data for each node type
+
+4. **Synchronization Layer**: Keeps layers in sync
+   - `nodeThoughtSync.ts`: Synchronizes positions between stores
+
+### State Management
+
+The application uses Zustand for state management with specialized stores:
+
+- **NodeStore**: Unified store for all visual nodes (thoughtBubble, textInput, response)
+  - Single source of truth for ReactFlow nodes
+  - Handles node operations (add, update, delete, position)
+
+- **ThoughtStore**: Manages thought data and API operations
+  - Handles API calls to generate thoughts
+  - Manages thought properties (weight, persistence, etc.)
+
+- **InputStore**: Manages input field data
+  - Tracks text input state and triggers
+  - Manages baseline detection for thought generation
+
+### Data Flow
+
+1. **User Input → Thought Generation → Visualization**:
+   ```
+   User types → InputStore updated → Trigger detected → 
+   API call via ThoughtStore → Thought created → 
+   createThoughtNode called → Node added to NodeStore → 
+   ReactFlow renders the node
+   ```
+
+2. **User Interaction with Nodes**:
+   ```
+   User drags node → ReactFlow updates → 
+   NodeStore position updated → nodeThoughtSync → 
+   ThoughtStore position updated
+   ```
+
+The architecture ensures a clear separation between data management and visualization, making the codebase more maintainable and extensible.
+
+### Node Types
+
+- **TextInputNode**: User input fields
+- **ThoughtBubbleNode**: Visualizations of AI thoughts
+- **ResponseNode**: AI responses with animations
+
+For detailed information about the frontend implementation, see the [frontend README](/thoughtfulLM/frontend/README.md).
 
 ## Examples
 

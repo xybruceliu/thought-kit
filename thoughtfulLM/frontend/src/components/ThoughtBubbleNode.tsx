@@ -3,14 +3,10 @@ import { NodeProps, Handle, Position } from 'reactflow';
 import { Box, Text, keyframes, IconButton, Fade, Icon } from '@chakra-ui/react';
 import { useThoughtStore } from '../store/thoughtStore';
 import { DeleteIcon, StarIcon } from '@chakra-ui/icons';
+import { ThoughtBubbleNodeData, useNodeStore } from '../store/nodeStore';
 
-type ThoughtBubbleNodeProps = NodeProps<{
-  content: string;
-  thoughtId: string; // Store the thought ID instead of the full object
-  blobVariant?: number;
-  isRemoving?: boolean;
-}>;
-
+// Update the type to use our unified node data type
+type ThoughtBubbleNodeProps = NodeProps<ThoughtBubbleNodeData>;
 
 // Array of different blob shapes using CSS border-radius
 // Updated for more distinct, smoother shapes without sharp corners
@@ -33,15 +29,20 @@ const colors = [
   "#FFB9B9",
 ];
 
-const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected }) => {
-  // Get the thought from the store using the thoughtId
-  const thoughts = useThoughtStore(state => state.thoughts);
+const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, id }) => {
+  // Get the thought from the store using the thoughtId from our node data
+  const { thoughtId } = data;
+  
+  // Get thought store functions and the specific thought
+  const thought = useThoughtStore(state => state.thoughts.find(t => t.id === thoughtId));
   const handleThoughtPin = useThoughtStore(state => state.handleThoughtPin);
   const handleThoughtDelete = useThoughtStore(state => state.handleThoughtDelete);
   const handleThoughtLike = useThoughtStore(state => state.handleThoughtLike);
   const handleThoughtDislike = useThoughtStore(state => state.handleThoughtDislike);
-
-  const thought = thoughts.find(t => t.id === data.thoughtId);
+  
+  // Get node store functions
+  const markNodeAsRemoving = useNodeStore(state => state.markNodeAsRemoving);
+  const isRemoving = useNodeStore(state => state.removingNodeIds.includes(id));
   
   // IMPORTANT: All hooks must be called at the top level, before any conditional returns
   // Random animation duration for more natural movement
@@ -49,7 +50,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
   const [isNew, setIsNew] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
-  const prevIsRemovingRef = useRef(data.isRemoving);
+  const prevIsRemovingRef = useRef(isRemoving);
   
   // Add state for hovering and mouse position
   const [isHovering, setIsHovering] = useState(false);
@@ -57,6 +58,14 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
   const [showDeleteButton, setShowDeleteButton] = useState(false);
   const [showPinButton, setShowPinButton] = useState(false);
   const bubbleRef = useRef<HTMLDivElement>(null);
+  
+  // Get the content from the thought
+  const content = thought?.content?.text || '';
+  
+  // Get blob variant (random if not specified)
+  const blobVariant = data.blobVariant !== undefined 
+    ? data.blobVariant 
+    : Math.floor(Math.random() * blobVariants.length);
   
   // Hook for setting animation duration
   useEffect(() => {
@@ -72,13 +81,13 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
   // Effect to handle removal animation
   useEffect(() => {
     // If isRemoving prop changed from false to true, trigger exit animation
-    if (data.isRemoving && !prevIsRemovingRef.current) {
+    if (isRemoving && !prevIsRemovingRef.current) {
       setIsExiting(true);
     }
     
     // Update ref for next comparison
-    prevIsRemovingRef.current = data.isRemoving;
-  }, [data.isRemoving]);
+    prevIsRemovingRef.current = isRemoving;
+  }, [isRemoving]);
   
   // Function to handle mouse movement and determine which quadrant
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -110,7 +119,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
     // Prevent bubbling to parent elements
     e.stopPropagation();
     
-    if (!bubbleRef.current || !data.thoughtId) return;
+    if (!bubbleRef.current || !thoughtId) return;
     
     const rect = bubbleRef.current.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
@@ -118,18 +127,43 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
     
     // If click is on the left half, dislike; if on the right half, like
     if (clickX < bubbleWidth * (2/5)) {
-      console.log(`Disliking thought: ${data.thoughtId}`);
-      handleThoughtDislike(data.thoughtId);
+      console.log(`Disliking thought: ${thoughtId}`);
+      handleThoughtDislike(thoughtId);
     } else {
-      console.log(`Liking thought: ${data.thoughtId}`);
-      handleThoughtLike(data.thoughtId);
+      console.log(`Liking thought: ${thoughtId}`);
+      handleThoughtLike(thoughtId);
     }
+  };
+  
+  // Handle thought deletion with animation
+  const onDeleteThought = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!thoughtId) return;
+    
+    console.log(`Deleting thought: ${thoughtId}`);
+    
+    // Mark the node as removing in the node store first (for animation)
+    markNodeAsRemoving(id);
+    
+    // Then schedule the actual deletion after animation completes
+    setTimeout(() => {
+      handleThoughtDelete(thoughtId);
+    }, 1000); // Match with exit animation duration
+  };
+  
+  // Handle thought pinning
+  const onPinThought = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!thoughtId) return;
+    
+    console.log(`Pinning thought: ${thoughtId}`);
+    handleThoughtPin(thoughtId);
   };
   
   // If thought is not found, show minimal content
   if (!thought) {
     // Check if this node is in the process of being removed
-    if (data.isRemoving) {
+    if (isRemoving) {
       // Return an empty fragment - nothing will be rendered during removal
       return <></>;
     }
@@ -137,7 +171,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
   }
   
   // Get three different variant indices to create more dramatic animation
-  const startVariantIndex = data.blobVariant !== undefined ? data.blobVariant % blobVariants.length : 0;
+  const startVariantIndex = blobVariant % blobVariants.length;
   const midVariantIndex = (startVariantIndex + 2) % blobVariants.length; // Skip one to get more contrast
   const endVariantIndex = (startVariantIndex + 4) % blobVariants.length; // Skip more for even more contrast
   // color index based on thought type
@@ -271,7 +305,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
           whiteSpace="pre-wrap"
           wordBreak="break-word"
         >
-          {data.content}
+          {content}
         </Text>
         
         {/* Star (pin) button */}
@@ -294,13 +328,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
             isRound
             variant="ghost"
             color={thought.config.persistent ? "yellow.300" : "gray.500"}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (thought) {
-                console.log(`Pinning thought: ${thought.id}`);
-                handleThoughtPin(thought.id);
-              }
-            }}
+            onClick={onPinThought}
             _hover={{
               bg: "none",
               color: "yellow.600"
@@ -328,13 +356,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected })
             isRound
             variant="ghost"
             color="gray.500"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (thought) {
-                console.log(`Deleting thought: ${thought.id}`);
-                handleThoughtDelete(thought.id);
-              }
-            }}
+            onClick={onDeleteThought}
             _hover={{
               bg: "none",
               color: "red.600"

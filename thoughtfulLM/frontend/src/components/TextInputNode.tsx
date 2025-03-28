@@ -1,36 +1,51 @@
-import React, { useCallback, useRef, useEffect } from 'react';
+import React, { useCallback, useRef, useEffect, useState } from 'react';
 import { NodeProps, useReactFlow } from 'reactflow';
 import { Box, Textarea, Kbd } from '@chakra-ui/react';
-import { useInputNodes } from '../hooks';
 import { useThoughtStore } from '../store/thoughtStore';
+import { useInputStore } from '../store/inputStore';
+import { useNodeStore, TextInputNodeData } from '../store/nodeStore';
 
-type TextInputNodeProps = NodeProps<{
-  value?: string;
-  onChange?: (value: string) => void;
-}>;
+// Update the node props to use our new node data type
+type TextInputNodeProps = NodeProps<TextInputNodeData>;
 
 const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
-  const { getInputText, handleTextChange } = useInputNodes();
-  const text = getInputText(id);
+  // Get the input ID from the node data
+  const { inputId } = data;
+  
+  // Get input text from the input store using the inputId
+  const inputText = useInputStore(state => {
+    const inputData = state.inputs[inputId];
+    return inputData ? inputData.currentInput : '';
+  });
+  
+  // Use local state for textarea value with initial value from store
+  const [text, setText] = useState(inputText);
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const reactFlowInstance = useReactFlow();
   const handleThoughtsSubmit = useThoughtStore(state => state.handleThoughtsSubmit);
 
+  // Update local state when input store changes
+  useEffect(() => {
+    setText(inputText);
+  }, [inputText]);
+
   const handleChange = useCallback(
     (event: React.ChangeEvent<HTMLTextAreaElement>) => {
       const newValue = event.target.value;
-      const textInputNode = reactFlowInstance.getNode(id);
-      if (textInputNode) {
-        handleTextChange(id, newValue, textInputNode);
-      }
-   
-      // Also call the original onChange if provided
+      
+      // Update local state immediately for responsive UI
+      setText(newValue);
+      
+      // Update the input store with the new value
+      useInputStore.getState().updateInput(inputId, newValue);
+      
+      // If there's an onChange handler in the data, call it too
       if (data.onChange) {
         data.onChange(newValue);
       }
     },
-    [data, handleTextChange, id, reactFlowInstance]
+    [data, inputId]
   );
   
   // Handle keyboard shortcuts

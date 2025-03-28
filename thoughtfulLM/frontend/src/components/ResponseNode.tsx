@@ -1,15 +1,18 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { NodeProps } from 'reactflow';
 import { Box, Text, keyframes, usePrefersReducedMotion } from '@chakra-ui/react';
+import { ResponseNodeData } from '../store/nodeStore';
 
-type ResponseNodeProps = NodeProps<{
-  content: string;
-}>;
+// Update to use our unified node data type
+type ResponseNodeProps = NodeProps<ResponseNodeData>;
 
 const ResponseNode: React.FC<ResponseNodeProps> = ({ data }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const prefersReducedMotion = usePrefersReducedMotion();
   const [displayedContent, setDisplayedContent] = useState<string>('');
+  
+  // Get the response text from the node data
+  const content = data.responseText || '';
   
   // Define the fade-in animation
   const fadeIn = keyframes`
@@ -24,14 +27,14 @@ const ResponseNode: React.FC<ResponseNodeProps> = ({ data }) => {
 
   // Word-by-word animation
   useEffect(() => {
-    if (prefersReducedMotion || !data.content) {
+    if (prefersReducedMotion || !content) {
       // Skip animation for accessibility or if content is empty
-      setDisplayedContent(data.content || '');
+      setDisplayedContent(content || '');
       return;
     }
 
     // Filter out any undefined or empty entries
-    const words = data.content.split(' ').filter(word => word !== undefined && word !== null);
+    const words = content.split(' ').filter(word => word !== undefined && word !== null);
     let currentWordIndex = 0;
     
     // Reset the displayed content when the actual content changes
@@ -52,7 +55,7 @@ const ResponseNode: React.FC<ResponseNodeProps> = ({ data }) => {
     }, 50); // Adjust speed as needed
     
     return () => clearInterval(typingInterval);
-  }, [data.content, prefersReducedMotion]);
+  }, [content, prefersReducedMotion]);
 
   // Auto-resize functionality
   useEffect(() => {

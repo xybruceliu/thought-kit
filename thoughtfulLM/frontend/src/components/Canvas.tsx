@@ -5,7 +5,8 @@ import ReactFlow, {
   ReactFlowProvider,
   NodeTypes,
   Edge,
-  NodeChange
+  NodeChange,
+  ConnectionMode
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Box } from '@chakra-ui/react';
@@ -14,11 +15,13 @@ import ThoughtBubbleNode from './ThoughtBubbleNode';
 import ResponseNode from './ResponseNode';
 import BoundaryIndicator from './BoundaryIndicator';
 import Settings from './Settings';
-import { useThoughtNodes, useInputNodes, useResponseNodes } from '../hooks';
-import { useTriggerDetection } from '../hooks';
+import { createInputNode, useTriggerDetection } from '../hooks';
 import { useThoughtStore } from '../store/thoughtStore';
 import { useMemoryStore } from '../store/memoryStore';
 import { useSettingsStore } from '../store/settingsStore';
+import { useNodeStore } from '../store/nodeStore';
+import { useInputStore } from '../store/inputStore';
+import { useNodeStoreSync, ensureNodesForAllEntities } from '../hooks/nodeStoreSync';
 
 // Define custom node types
 const nodeTypes: NodeTypes = {
@@ -29,23 +32,23 @@ const nodeTypes: NodeTypes = {
 
 // The inner component that has access to the ReactFlow hooks
 const CanvasContent: React.FC = () => {
-  // Use our custom hooks for nodes
-  const { thoughtNodes, onThoughtNodesChange } = useThoughtNodes();
-  const { inputNodes, onInputNodesChange, addInputNode } = useInputNodes();
-  const { responseNodes, onResponseNodesChange } = useResponseNodes();
+  // Use the new unified node store instead of individual hooks
+  const { 
+    nodes, 
+    edges, 
+    onNodesChange, 
+    onEdgesChange 
+  } = useNodeStore();
+  
+  // Still use the trigger detection hook for pane clicks
   const { onPaneClick } = useTriggerDetection();
   
-  // Initialize edges state
-  const [edges] = useState<Edge[]>([]);
+  // Use our new unified synchronization hook to keep all nodes in sync with data stores
+  useNodeStoreSync();
   
   // Settings state
   const [interfaceType, setInterfaceType] = useState<number>(1);
   const [maxThoughts, setMaxThoughts] = useState<number>(5);
-
-  // Combine all nodes for the canvas
-  const nodes = useMemo(() => {
-    return [...inputNodes, ...thoughtNodes, ...responseNodes];
-  }, [inputNodes, thoughtNodes, responseNodes]);
 
   // Clear all data when the component mounts (page loads/refreshes)
   useEffect(() => {
@@ -54,10 +57,19 @@ const CanvasContent: React.FC = () => {
         // Get the store actions directly from the imported hooks
         const thoughtStore = useThoughtStore.getState();
         const memoryStore = useMemoryStore.getState();
+        const nodeStore = useNodeStore.getState();
+        const inputStore = useInputStore.getState();
         
-        // Clear thoughts and memories
+        // Clear thoughts, memories and nodes
         thoughtStore.clearThoughts();
         memoryStore.clearMemories();
+        nodeStore.clearAllNodes();
+
+        // Create an initial input node
+        const position = { x: 250, y: 250 };
+        const newNode = createInputNode(position);
+        
+        // Update position in input store (automatically handled by createInputNode now)
         
         console.log('All data cleared on page refresh');
       } catch (error) {
@@ -71,13 +83,10 @@ const CanvasContent: React.FC = () => {
     // This effect should only run once when the component mounts
   }, []);
 
-  // Combined nodes change handler
-  const handleNodesChange = useCallback((changes: NodeChange[]) => {
-    // Determine which nodes are being changed and call the appropriate handler
-    onThoughtNodesChange(changes);
-    onInputNodesChange(changes);
-    onResponseNodesChange(changes);
-  }, [onThoughtNodesChange, onInputNodesChange, onResponseNodesChange]);
+  // Ensure nodes exist for all data entities when component mounts or data changes
+  useEffect(() => {
+    ensureNodesForAllEntities();
+  }, []);
 
   // Handlers for settings changes
   const handleInterfaceChange = useCallback((interfaceType: number) => {
@@ -107,8 +116,10 @@ const CanvasContent: React.FC = () => {
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
-        onNodesChange={handleNodesChange}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
         onPaneClick={onPaneClick}
+        connectionMode={ConnectionMode.Loose}
         fitView
         fitViewOptions={{
           padding: 0.5,

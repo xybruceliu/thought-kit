@@ -1,6 +1,9 @@
 import { XYPosition, Node as ReactFlowNode } from 'reactflow';
-import { ThoughtNode } from '../hooks/useThoughtNodes';
 import { useBoundsStore } from '../store/boundsStore';
+import { ThoughtBubbleNodeData } from '../store/nodeStore';
+
+// Type alias for thought node with proper data type
+type ThoughtNode = ReactFlowNode<ThoughtBubbleNodeData>;
 
 // Constants for node dimensions
 export const NODE_DIMENSIONS = {
