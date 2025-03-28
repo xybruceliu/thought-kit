@@ -39,17 +39,19 @@ export function createInputNode(position: XYPosition, onChange?: (value: string)
   const nodeStore = useNodeStore.getState();
   const inputStore = useInputStore.getState();
   
-  // Generate a unique ID for the input
+  // Create a unique ID for new input
   const inputId = uuidv4();
   
-  // Register the input with the input store
-  inputStore.addInput(inputId);
+  // Add the input to the input store first
+  useInputStore.getState().addInput(inputId);
+  // Set as active input
+  useInputStore.getState().setActiveInputId(inputId);
   
-  // Add the input node
+  // Add the node to the flow
   return nodeStore.addNode('textInput', position, {
     inputId,
     onChange
-  });
+  }, { draggable: false });  // Set draggable to false here
 }
 
 /**

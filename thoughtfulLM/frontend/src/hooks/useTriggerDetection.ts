@@ -138,7 +138,6 @@ export const useTriggerDetection = () => {
     // Update input baseline
     inputStore.updateInputBaseline(nodeId, inputAtCheckTime);
 
-
     // Create a bounds object for the thought
     const thoughtBounds = createBoundsAboveNode(textInputNode);
     setBounds(thoughtBounds);

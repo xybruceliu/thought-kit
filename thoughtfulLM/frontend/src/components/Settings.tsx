@@ -16,10 +16,14 @@ import {
   NumberInputStepper,
   NumberIncrementStepper,
   NumberDecrementStepper,
-  Divider
+  Divider,
+  Switch,
+  FormControl,
+  FormLabel
 } from '@chakra-ui/react';
 import { SettingsIcon, createIcon } from '@chakra-ui/icons';
 import { useSettingsStore } from '../store/settingsStore';
+import { useBoundsStore } from '../store/boundsStore';
 
 // Create custom microphone icon
 const MicrophoneIcon = createIcon({
@@ -44,9 +48,13 @@ const Settings: React.FC<SettingsProps> = ({
   const { 
     interfaceType,
     maxThoughtCount, 
+    debugMode,
     setInterfaceType, 
-    setMaxThoughtCount 
+    setMaxThoughtCount,
+    setDebugMode 
   } = useSettingsStore();
+
+  const { setShowBounds } = useBoundsStore();
 
   const handleInterfaceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newInterface = parseInt(e.target.value);
@@ -55,6 +63,12 @@ const Settings: React.FC<SettingsProps> = ({
 
   const handleMaxThoughtsChange = (valueAsString: string, valueAsNumber: number) => {
     setMaxThoughtCount(valueAsNumber);
+  };
+
+  const handleDebugToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const isEnabled = e.target.checked;
+    setDebugMode(isEnabled);
+    setShowBounds(isEnabled);
   };
 
   return (
@@ -109,8 +123,6 @@ const Settings: React.FC<SettingsProps> = ({
                   </Select>
                 </Box>
                 
-
-                
                 <Box>
                   <Text mb={1} fontSize="sm">Max Thoughts</Text>
                   <NumberInput 
@@ -127,6 +139,18 @@ const Settings: React.FC<SettingsProps> = ({
                     </NumberInputStepper>
                   </NumberInput>
                 </Box>
+
+                <FormControl display='flex' alignItems='center' mt={1}>
+                  <FormLabel htmlFor='debug-mode' mb='0' fontSize="sm">
+                    Debug
+                  </FormLabel>
+                  <Switch 
+                    id='debug-mode' 
+                    size='sm' 
+                    isChecked={debugMode}
+                    onChange={handleDebugToggle}
+                  />
+                </FormControl>
               </Flex>
             </PopoverBody>
           </PopoverContent>

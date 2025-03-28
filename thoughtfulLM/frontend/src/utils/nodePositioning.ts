@@ -1,5 +1,6 @@
 import { XYPosition, Node as ReactFlowNode } from 'reactflow';
 import { useBoundsStore } from '../store/boundsStore';
+import { useSettingsStore } from '../store/settingsStore';
 import { NodeData } from '../store/nodeStore';
 
 // Type alias for thought node with proper data type
@@ -314,7 +315,7 @@ export const positioningStrategies = {
 /**
  * Creates a bounded area above a given input node and updates the global bounds store
  */
-export const createBoundsAboveNode = (node: ReactFlowNode, showVisually = true): Bounds => {
+export const createBoundsAboveNode = (node: ReactFlowNode, showVisually?: boolean): Bounds => {
   if (!node) {
     const defaultBounds = useBoundsStore.getState().defaultBounds;
     return defaultBounds;
@@ -341,13 +342,21 @@ export const createBoundsAboveNode = (node: ReactFlowNode, showVisually = true):
     bottomRight: { x: nodeX + nodeWidth + xOffset, y: boundsY + boundsHeight }
   };
 
+  // Use the debug mode setting if showVisually is not explicitly provided
+  if (showVisually === undefined) {
+    showVisually = useSettingsStore.getState().debugMode;
+  }
+
+  // Update the bounds in the store
+  useBoundsStore.getState().setBounds(bounds, showVisually);
+
   return bounds;
 };
 
 /**
  * Creates a bounded area to the right of a given response node
  */
-export const createBoundsRightOfNode = (node: ReactFlowNode, showVisually = true): Bounds => {
+export const createBoundsRightOfNode = (node: ReactFlowNode, showVisually?: boolean): Bounds => {
   if (!node) {
     const defaultBounds = useBoundsStore.getState().defaultBounds;
     return defaultBounds;
@@ -371,6 +380,94 @@ export const createBoundsRightOfNode = (node: ReactFlowNode, showVisually = true
     bottomRight: { x: boundsX + boundsWidth, y: boundsY + boundsHeight }
   };
   
+  // Use the debug mode setting if showVisually is not explicitly provided
+  if (showVisually === undefined) {
+    showVisually = useSettingsStore.getState().debugMode;
+  }
+
+  // Update the bounds in the store  
+  useBoundsStore.getState().setBounds(bounds, showVisually);
+  
+  return bounds;
+};
+
+/**
+ * Creates a bounded area below a given node and updates the global bounds store
+ */
+export const createBoundsBelowNode = (node: ReactFlowNode, showVisually?: boolean): Bounds => {
+  if (!node) {
+    const defaultBounds = useBoundsStore.getState().defaultBounds;
+    return defaultBounds;
+  }
+  
+  const nodeX = node.position.x;
+  const nodeY = node.position.y;
+  const nodeWidth = node.width || 500;
+  const nodeHeight = node.height || 200;
+
+  // Width is 120% of the node width
+  const boundsWidth = nodeWidth * 1.2;
+  // Height is 0.7 times the thought node height (matching the above pattern)
+  const boundsHeight = nodeHeight * 0.7;
+  // X offset to center the bounds below the node (accounts for the extra width)
+  const xOffset = (boundsWidth - nodeWidth) / 2;
+  // Y is 10pt below the input node lower bound
+  const boundsY = nodeY + nodeHeight + 10;
+  
+  const bounds = {
+    topLeft: { x: nodeX - xOffset, y: boundsY },
+    topRight: { x: nodeX + nodeWidth + xOffset, y: boundsY },
+    bottomLeft: { x: nodeX - xOffset, y: boundsY + boundsHeight },
+    bottomRight: { x: nodeX + nodeWidth + xOffset, y: boundsY + boundsHeight }
+  };
+
+  // Use the debug mode setting if showVisually is not explicitly provided
+  if (showVisually === undefined) {
+    showVisually = useSettingsStore.getState().debugMode;
+  }
+
+  // Update the bounds in the store
+  useBoundsStore.getState().setBounds(bounds, showVisually);
+
+  return bounds;
+};
+
+/**
+ * Creates a bounded area to the left of a given node and updates the global bounds store
+ */
+export const createBoundsLeftOfNode = (node: ReactFlowNode, showVisually?: boolean): Bounds => {
+  if (!node) {
+    const defaultBounds = useBoundsStore.getState().defaultBounds;
+    return defaultBounds;
+  }
+  
+  const nodeX = node.position.x;
+  const nodeY = node.position.y - 20;
+  const nodeWidth = 500;
+  const nodeHeight = 200;
+
+  // Width is 80% of the node width (matching the right bounds pattern)
+  const boundsWidth = nodeWidth * 0.8;
+  const boundsHeight = nodeHeight;
+  // X is 10pt to the left of the input node left bound
+  const boundsX = nodeX - boundsWidth - 10;
+  // Y is centered to the node
+  const boundsY = nodeY + (nodeHeight / 2) - (boundsHeight / 2);
+  
+  const bounds = {
+    topLeft: { x: boundsX, y: boundsY },
+    topRight: { x: boundsX + boundsWidth, y: boundsY },
+    bottomLeft: { x: boundsX, y: boundsY + boundsHeight },
+    bottomRight: { x: boundsX + boundsWidth, y: boundsY + boundsHeight }
+  };
+  
+  // Use the debug mode setting if showVisually is not explicitly provided
+  if (showVisually === undefined) {
+    showVisually = useSettingsStore.getState().debugMode;
+  }
+
+  // Update the bounds in the store  
+  useBoundsStore.getState().setBounds(bounds, showVisually);
   
   return bounds;
 };
@@ -378,7 +475,12 @@ export const createBoundsRightOfNode = (node: ReactFlowNode, showVisually = true
 /**
  * Sets custom bounds and updates the global store
  */
-export const setBounds = (bounds: Bounds, showVisually = true): void => {
+export const setBounds = (bounds: Bounds, showVisually?: boolean): void => {
+  // Use the debug mode setting if showVisually is not explicitly provided
+  if (showVisually === undefined) {
+    showVisually = useSettingsStore.getState().debugMode;
+  }
+
   useBoundsStore.getState().setBounds(bounds, showVisually);
 };
 

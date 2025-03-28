@@ -15,10 +15,14 @@ interface SettingsStoreState {
   // Audio settings
   microphoneEnabled: boolean;
   
+  // Debug settings
+  debugMode: boolean;
+  
   // Actions
   setInterfaceType: (interfaceType: number) => void;
   setMaxThoughtCount: (count: number) => void;
   setMicrophoneEnabled: (enabled: boolean) => void;
+  setDebugMode: (enabled: boolean) => void;
 }
 
 export const useSettingsStore = create<SettingsStoreState>((set) => ({
@@ -28,9 +32,11 @@ export const useSettingsStore = create<SettingsStoreState>((set) => ({
   decay: 0.1,
   likeAmount: 0.2,
   microphoneEnabled: false,
+  debugMode: false,
   
   // Actions to update settings
   setInterfaceType: (interfaceType: number) => set({ interfaceType }),
   setMaxThoughtCount: (count: number) => set({ maxThoughtCount: count }),
   setMicrophoneEnabled: (enabled: boolean) => set({ microphoneEnabled: enabled }),
+  setDebugMode: (enabled: boolean) => set({ debugMode: enabled }),
 })); 

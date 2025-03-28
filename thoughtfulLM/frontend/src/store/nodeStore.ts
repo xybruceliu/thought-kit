@@ -75,7 +75,7 @@ interface NodeStoreState {
   onEdgesChange: (changes: EdgeChange[]) => void;
   
   // Specialized node operations
-  addNode: (type: NodeType, position: XYPosition, data: NodeCreationParams) => Node<NodeData>;
+  addNode: (type: NodeType, position: XYPosition, data: NodeCreationParams, options?: { draggable?: boolean }) => Node<NodeData>;
   updateNodeData: (nodeId: string, newData: Partial<NodeData>) => void;
   getNodeById: (nodeId: string) => Node<NodeData> | undefined;
   getNodeByEntityId: (entityType: 'thought' | 'input' | 'response', entityId: string) => Node<NodeData> | undefined;
@@ -113,7 +113,7 @@ export const useNodeStore = create<NodeStoreState>((set, get) => ({
   },
   
   // Add a new node
-  addNode: (type, position, data) => {
+  addNode: (type, position, data, options = {}) => {
     let nodeData: NodeData;
     
     // Create the correct node data type based on the node type
@@ -151,6 +151,7 @@ export const useNodeStore = create<NodeStoreState>((set, get) => ({
       type,
       position,
       data: nodeData,
+      ...options
     };
     
     set((state) => ({
