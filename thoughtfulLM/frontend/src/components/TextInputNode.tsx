@@ -4,6 +4,7 @@ import { Box, Textarea, Kbd } from '@chakra-ui/react';
 import { useThoughtStore } from '../store/thoughtStore';
 import { useInputStore } from '../store/inputStore';
 import { useNodeStore, TextInputNodeData } from '../store/nodeStore';
+import { useTriggerDetection } from '../hooks';
 
 // Update the node props to use our new node data type
 type TextInputNodeProps = NodeProps<TextInputNodeData>;
@@ -21,6 +22,12 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
   // Use local state for textarea value with initial value from store
   const [text, setText] = useState(inputText);
   
+  // Get trigger detection hook
+  const { checkTriggersAndGenerate } = useTriggerDetection();
+  
+  // Track the timer for debounced trigger checking
+  const triggerTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const reactFlowInstance = useReactFlow();
   const handleThoughtsSubmit = useThoughtStore(state => state.handleThoughtsSubmit);
@@ -29,6 +36,32 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
   useEffect(() => {
     setText(inputText);
   }, [inputText]);
+  
+  // Set up a debounced trigger check when input changes
+  useEffect(() => {
+    // Only check triggers if the input is active
+    if (useInputStore.getState().activeInputId !== inputId) {
+      return;
+    }
+
+    // Clear any existing timer
+    if (triggerTimerRef.current) {
+      clearTimeout(triggerTimerRef.current);
+    }
+    
+    // Set a short delay to avoid excessive checking during rapid typing
+    triggerTimerRef.current = setTimeout(() => {
+      // Check for triggers and potentially generate thoughts
+      checkTriggersAndGenerate(inputId);
+    }, 300); // 300ms debounce
+    
+    // Clean up timer when component unmounts
+    return () => {
+      if (triggerTimerRef.current) {
+        clearTimeout(triggerTimerRef.current);
+      }
+    };
+  }, [inputId, text, checkTriggersAndGenerate]);
 
   const handleChange = useCallback(
     (event: React.ChangeEvent<HTMLTextAreaElement>) => {

@@ -3,7 +3,8 @@ import { useThoughtStore } from '../store/thoughtStore';
 import { useInputStore } from '../store/inputStore';
 import { Node as ReactFlowNode, useReactFlow } from 'reactflow';
 import { createThoughtNode, getNodeByEntityId } from './nodeConnectors';
-import { useNodeStore } from '../store/nodeStore';
+import { NodeData, useNodeStore } from '../store/nodeStore';
+import { boundedAreaStrategy, createBoundsAboveNode, setBounds } from '../utils/nodePositioning';
 
 /**
  * Custom hook that handles thought trigger detection logic
@@ -134,16 +135,20 @@ export const useTriggerDetection = () => {
       console.warn(`Could not find input node with ID ${nodeId}`);
       return false;
     }
-    
     // Update input baseline
     inputStore.updateInputBaseline(nodeId, inputAtCheckTime);
-    
-    // Calculate position relative to the input node
-    const thoughtPosition = {
-      x: textInputNode.position.x + 250,
-      y: textInputNode.position.y - 50
-    };
-    
+
+
+    // Create a bounds object for the thought
+    const thoughtBounds = createBoundsAboveNode(textInputNode);
+    setBounds(thoughtBounds);
+    const activeThoughtIds = useThoughtStore.getState().activeThoughtIds;
+    // use getNodeByEntityId to get the active thoughts
+    const activeThoughts = activeThoughtIds
+      .map(id => getNodeByEntityId('thought', id))
+      .filter((node): node is ReactFlowNode<NodeData> => node !== undefined);
+    const thoughtPosition = boundedAreaStrategy.calculateNodePosition(thoughtBounds, activeThoughts);
+
     // Generate the thought
     const thought = await useThoughtStore.getState().generateThought(triggerType, thoughtPosition);
     
