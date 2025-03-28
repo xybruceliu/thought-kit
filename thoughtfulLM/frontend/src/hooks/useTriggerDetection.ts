@@ -270,6 +270,9 @@ export const useAutomaticTriggerDetection = (
   // Track the timer for debounced trigger checking
   const triggerTimerRef = useRef<NodeJS.Timeout | null>(null);
   
+  // Track the timer for idle checking
+  const idleCheckTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
   // Determine if the input is currently active
   const isActive = useInputStore(state => state.activeInputId === inputId);
   
@@ -301,6 +304,43 @@ export const useAutomaticTriggerDetection = (
       }
     };
   }, [inputId, inputText, isActive, checkTriggersAndGenerate, debounceMs]);
+  
+  // Set up a separate periodic check specifically for idle time triggers
+  useEffect(() => {
+    // Only set up the idle checker if the input is active and has text
+    if (!isActive) return;
+    
+    // Check every 5 seconds for idle state
+    const idleCheckInterval = 5000;
+    
+    // Create the periodic checker
+    idleCheckTimerRef.current = setInterval(() => {
+      // Get current input data
+      const inputData = useInputStore.getState().getInputData(inputId);
+      
+      // Only proceed if there's text and the idle trigger hasn't fired yet
+      if (inputData.currentInput.trim() && !inputData.idleTriggerFired) {
+        // Rather than running the full trigger check (which would reset activity time),
+        // manually check if the idle condition is met
+        const now = Date.now();
+        const idleThreshold = useInputStore.getState().idleTimeThreshold;
+        
+        if ((now - inputData.lastActivityTimestamp) > idleThreshold) {
+          console.log(`Idle check: detected idle time > ${idleThreshold}ms, generating thought...`);
+          
+          // Run the trigger generation which will properly handle the idle case
+          checkTriggersAndGenerate(inputId);
+        }
+      }
+    }, idleCheckInterval);
+    
+    // Clean up the interval on unmount
+    return () => {
+      if (idleCheckTimerRef.current) {
+        clearInterval(idleCheckTimerRef.current);
+      }
+    };
+  }, [inputId, isActive, checkTriggersAndGenerate]);
   
   return {
     isMonitoring: isActive
