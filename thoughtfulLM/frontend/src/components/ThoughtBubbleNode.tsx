@@ -37,7 +37,6 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
   // Get thought store functions and the specific thought
   const thought = useThoughtStore(state => state.thoughts.find(t => t.id === thoughtId));
   const handleThoughtPin = useThoughtStore(state => state.handleThoughtPin);
-  const handleThoughtDelete = useThoughtStore(state => state.handleThoughtDelete);
   const handleThoughtLike = useThoughtStore(state => state.handleThoughtLike);
   const handleThoughtDislike = useThoughtStore(state => state.handleThoughtDislike);
   

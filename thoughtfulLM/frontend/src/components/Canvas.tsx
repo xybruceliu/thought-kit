@@ -75,20 +75,6 @@ const CanvasContent: React.FC = () => {
   }, []);
 
 
-  // Handlers for settings changes
-  const handleInterfaceChange = useCallback((interfaceType: number) => {
-    setInterfaceType(interfaceType);
-    // Additional logic to change interface can be added here
-    console.log(`Interface changed to: ${interfaceType}`);
-  }, []);
-
-  const handleMaxThoughtsChange = useCallback((max: number) => {
-    setMaxThoughts(max);
-    // Update the max thought count in the thought store
-    useThoughtStore.setState({ maxThoughtCount: max });
-    console.log(`Max thoughts set to: ${max}`);
-  }, []);
-
   // Web Speech API implementation placeholder
   const handleMicrophoneClick = useCallback(() => {
     console.log('Microphone clicked - Web Speech API to be implemented');

@@ -128,7 +128,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       }
       
       // Check if this thought already exists (update case)
-      // Since our backend returns the same thought id if the thought is similar, with updated saliency
+      // Since our backend returns the same thought id if the thought is similar, with UPDATED saliency
       const existingThoughtIndex = get().thoughts.findIndex(t => t.id === thoughtData.id);
       const isUpdate = existingThoughtIndex >= 0;
       
@@ -174,17 +174,19 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
         
 
       // Remove excess non-persistent thoughts if needed
-      const { thoughts, removeThought } = get();
+      const { thoughts } = get();
       let nonPersistentThoughts = thoughts.filter(t => !t.config.persistent);
       // Get max thoughts count from settings store 
       const { maxThoughtCount } = useSettingsStore.getState();
       
       if (nonPersistentThoughts.length > maxThoughtCount) {
-        // Find and remove the thought with the lowest score
-        const thoughtsWithScore = nonPersistentThoughts.map(t => ({
-          id: t.id,
-          score: t.score.saliency + t.score.weight
-        }));
+        // Find and remove the thought with the lowest score that is NOT the new thought
+        const thoughtsWithScore = nonPersistentThoughts
+          .filter(t => t.id !== thoughtData.id) // Exclude the newly added thought
+          .map(t => ({
+            id: t.id,
+            score: t.score.saliency + t.score.weight
+          }));
           
         const lowestScoreThought = thoughtsWithScore.reduce((lowest, current) => 
           current.score < lowest.score ? current : lowest
