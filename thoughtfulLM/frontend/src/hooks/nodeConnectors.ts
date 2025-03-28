@@ -96,6 +96,15 @@ export function getNodeByEntityId(entityType: 'thought' | 'input' | 'response', 
 }
 
 /**
+ * Gets a node by its ID
+ * @param nodeId The ID of the node
+ * @returns The node associated with the ID, or undefined if not found
+ */
+export function getNodeById(nodeId: string): ReactFlowNode<NodeData> | undefined {
+  return useNodeStore.getState().getNodeById(nodeId);
+}
+
+/**
  * Gets all nodes of a specific type
  * @param entityType The type of entity to look for
  * @returns All nodes of the specified type

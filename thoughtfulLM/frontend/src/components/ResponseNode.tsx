@@ -1,12 +1,16 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { NodeProps } from 'reactflow';
-import { Box, Text, keyframes, usePrefersReducedMotion } from '@chakra-ui/react';
+import { Box, IconButton, Text, keyframes, usePrefersReducedMotion } from '@chakra-ui/react';
 import { ResponseNodeData } from '../store/nodeStore';
+import { AddIcon } from '@chakra-ui/icons';
+import { createInputNode, getNodeById } from '../hooks/';
+import { useSettingsStore } from '../store/settingsStore';
 
 // Update to use our unified node data type
 type ResponseNodeProps = NodeProps<ResponseNodeData>;
 
-const ResponseNode: React.FC<ResponseNodeProps> = ({ data }) => {
+const ResponseNode: React.FC<ResponseNodeProps> = (props) => {
+  const { data, id } = props;
   const contentRef = useRef<HTMLDivElement>(null);
   const prefersReducedMotion = usePrefersReducedMotion();
   const [displayedContent, setDisplayedContent] = useState<string>('');
@@ -67,6 +71,23 @@ const ResponseNode: React.FC<ResponseNodeProps> = ({ data }) => {
     contentDiv.style.height = `${newHeight}px`;
   }, [displayedContent]);
 
+  const handleAddClick = () => {
+    console.log('New conversation button clicked');
+    
+    // Get the current node
+    const currentNode = getNodeById(id);
+    console.log('Current node:', currentNode);
+    
+    if (currentNode) {
+      // Create a new input node below this response node
+      console.log('Creating input node below response node');
+      createInputNode({
+        x: currentNode.position.x,
+        y: currentNode.position.y + (currentNode.height || 100) + 50
+      });
+    }
+  };
+
   return (
     <Box
       bg="gray.50"
@@ -92,6 +113,28 @@ const ResponseNode: React.FC<ResponseNodeProps> = ({ data }) => {
           AI's Response
         </Box>
       </Box>
+      {useSettingsStore.getState().interfaceType === 1 && (
+        <Box 
+          position="absolute" 
+          bottom="-20" 
+        left="0">
+        <IconButton
+          aria-label="New conversation"
+          icon={<AddIcon />}
+          size="sm"
+          boxShadow="sm"
+          isRound
+          variant="ghost"
+          color="gray.500"
+          backgroundColor="gray.100"
+          onClick={handleAddClick}
+          _hover={{
+            bg: "gray.50",
+            color: "gray.700"
+          }}
+        />
+      </Box>
+      )}
     </Box>
   );
 };

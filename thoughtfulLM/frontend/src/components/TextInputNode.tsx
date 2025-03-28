@@ -112,13 +112,19 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
         overflowY="hidden"
         isDisabled={!isActive}
       />
-      {isActive && (
+      {isActive ? (
         <Box position="absolute" bottom="-5" right="3">
           <Box fontSize="2xs" color="gray.400" display="flex" alignItems="center">
             <Kbd>{navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}</Kbd>
             <Box as="span" mx="1">+</Box>
             <Kbd>Enter</Kbd>
             <Box as="span" ml="1">to submit</Box>
+          </Box>
+        </Box>
+      ) : (
+        <Box position="absolute" bottom="-5" right="3">
+          <Box fontSize="2xs" color="gray.400" display="flex" alignItems="center">
+            Your Input
           </Box>
         </Box>
       )}

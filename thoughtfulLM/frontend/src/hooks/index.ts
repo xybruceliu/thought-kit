@@ -33,5 +33,6 @@ export {
   // Utility methods
   doesNodeExistByEntityId,
   getNodeByEntityId,
+  getNodeById,
   
 } from './nodeConnectors'; 
