@@ -71,7 +71,7 @@ export function createResponseNode(responseText: string, position: XYPosition): 
   return nodeStore.addNode('response', position, {
     responseId,
     responseText
-  });
+  }, { draggable: false });  // Set draggable to false to make it non-draggable
 }
 
 
@@ -94,6 +94,16 @@ export function doesNodeExistByEntityId(entityType: 'thought' | 'input' | 'respo
 export function getNodeByEntityId(entityType: 'thought' | 'input' | 'response', entityId: string): ReactFlowNode<NodeData> | undefined {
   return useNodeStore.getState().getNodeByEntityId(entityType, entityId);
 }
+
+/**
+ * Gets all nodes of a specific type
+ * @param entityType The type of entity to look for
+ * @returns All nodes of the specified type
+ */
+export function getNodesByType(entityType: 'thought' | 'input' | 'response'): ReactFlowNode<NodeData>[] {
+  return useNodeStore.getState().nodes.filter(node => node.data.type === entityType);
+} 
+
 
 // -------------------- DELETE METHODS --------------------
 
@@ -138,7 +148,6 @@ export function deleteResponseNode(responseId: string): void {
   if (node) {
     // Remove from NodeStore
     useNodeStore.getState().removeNode(node.id);
-    
     // Note: If you have a dedicated response store, you would remove it from there too
   }
 }

@@ -4,6 +4,7 @@
 // Active hooks
 export { useTriggerDetection, useAutomaticTriggerDetection } from './useTriggerDetection';
 export { useAppInitialization } from './useAppInitialization';
+export { useResponseHandling } from './useResponseHandling';
 
 // Core connector functions between data layer and visualization layer
 export {

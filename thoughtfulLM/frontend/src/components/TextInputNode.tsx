@@ -19,6 +19,9 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
     return inputData ? inputData.currentInput : '';
   });
   
+  // Check if this input is active
+  const isActive = useInputStore(state => state.activeInputId === inputId);
+  
   // Use local state for textarea value with initial value from store
   const [text, setText] = useState(inputText);
   
@@ -107,15 +110,18 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
         bg="gray.50"
         p={5}
         overflowY="hidden"
+        isDisabled={!isActive}
       />
-      <Box position="absolute" bottom="-5" right="3">
-        <Box fontSize="2xs" color="gray.400" display="flex" alignItems="center">
-          <Kbd>{navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}</Kbd>
-          <Box as="span" mx="1">+</Box>
-          <Kbd>Enter</Kbd>
-          <Box as="span" ml="1">to submit</Box>
+      {isActive && (
+        <Box position="absolute" bottom="-5" right="3">
+          <Box fontSize="2xs" color="gray.400" display="flex" alignItems="center">
+            <Kbd>{navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}</Kbd>
+            <Box as="span" mx="1">+</Box>
+            <Kbd>Enter</Kbd>
+            <Box as="span" ml="1">to submit</Box>
+          </Box>
         </Box>
-      </Box>
+      )}
     </Box>
   );
 };

@@ -4,7 +4,8 @@ import { useInputStore } from '../store/inputStore';
 import { Node as ReactFlowNode, useReactFlow } from 'reactflow';
 import { createThoughtNode, getNodeByEntityId } from './nodeConnectors';
 import { NodeData, useNodeStore } from '../store/nodeStore';
-import { boundedAreaStrategy, createBoundsAboveNode, setBounds } from '../utils/nodePositioning';
+import { boundedAreaStrategy, createBoundsAboveNode, createBoundsBelowNode, createBoundsRightOfNode } from '../utils/nodePositioning';
+import { useSettingsStore } from '../store/settingsStore';
 
 /**
  * Custom hook that handles thought trigger detection logic
@@ -139,7 +140,22 @@ export const useTriggerDetection = () => {
     inputStore.updateInputBaseline(nodeId, inputAtCheckTime);
 
     // Create a bounds object for the thought
-    const thoughtBounds = createBoundsAboveNode(textInputNode);
+    let thoughtBounds;
+    // Get the current interface type
+    const interfaceType = useSettingsStore.getState().interfaceType;
+    // if interface 1 create below node
+    if (interfaceType === 1) {
+      thoughtBounds = createBoundsBelowNode(textInputNode);
+    }
+    // if interface 2 create above node
+    else if (interfaceType === 2) {
+      thoughtBounds = createBoundsAboveNode(textInputNode);
+    }
+    // Default fallback for other interface types
+    else {
+      thoughtBounds = createBoundsRightOfNode(textInputNode);
+    }
+
     // No need to call setBounds again as createBoundsAboveNode already sets bounds in the store
     const activeThoughtIds = useThoughtStore.getState().activeThoughtIds;
     // use getNodeByEntityId to get the active thoughts

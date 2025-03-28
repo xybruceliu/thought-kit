@@ -13,7 +13,7 @@ import ThoughtBubbleNode from './ThoughtBubbleNode';
 import ResponseNode from './ResponseNode';
 import BoundaryIndicator from './BoundaryIndicator';
 import Settings from './Settings';
-import { useTriggerDetection, useAppInitialization } from '../hooks';
+import { useTriggerDetection, useAppInitialization, useResponseHandling } from '../hooks';
 import { useSettingsStore } from '../store/settingsStore';
 import { useNodeStore } from '../store/nodeStore';
 import { useThoughtStore } from '../store/thoughtStore';
@@ -42,6 +42,9 @@ const CanvasContent: React.FC = () => {
   // Initialize the application with default settings
   // This will respond to interface type changes
   useAppInitialization();
+  
+  // Set up response handling
+  useResponseHandling();
   
   // Get thoughts to monitor for changes
   const thoughts = useThoughtStore(state => state.thoughts);
