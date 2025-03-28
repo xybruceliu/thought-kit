@@ -9,7 +9,7 @@ import {
 import { EventType } from '../types/event';
 import { thoughtApi } from '../api/thoughtApi';
 import { useSettingsStore } from './settingsStore';
-import { deleteThoughtNode, markNodeForRemoval } from '../hooks/nodeConnectors';
+import { deleteThoughtNode, getNodeByEntityId, markNodeForRemoval } from '../hooks/nodeConnectors';
 
 // Define the store state
 interface ThoughtStoreState {
@@ -191,10 +191,13 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
         );
         
         console.log(`🗑 Removing thought ${lowestScoreThought.id} due to exceeding max count (${maxThoughtCount})`);
-        markNodeForRemoval(lowestScoreThought.id);
-        setTimeout(() => {
-          deleteThoughtNode(lowestScoreThought.id);
-        }, 1000);
+        const node = getNodeByEntityId('thought', lowestScoreThought.id);
+        if (node) {
+          markNodeForRemoval(node.id);
+          setTimeout(() => {
+            deleteThoughtNode(lowestScoreThought.id);
+          }, 1000);
+        }
       }
       
       // Apply time decay to older thoughts
