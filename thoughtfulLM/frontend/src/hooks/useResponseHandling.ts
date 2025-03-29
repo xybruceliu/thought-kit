@@ -68,10 +68,11 @@ export const useResponseHandling = () => {
         y: inputNode.position.y + (inputNode.height || 0) + 30
       });
       
-      // Move active thoughts to the right of the response node
-      setTimeout(() => {
-        // Get active thoughts
-        const { activeThoughtIds } = useThoughtStore.getState();
+      // If interface 1, move active thoughts to the right of the response node
+      if (useSettingsStore.getState().interfaceType === 1) {
+        setTimeout(() => {
+          // Get active thoughts
+          const { activeThoughtIds } = useThoughtStore.getState();
         if (activeThoughtIds.length === 0) return;
         
         // Create bounds to the right of the response node
@@ -98,9 +99,10 @@ export const useResponseHandling = () => {
           repositionNodeByEntityId('thought', thoughtId, position);
         });
 
-        // clear active thoughts
-        useThoughtStore.getState().clearActiveThoughts(); 
-      }, 100); // Short delay to ensure the response node is fully rendered
+          // clear active thoughts
+          useThoughtStore.getState().clearActiveThoughts(); 
+        }, 100); // Short delay to ensure the response node is fully rendered
+      }
 
       return responseId;
     };

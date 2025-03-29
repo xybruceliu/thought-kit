@@ -51,6 +51,7 @@ export const useAppInitialization = (customPosition?: XYPosition) => {
         }
         
         console.log('Application initialized successfully');
+        console.log(`Interface: ${interfaceType}`);
         return true;
       } catch (error) {
         console.error('Error initializing application:', error);
