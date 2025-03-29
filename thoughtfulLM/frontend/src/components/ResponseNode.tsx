@@ -1,9 +1,9 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { NodeProps } from 'reactflow';
-import { Box, IconButton, Text, keyframes, usePrefersReducedMotion } from '@chakra-ui/react';
+import { NodeProps, useReactFlow } from 'reactflow';
+import { Box, IconButton, Text, keyframes } from '@chakra-ui/react';
 import { ResponseNodeData } from '../store/nodeStore';
 import { AddIcon } from '@chakra-ui/icons';
-import { createInputNode, getNodeById } from '../hooks/';
+import { createInputNode, getNodeById, getNodesByType } from '../hooks/';
 import { useSettingsStore } from '../store/settingsStore';
 
 // Update to use our unified node data type
@@ -12,33 +12,61 @@ type ResponseNodeProps = NodeProps<ResponseNodeData>;
 const ResponseNode: React.FC<ResponseNodeProps> = (props) => {
   const { data, id } = props;
   const contentRef = useRef<HTMLDivElement>(null);
-  const prefersReducedMotion = usePrefersReducedMotion();
   const [displayedContent, setDisplayedContent] = useState<string>('');
+  const [showAddButton, setShowAddButton] = useState<boolean>(true);
+  const [isVisible, setIsVisible] = useState<boolean>(false);
+  const [buttonFadingOut, setButtonFadingOut] = useState<boolean>(false);
+  const reactFlowInstance = useReactFlow();
   
   // Get the response text from the node data
   const content = data.responseText || '';
   
-  // Define the fade-in animation
+  // Define the fade-in animation for response node
   const fadeIn = keyframes`
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  `;
+
+  // Define the fade-in animation for add button
+  const buttonFadeIn = keyframes`
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
   `;
   
-  // Skip animation if user prefers reduced motion
-  const animation = prefersReducedMotion
-    ? undefined
-    : `${fadeIn} 0.5s ease-in`;
+  // Define the fade-out animation for add button
+  const buttonFadeOut = keyframes`
+    from { opacity: 1; transform: scale(1); }
+    to { opacity: 0; transform: scale(0.8); }
+  `;
+  
+  // Animation definitions
+  const buttonAnimation = buttonFadingOut 
+    ? `${buttonFadeOut} 0.3s ease-out forwards`
+    : `${buttonFadeIn} 0.5s ease-in`;
+
+  // Force every response node to start invisible and fade in
+  // This ensures consistent animation regardless of how the node is created
+  useEffect(() => {
+    // Start with the node invisible
+    setIsVisible(false);
+    
+    // Short delay to ensure fade-in animation is visible
+    const showTimer = setTimeout(() => {
+      setIsVisible(true);
+    }, 50);
+    
+    return () => clearTimeout(showTimer);
+  }, [id]); // Re-trigger if ID changes (shouldn't happen, but for safety)
 
   // Word-by-word animation
   useEffect(() => {
-    if (prefersReducedMotion || !content) {
-      // Skip animation for accessibility or if content is empty
-      setDisplayedContent(content || '');
+    if (!content) {
+      setDisplayedContent('');
       return;
     }
 
     // Filter out any undefined or empty entries
-    const words = content.split(' ').filter(word => word !== undefined && word !== null);
+    const words = content.split(' ').filter(Boolean);
     let currentWordIndex = 0;
     
     // Reset the displayed content when the actual content changes
@@ -47,11 +75,7 @@ const ResponseNode: React.FC<ResponseNodeProps> = (props) => {
     const typingInterval = setInterval(() => {
       if (currentWordIndex < words.length) {
         const word = words[currentWordIndex];
-        if (word !== undefined && word !== null) {
-          setDisplayedContent(prev => 
-            prev + (prev ? ' ' : '') + word
-          );
-        }
+        setDisplayedContent(prev => prev + (prev ? ' ' : '') + word);
         currentWordIndex++;
       } else {
         clearInterval(typingInterval);
@@ -59,7 +83,7 @@ const ResponseNode: React.FC<ResponseNodeProps> = (props) => {
     }, 50); // Adjust speed as needed
     
     return () => clearInterval(typingInterval);
-  }, [content, prefersReducedMotion]);
+  }, [content]);
 
   // Auto-resize functionality
   useEffect(() => {
@@ -72,19 +96,39 @@ const ResponseNode: React.FC<ResponseNodeProps> = (props) => {
   }, [displayedContent]);
 
   const handleAddClick = () => {
-    console.log('New conversation button clicked');
+    // Start the fade-out animation
+    setButtonFadingOut(true);
     
     // Get the current node
     const currentNode = getNodeById(id);
-    console.log('Current node:', currentNode);
     
     if (currentNode) {
-      // Create a new input node below this response node
-      console.log('Creating input node below response node');
-      createInputNode({
-        x: currentNode.position.x,
-        y: currentNode.position.y + (currentNode.height || 100) + 50
-      });
+      // Wait for fade-out animation to complete before creating new node and hiding button
+      setTimeout(() => {
+        setShowAddButton(false);
+        
+        // Create a new input node below this response node
+        const newInputNode = createInputNode({
+          x: currentNode.position.x,
+          y: currentNode.position.y + (currentNode.height || 100) + 50
+        });
+        
+        // Fit view to include the new input node
+        if (newInputNode) {
+          setTimeout(() => {
+          reactFlowInstance.fitView({
+            padding: 0.5,
+            minZoom: 0.5,
+            maxZoom: 1.5,
+            duration: 500,
+            nodes: [
+              { id: currentNode.id },
+              { id: newInputNode.id }
+            ]
+          }); 
+        }, 200);
+        }
+      }, 300); // Match the duration of the fade-out animation
     }
   };
 
@@ -94,8 +138,10 @@ const ResponseNode: React.FC<ResponseNodeProps> = (props) => {
       borderRadius="2xl"
       boxShadow="sm"
       width="500px"
-      transition="all 0.2s"
-      animation={animation}
+      transition="opacity 0.5s ease, transform 0.5s ease"
+      opacity={isVisible ? 1 : 0}
+      transform={isVisible ? "translateY(0)" : "translateY(10px)"}
+      data-testid="response-node"
     >
       <Box
         ref={contentRef}
@@ -113,27 +159,31 @@ const ResponseNode: React.FC<ResponseNodeProps> = (props) => {
           AI's Response
         </Box>
       </Box>
-      {useSettingsStore.getState().interfaceType === 1 && (
+      {useSettingsStore.getState().interfaceType === 1 && showAddButton && (
         <Box 
           position="absolute" 
           bottom="-20" 
-        left="0">
-        <IconButton
-          aria-label="New conversation"
-          icon={<AddIcon />}
-          size="sm"
-          boxShadow="sm"
-          isRound
-          variant="ghost"
-          color="gray.500"
-          backgroundColor="gray.100"
-          onClick={handleAddClick}
-          _hover={{
-            bg: "gray.50",
-            color: "gray.700"
-          }}
-        />
-      </Box>
+          left="0"
+          animation={buttonAnimation}
+        >
+          <IconButton
+            aria-label="New conversation"
+            id="new-conversation-button"
+            icon={<AddIcon />}
+            size="sm"
+            boxShadow="sm"
+            isRound
+            variant="ghost"
+            color="gray.500"
+            backgroundColor="gray.100"
+            onClick={handleAddClick}
+            transition="all 0.3s ease"
+            _hover={{
+              bg: "gray.50",
+              color: "gray.700"
+            }}
+          />
+        </Box>
       )}
     </Box>
   );

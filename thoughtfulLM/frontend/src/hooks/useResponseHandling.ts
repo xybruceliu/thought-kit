@@ -62,7 +62,7 @@ export const useResponseHandling = () => {
       // Generate a unique ID for the response
       const responseId = uuidv4();
       
-      // under the input node create a response node
+      // Create a response node under the input node
       const responseNode = createResponseNode(content, {
         x: inputNode.position.x,
         y: inputNode.position.y + (inputNode.height || 0) + 30
@@ -73,34 +73,46 @@ export const useResponseHandling = () => {
         setTimeout(() => {
           // Get active thoughts
           const { activeThoughtIds } = useThoughtStore.getState();
-        if (activeThoughtIds.length === 0) return;
-        
-        // Create bounds to the right of the response node
-        const bounds = createBoundsRightOfNode(responseNode);
-        
-        // Get the active thoughts as nodes (filtered to remove any undefined values)
-        const activeThoughtNodes = activeThoughtIds
-          .map(id => getNodeByEntityId('thought', id))
-          .filter((node): node is ReactFlowNode<NodeData> => node !== undefined);
-        
-        // Reposition each thought node using the bounded area strategy
-        activeThoughtIds.forEach((thoughtId, index) => {
-          // Only proceed if the node exists
-          const node = getNodeByEntityId('thought', thoughtId);
-          if (!node) return;
+          if (activeThoughtIds.length === 0) return;
           
-          // Calculate position within bounds
-          const position = boundedAreaStrategy.calculateNodePosition(
-            bounds, 
-            activeThoughtNodes.slice(0, index) // Only consider nodes that have already been positioned
-          );
+          // Create bounds to the right of the response node
+          const bounds = createBoundsRightOfNode(responseNode);
           
-          // Reposition the node
-          repositionNodeByEntityId('thought', thoughtId, position);
-        });
+          // Get the active thoughts as nodes (filtered to remove any undefined values)
+          const activeThoughtNodes = activeThoughtIds
+            .map(id => getNodeByEntityId('thought', id))
+            .filter((node): node is ReactFlowNode<NodeData> => node !== undefined);
+          
+          // Reposition each thought node using the bounded area strategy
+          activeThoughtIds.forEach((thoughtId, index) => {
+            // Only proceed if the node exists
+            const node = getNodeByEntityId('thought', thoughtId);
+            if (!node) return;
+            
+            // Calculate position within bounds
+            const position = boundedAreaStrategy.calculateNodePosition(
+              bounds, 
+              activeThoughtNodes.slice(0, index) // Only consider nodes that have already been positioned
+            );
+            
+            // Reposition the node
+            repositionNodeByEntityId('thought', thoughtId, position);
+          });
 
           // clear active thoughts
           useThoughtStore.getState().clearActiveThoughts(); 
+          
+          // Fit the view to include input and response node
+          reactFlowInstance.fitView({
+            padding: 0.5,
+            minZoom: 0.5,
+            maxZoom: 1.5,
+            duration: 500,
+            nodes: [
+              { id: inputNode.id },
+              { id: responseNode.id }
+            ]
+          });
         }, 100); // Short delay to ensure the response node is fully rendered
       }
 

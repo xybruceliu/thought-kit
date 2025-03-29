@@ -34,5 +34,6 @@ export {
   doesNodeExistByEntityId,
   getNodeByEntityId,
   getNodeById,
+  getNodesByType,
   
 } from './nodeConnectors'; 

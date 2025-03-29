@@ -67,7 +67,7 @@ const CanvasContent: React.FC = () => {
         fitView
         fitViewOptions={{
           padding: 0.5,
-          minZoom: 1,
+          minZoom: 0.5,
           maxZoom: 1.5
         }}
       >
