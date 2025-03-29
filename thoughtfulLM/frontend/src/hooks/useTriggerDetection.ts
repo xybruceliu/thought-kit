@@ -138,6 +138,8 @@ export const useTriggerDetection = () => {
     }
     // Update input baseline
     inputStore.updateInputBaseline(nodeId, inputAtCheckTime);
+    // Update activity timestamp
+    inputStore.updateActivityTimestamp(nodeId);
 
     // Create a bounds object for the thought
     let thoughtBounds;
@@ -168,12 +170,15 @@ export const useTriggerDetection = () => {
     const thought = await useThoughtStore.getState().generateThought(triggerType, thoughtPosition);
     
     if (thought) {
-      // Create visualization for the thought
-      createThoughtNode(thought, thoughtPosition);
-      
-      // Update activity timestamp
-      inputStore.updateActivityTimestamp(nodeId);
-      return true;
+      // If thought id already in node store, do not create a new node
+      const existingThought = useNodeStore.getState().nodes.find((n: any) => n.data.thoughtId === thought.id);
+      if (existingThought) {
+        console.log(`Thought ${thought.id} already exists in node store, not creating a new node`);
+      }
+      else {
+        // Create visualization for the thought
+        createThoughtNode(thought, thoughtPosition);
+      }
     }
     
     return false;
@@ -254,6 +259,8 @@ export const useTriggerDetection = () => {
           const inputData = inputStore.getInputData(activeInputId);
           // Save the input at the time of click generation
           inputStore.updateInputBaseline(activeInputId, inputData.currentInput);
+          // Update activity timestamp
+          inputStore.updateActivityTimestamp(activeInputId);
         }
       } catch (error) {
         console.error('Error generating thought from click:', error);
