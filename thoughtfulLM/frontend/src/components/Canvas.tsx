@@ -13,6 +13,7 @@ import ThoughtBubbleNode from './ThoughtBubbleNode';
 import ResponseNode from './ResponseNode';
 import BoundaryIndicator from './BoundaryIndicator';
 import Settings from './Settings';
+import AppInfo from './AppInfo';
 import { useTriggerDetection, useAppInitialization, useResponseHandling } from '../hooks';
 import { useSettingsStore } from '../store/settingsStore';
 import { useNodeStore } from '../store/nodeStore';
@@ -86,6 +87,7 @@ const Canvas: React.FC = () => {
     <Box width="100%" height="100vh" bg="gray.100">
       <ReactFlowProvider>
         <CanvasContent />
+        <AppInfo />
       </ReactFlowProvider>
     </Box>
   );

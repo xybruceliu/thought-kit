@@ -303,6 +303,28 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       
       console.log('Response received:', response);
 
+      // Store AI response in memory
+      if (response.response) {
+        const memoryItem = await thoughtApi.createMemory({
+          type: 'SHORT_TERM',
+          text: "AI: " + response.response
+        });
+        
+        // Check if the last memory item contains "AI: "
+        if (memory.short_term.length > 0) {
+          const lastMemory = memory.short_term[memory.short_term.length - 1];
+          // If last memory isn't a user input and contains "AI: ", update it
+          if (!lastMemory.content.text.includes("User: ") && lastMemory.content.text.includes("AI: ")) {
+            lastMemory.content.text = "AI: " + response.response;
+          } else {
+            // Otherwise add as new memory
+            memory.short_term.push(memoryItem);
+          }
+        } else {
+          memory.short_term.push(memoryItem);
+        }
+      }
+      
       // Remove all thoughts that are not persistent
       // const nonPersistentThoughts = thoughts.filter(t => !t.config.persistent);
       // nonPersistentThoughts.forEach(t => get().removeThought(t.id));
