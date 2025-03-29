@@ -23,7 +23,35 @@ code {
   transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
 }
 
-/* Smoother drag transitions when actively dragging */
+/* Weight effect when actively dragging */
 .react-flow__node.dragging {
-  transition: none !important;
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  transform-origin: center center;
+}
+
+/* Add a custom class for our "weighted" thought bubbles */
+.thought-bubble-weighted {
+  position: relative;
+}
+
+/* Create the lag effect with a pseudo-element that follows with delay */
+.thought-bubble-weighted::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: inherit;
+  background: inherit;
+  box-shadow: inherit;
+  opacity: 0.4;
+  z-index: -1;
+  transition: all 0.8s cubic-bezier(0.2, 0.9, 0.1, 1.2);
+  pointer-events: none;
+}
+
+/* Add additional bounce effect when stopping a drag */
+.thought-bubble-weighted:not(.dragging)::after {
+  transition: all 1.2s cubic-bezier(0.2, 0.9, 0.1, 1.5);
 }

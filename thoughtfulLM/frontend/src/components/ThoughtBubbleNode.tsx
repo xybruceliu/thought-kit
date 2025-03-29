@@ -58,6 +58,10 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
   const [showDeleteButton, setShowDeleteButton] = useState(false);
   const [showPinButton, setShowPinButton] = useState(false);
   const bubbleRef = useRef<HTMLDivElement>(null);
+
+  // Add ref for tracking last mouse position for drag trailing effect
+  const lastPositionRef = useRef({ x: 0, y: 0 });
+  const ghostRef = useRef<HTMLDivElement>(null);
   
   // Get the content from the thought
   const content = thought?.content?.text || '';
@@ -91,11 +95,17 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
   
   // Function to handle mouse movement and determine which quadrant
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!bubbleRef.current || isDragging) return;
+    if (!bubbleRef.current) return;
     
     const rect = bubbleRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left; // x position within the element
     const y = e.clientY - rect.top;  // y position within the element
+    
+    // If dragging, update the last position for the trailing effect
+    if (isDragging) {
+      lastPositionRef.current = { x: e.clientX, y: e.clientY };
+      return;
+    }
 
     // Show a small tag on the bottom right of the bubble to indicate the type of thought
     
@@ -245,6 +255,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
   return (
     <div 
       style={{ position: 'relative' }}
+      className={`thought-bubble-weighted ${isDragging ? 'dragging' : ''}`}
       onMouseDown={() => setIsDragging(true)}
       onMouseUp={() => setIsDragging(false)}
       onMouseLeave={() => {
@@ -276,7 +287,9 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
         style={{
           transform: `scale(${sizeScale * hoverScaleModifier})`,
           backdropFilter: "blur(5px)",
-          transition: "border-radius 0.6s ease-in-out, opacity 0.5s ease-in-out, transform 0.5s ease-in-out, left 1s cubic-bezier(0.34, 1.56, 0.64, 1), top 1s cubic-bezier(0.34, 1.56, 0.64, 1)",
+          transition: isDragging 
+            ? "transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)" 
+            : "transform 0.9s cubic-bezier(0.16, 1, 0.3, 1.6), border-radius 0.6s ease-in-out, opacity 0.5s ease-in-out, left 1s cubic-bezier(0.34, 1.56, 0.64, 1), top 1s cubic-bezier(0.34, 1.56, 0.64, 1)",
         }}
         animation={
           isExiting

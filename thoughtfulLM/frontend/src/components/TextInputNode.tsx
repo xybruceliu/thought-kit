@@ -107,10 +107,16 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
         }}
         fontSize="md"
         color="gray.700"
-        bg="gray.50"
+        bg="gray.200"
         p={5}
         overflowY="hidden"
         isDisabled={!isActive}
+        _disabled={{
+          opacity: 1,
+          color: "gray.700",
+          bg: "gray.200",
+          cursor: "default"
+        }}
       />
       {isActive ? (
         <Box position="absolute" bottom="-5" right="3">
