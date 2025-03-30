@@ -35,6 +35,13 @@ Plus a Web UI allowing you to visualize and interact with AI thoughts on a canva
    ```
 
 3. Configure your OpenAI API key
+   ```bash
+   # Set as environment variable
+   export OPENAI_API_KEY=your_api_key_here  # On Windows: set OPENAI_API_KEY=your_api_key_here
+   
+   # Or create a .env file in thoughtfulLM/backend directory
+   echo "OPENAI_API_KEY=your_api_key_here" > thoughtfulLM/backend/.env
+   ```
 
 
 ### Backend Setup
