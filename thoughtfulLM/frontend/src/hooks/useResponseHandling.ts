@@ -56,7 +56,7 @@ export const useResponseHandling = () => {
       
       // if interface 1, disable the input node by setting activeInputId to empty string    
       if (useSettingsStore.getState().interfaceType === 1) {
-        useInputStore.getState().setActiveInputId('');
+        useInputStore.getState().setActiveInputId(null);
       }
       
       // Generate a unique ID for the response

@@ -31,10 +31,11 @@ interface InputStoreState {
   updateActivityTimestamp: (inputId: string) => void;
   setIdleTriggerFired: (inputId: string, fired: boolean) => void;
   updateInputBaseline: (inputId: string, input: string) => void;
-  setActiveInputId: (inputId: string) => void;
+  setActiveInputId: (inputId: string | null) => void;
   getInputData: (inputId: string) => InputData;
   addInput: (inputId: string) => void;
   removeInput: (inputId: string) => void;
+  clearInputs: () => void; // New method to clean up all inputs
 }
 
 // Default input data for new inputs
@@ -97,7 +98,13 @@ export const useInputStore = create<InputStoreState>((set, get) => ({
   },
   
   // Set the active input
-  setActiveInputId: (inputId: string) => {
+  setActiveInputId: (inputId: string | null) => {
+    // If null, just set activeInputId to null
+    if (inputId === null) {
+      set({ activeInputId: null });
+      return;
+    }
+    
     // Ensure the input exists before setting it as active
     const state = get();
     if (!state.inputs[inputId]) {
@@ -194,6 +201,14 @@ export const useInputStore = create<InputStoreState>((set, get) => ({
           }
         }
       };
+    });
+  },
+  
+  // Clear all inputs and reset activeInputId
+  clearInputs: () => {
+    set({
+      inputs: {},
+      activeInputId: null
     });
   },
 })); 

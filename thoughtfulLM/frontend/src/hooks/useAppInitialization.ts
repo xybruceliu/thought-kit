@@ -3,6 +3,7 @@ import { useThoughtStore } from '../store/thoughtStore';
 import { useMemoryStore } from '../store/memoryStore';
 import { useNodeStore } from '../store/nodeStore';
 import { useSettingsStore } from '../store/settingsStore';
+import { useInputStore } from '../store/inputStore';
 import { createInputNode } from './nodeConnectors';
 import { XYPosition } from 'reactflow';
 
@@ -36,11 +37,13 @@ export const useAppInitialization = (customPosition?: XYPosition) => {
         const thoughtStore = useThoughtStore.getState();
         const memoryStore = useMemoryStore.getState();
         const nodeStore = useNodeStore.getState();
+        const inputStore = useInputStore.getState();
         
         // Clear all existing data
         thoughtStore.clearThoughts();
         memoryStore.clearMemories();
         nodeStore.clearAllNodes();
+        inputStore.clearInputs();
 
         // Create an initial input node only if interfaceType is 1 or 2
         if (interfaceType === 1 || interfaceType === 2) {
