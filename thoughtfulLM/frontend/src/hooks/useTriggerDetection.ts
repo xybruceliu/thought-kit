@@ -4,7 +4,7 @@ import { useInputStore } from '../store/inputStore';
 import { Node as ReactFlowNode, useReactFlow } from 'reactflow';
 import { createThoughtNode, getNodeByEntityId } from './nodeConnectors';
 import { NodeData, useNodeStore } from '../store/nodeStore';
-import { boundedAreaStrategy, createBoundsAboveNode, createBoundsBelowNode, createBoundsRightOfNode } from '../utils/nodePositioning';
+import { boundedAreaStrategy, createBoundsAboveNode, createBoundsBelowNode, createBoundsRightOfNode, createBoundsLeftOfNode } from '../utils/nodePositioning';
 import { useSettingsStore } from '../store/settingsStore';
 
 /**
@@ -155,7 +155,7 @@ export const useTriggerDetection = () => {
     }
     // Default fallback for other interface types
     else {
-      thoughtBounds = createBoundsRightOfNode(textInputNode);
+      thoughtBounds = createBoundsLeftOfNode(textInputNode);
     }
 
     // No need to call setBounds again as createBoundsAboveNode already sets bounds in the store
@@ -164,21 +164,23 @@ export const useTriggerDetection = () => {
     const activeThoughts = activeThoughtIds
       .map(id => getNodeByEntityId('thought', id))
       .filter((node): node is ReactFlowNode<NodeData> => node !== undefined);
-    const thoughtPosition = boundedAreaStrategy.calculateNodePosition(thoughtBounds, activeThoughts);
+
+    let thoughtPosition;
+    if (interfaceType === 1) {
+      thoughtPosition = boundedAreaStrategy.calculateNodePosition(thoughtBounds, activeThoughts, 'top');
+    }
+    else if (interfaceType === 2) {
+      thoughtPosition = boundedAreaStrategy.calculateNodePosition(thoughtBounds, activeThoughts, 'bottom');
+    }
+    else {
+      thoughtPosition = boundedAreaStrategy.calculateNodePosition(thoughtBounds, activeThoughts, 'left');
+    }
 
     // Generate the thought
     const thought = await useThoughtStore.getState().generateThought(triggerType, thoughtPosition);
-    
+    // Add the thought to thought store and create a node via connector function
     if (thought) {
-      // If thought id already in node store, do not create a new node
-      const existingThought = useNodeStore.getState().nodes.find((n: any) => n.data.thoughtId === thought.id);
-      if (existingThought) {
-        console.log(`Thought ${thought.id} already exists in node store, not creating a new node`);
-      }
-      else {
-        // Create visualization for the thought
-        createThoughtNode(thought, thoughtPosition);
-      }
+      createThoughtNode(thought, thoughtPosition);
     }
     
     return false;
@@ -244,15 +246,8 @@ export const useTriggerDetection = () => {
         const thought = await useThoughtStore.getState().generateThought('CLICK', finalPosition);
         
         if (thought) {
-          // If thought id already in node store, do not create a new node
-          const existingThought = useNodeStore.getState().nodes.find((n: any) => n.data.thoughtId === thought.id);
-          if (existingThought) {
-            console.log(`Thought ${thought.id} already exists in node store, not creating a new node`);
-          }
-          else {
-            // Create visualization for the thought
-            createThoughtNode(thought, finalPosition);
-          }
+          // Add the thought to thought store and create a node via connector function
+          createThoughtNode(thought, finalPosition);
           
           // Update input baseline any way
           // Get the current input for this node

@@ -9,7 +9,6 @@ import { thoughtApi } from '../api/thoughtApi';
 interface MemoryState {
   // Memory collections
   memory: Memory;
-  isLoading: boolean;
   
   // Actions
   createMemoryItem: (text: string, type: 'LONG_TERM' | 'SHORT_TERM') => Promise<MemoryItem | null>;
@@ -23,13 +22,10 @@ export const useMemoryStore = create<MemoryState>((set, get) => ({
     long_term: [],
     short_term: [],
   },
-  isLoading: false,
   
   // Create a memory item
   createMemoryItem: async (text: string, type: 'LONG_TERM' | 'SHORT_TERM') => {
     try {
-      set({ isLoading: true });
-      
       // Call the backend API to create a memory item (doesn't store it)
       const memoryItem = await thoughtApi.createMemory({
         type,
@@ -43,16 +39,14 @@ export const useMemoryStore = create<MemoryState>((set, get) => ({
             memory: {
               ...state.memory,
               long_term: [...state.memory.long_term, memoryItem]
-            },
-            isLoading: false
+            }
           };
         } else {
           return {
             memory: {
               ...state.memory,
               short_term: [...state.memory.short_term, memoryItem]
-            },
-            isLoading: false
+            }
           };
         }
       });
@@ -60,7 +54,6 @@ export const useMemoryStore = create<MemoryState>((set, get) => ({
       return memoryItem;
     } catch (error) {
       console.error('Error creating memory item:', error);
-      set({ isLoading: false });
       return null;
     }
   },

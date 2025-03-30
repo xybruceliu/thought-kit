@@ -3,7 +3,7 @@
 
 import { XYPosition, Node as ReactFlowNode } from 'reactflow';
 import { Thought } from '../types/thought';
-import { useNodeStore, NodeType, ThoughtBubbleNodeData, TextInputNodeData, ResponseNodeData, NodeData } from '../store/nodeStore';
+import nodeStore, { useNodeStore, NodeType, ThoughtBubbleNodeData, TextInputNodeData, ResponseNodeData, NodeData } from '../store/nodeStore';
 import { useThoughtStore } from '../store/thoughtStore';
 import { useInputStore } from '../store/inputStore';
 import { v4 as uuidv4 } from 'uuid';
@@ -17,6 +17,12 @@ import { v4 as uuidv4 } from 'uuid';
 export function createThoughtNode(thought: Thought, position: XYPosition): ReactFlowNode<NodeData> {
   // Get the node store instance
   const nodeStore = useNodeStore.getState();
+  const thoughtStore = useThoughtStore.getState();
+
+  // Add the thought to the thought store
+  thoughtStore.addThought(thought); 
+  // Add the thought to the active thoughts list
+  thoughtStore.addActiveThought(thought.id);  
   
   // Generate a random blob variant (0-4)
   const blobVariant = Math.floor(Math.random() * 5);
@@ -36,16 +42,16 @@ export function createThoughtNode(thought: Thought, position: XYPosition): React
  */
 export function createInputNode(position: XYPosition, onChange?: (value: string) => void): ReactFlowNode<NodeData> {
   // Get the stores
-  const nodeStore = useNodeStore.getState();
+  const nodeStore = useNodeStore.getState();  
   const inputStore = useInputStore.getState();
   
   // Create a unique ID for new input
   const inputId = uuidv4();
   
   // Add the input to the input store first
-  useInputStore.getState().addInput(inputId);
+  inputStore.addInput(inputId);
   // Set as active input
-  useInputStore.getState().setActiveInputId(inputId);
+  inputStore.setActiveInputId(inputId);
   
   // Add the node to the flow
   return nodeStore.addNode('textInput', position, {
@@ -121,13 +127,17 @@ export function getNodesByType(entityType: 'thought' | 'input' | 'response'): Re
  * @param thoughtId The ID of the thought to remove
  */
 export function deleteThoughtNode(thoughtId: string): void {
+  // Get the node store instance
+  const nodeStore = useNodeStore.getState();
+  const thoughtStore = useThoughtStore.getState();
+
   // Find the node in the NodeStore
   const node = getNodeByEntityId('thought', thoughtId);
   if (node) {
     // Remove from NodeStore
-    useNodeStore.getState().removeNode(node.id);
+    nodeStore.removeNode(node.id);
     // Remove from ThoughtStore
-    useThoughtStore.getState().removeThought(thoughtId)
+    thoughtStore.removeThought(thoughtId)
   }
 }
 
@@ -136,14 +146,16 @@ export function deleteThoughtNode(thoughtId: string): void {
  * @param inputId The ID of the input to remove
  */
 export function deleteInputNode(inputId: string): void {
+  const nodeStore = useNodeStore.getState();
+  const inputStore = useInputStore.getState();
+
   // Find the node in the NodeStore
   const node = getNodeByEntityId('input', inputId);
   if (node) {
     // Remove from NodeStore
-    useNodeStore.getState().removeNode(node.id);
-    
+    nodeStore.removeNode(node.id);
     // Remove from InputStore
-    useInputStore.getState().removeInput(inputId);
+    inputStore.removeInput(inputId);
   }
 }
 
@@ -152,11 +164,13 @@ export function deleteInputNode(inputId: string): void {
  * @param responseId The ID of the response to remove
  */
 export function deleteResponseNode(responseId: string): void {
+  const nodeStore = useNodeStore.getState();
+
   // Find the node in the NodeStore
   const node = getNodeByEntityId('response', responseId);
   if (node) {
     // Remove from NodeStore
-    useNodeStore.getState().removeNode(node.id);
+    nodeStore.removeNode(node.id);
     // Note: If you have a dedicated response store, you would remove it from there too
   }
 }
@@ -169,6 +183,7 @@ export function deleteResponseNode(responseId: string): void {
  * @param properties New properties to apply to the node
  */
 export function updateThoughtNode(thoughtId: string, properties: Partial<Omit<ThoughtBubbleNodeData, 'type' | 'thoughtId'>>): void {
+  const nodeStore = useNodeStore.getState();
   const node = getNodeByEntityId('thought', thoughtId);
   if (node) {
     // Ensure we're not changing the node type or ID
@@ -178,7 +193,7 @@ export function updateThoughtNode(thoughtId: string, properties: Partial<Omit<Th
       thoughtId
     };
     
-    useNodeStore.getState().updateNodeData(node.id, updatedProperties);
+    nodeStore.updateNodeData(node.id, updatedProperties);
   }
 }
 
@@ -188,6 +203,7 @@ export function updateThoughtNode(thoughtId: string, properties: Partial<Omit<Th
  * @param properties New properties to apply to the node
  */
 export function updateInputNode(inputId: string, properties: Partial<Omit<TextInputNodeData, 'type' | 'inputId'>>): void {
+  const nodeStore = useNodeStore.getState();
   const node = getNodeByEntityId('input', inputId);
   if (node) {
     // Ensure we're not changing the node type or ID
@@ -197,7 +213,7 @@ export function updateInputNode(inputId: string, properties: Partial<Omit<TextIn
       inputId
     };
     
-    useNodeStore.getState().updateNodeData(node.id, updatedProperties);
+    nodeStore.updateNodeData(node.id, updatedProperties);
   }
 }
 
@@ -207,6 +223,7 @@ export function updateInputNode(inputId: string, properties: Partial<Omit<TextIn
  * @param properties New properties to apply to the node
  */
 export function updateResponseNode(responseId: string, properties: Partial<Omit<ResponseNodeData, 'type' | 'responseId'>>): void {
+  const nodeStore = useNodeStore.getState();
   const node = getNodeByEntityId('response', responseId);
   if (node) {
     // Ensure we're not changing the node type or ID
@@ -216,7 +233,7 @@ export function updateResponseNode(responseId: string, properties: Partial<Omit<
       responseId
     };
     
-    useNodeStore.getState().updateNodeData(node.id, updatedProperties);
+    nodeStore.updateNodeData(node.id, updatedProperties);
   }
 }
 
@@ -260,5 +277,6 @@ export function repositionNodeByEntityId(entityType: 'thought' | 'input' | 'resp
  * @param nodeId The ID of the node to mark
  */
 export function markNodeForRemoval(nodeId: string): void {
-  useNodeStore.getState().markNodeAsRemoving(nodeId);
+  const nodeStore = useNodeStore.getState();
+  nodeStore.markNodeAsRemoving(nodeId);
 } 

@@ -92,7 +92,8 @@ export const useResponseHandling = () => {
             // Calculate position within bounds
             const position = boundedAreaStrategy.calculateNodePosition(
               bounds, 
-              activeThoughtNodes.slice(0, index) // Only consider nodes that have already been positioned
+              activeThoughtNodes.slice(0, index), // Only consider nodes that have already been positioned
+              'left'
             );
             
             // Reposition the node

@@ -10,12 +10,12 @@ import { EventType } from '../types/event';
 import { thoughtApi } from '../api/thoughtApi';
 import { useSettingsStore } from './settingsStore';
 import { deleteThoughtNode, getNodeByEntityId, markNodeForRemoval } from '../hooks/nodeConnectors';
+import { computeSimilarity } from '../utils/embeddingUtils';
 
 // Define the store state
 interface ThoughtStoreState {
   // Data
   thoughts: Thought[];
-  isLoading: boolean; // Track API loading state
   
   // Active thought IDs - thoughts that are currently active in the system
   activeThoughtIds: string[];
@@ -33,6 +33,7 @@ interface ThoughtStoreState {
   
   // Actions
   generateThought: (triggerType: EventType, position?: { x: number, y: number }) => Promise<Thought | null>;
+  addThought: (thought: Thought) => void;
   updateThought: (thoughtId: string, updatedThought: Thought) => void;
   removeThought: (thoughtId: string) => void;
   clearThoughts: () => void;
@@ -53,7 +54,6 @@ interface ThoughtStoreState {
 export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
   // Data
   thoughts: [],
-  isLoading: false, // Loading state
   activeThoughtIds: [], // Track active thought IDs
   
   // SETTINGS
@@ -89,8 +89,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
   
   generateThought: async (triggerType: EventType, position?: { x: number, y: number }) => {
     try {
-      set({ isLoading: true });
-
+      let returnedThought = null;
       // Get input data
       const inputStoreModule = await import('./inputStore');
       const { useInputStore } = inputStoreModule;
@@ -98,7 +97,6 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       
       if (!activeInputId) {
         console.error('No active input node found');
-        set({ isLoading: false });
         return null;
       }
       
@@ -123,12 +121,11 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
 
       if (!thoughtData) {
         console.log('❌ No thought data returned from backend');
-        set({ isLoading: false });
         return null;
       }
       
       // Check if this thought already exists (update case)
-      // Since our backend returns the same thought id if the thought is similar, with UPDATED saliency
+      // Our backend returns the same thought id if the thought is similar, with UPDATED saliency
       const existingThoughtIndex = get().thoughts.findIndex(t => t.id === thoughtData.id);
       const isUpdate = existingThoughtIndex >= 0;
       
@@ -138,25 +135,19 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
         // Update the thought in the store
         get().updateThought(thoughtData.id, thoughtData);
         
-        set({
-          isLoading: false
-        });
-        
         // Make sure the thought is in the active list
         get().addActiveThought(thoughtData.id);
-        
-        return thoughtData;
+
+        // Don't return the thought data
+        returnedThought = null;
       }
-      
-      // Add the new thought to state and the active thoughts list
-      set((state) => ({
-        thoughts: [...state.thoughts, thoughtData],
-        activeThoughtIds: [...state.activeThoughtIds, thoughtData.id],
-        isLoading: false
-      }));
 
+      // If the thought is new, return the thought data
+      else{
+        returnedThought = thoughtData;
+      }
 
-      // Update memory
+      // Update memory  
       const memoryItem = await thoughtApi.createMemory({
         type: 'SHORT_TERM',
         text: "User: " + inputData.currentInput
@@ -206,7 +197,47 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       const updatedThoughts = get().thoughts.map(thought => {
         if (thought.id !== thoughtData.id && !thought.config.persistent) {
           const thoughtCopy = { ...thought };
-          thoughtCopy.score.saliency = Math.max(0, thought.score.saliency - get().decay);
+
+          let similarityThreshold = 0.2;
+          
+          // Check if this thought has similarity > threshold with any other thought (including the new one)
+          let hasHighSimilarity = false;
+          
+          // Check similarity with the new thought first
+          if (thought.content.embedding && thoughtData.content.embedding) {
+            const similarity = computeSimilarity(thought.content.embedding, thoughtData.content.embedding);
+            if (similarity > similarityThreshold) {
+              hasHighSimilarity = true;
+            }
+          }
+          
+          // If not similar to the new thought, check with all other thoughts
+          if (!hasHighSimilarity) {
+            for (const otherThought of get().thoughts) {
+              // Skip comparison with itself or the new thought (we already checked that)
+              if (otherThought.id === thought.id || otherThought.id === thoughtData.id) {
+                continue;
+              }
+              
+              if (thought.content.embedding && otherThought.content.embedding) {
+                const similarity = computeSimilarity(thought.content.embedding, otherThought.content.embedding);
+                if (similarity > similarityThreshold) {
+                  hasHighSimilarity = true;
+                  break;
+                }
+              }
+            }
+          }
+          
+          // If no high similarity found with any thought, reduce saliency by - decay - 0.2
+          // Otherwise, apply the standard decay
+          if (!hasHighSimilarity) {
+            console.log(`🔍 This old thought has no high similarity: ${thought.id}`);
+            thoughtCopy.score.saliency = Math.max(0, thought.score.saliency - get().decay - 0.2);
+          } else {
+            thoughtCopy.score.saliency = Math.max(0, thought.score.saliency - get().decay);
+          }
+          
           return thoughtCopy;
         }
         return thought;
@@ -214,10 +245,9 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       
       set({ thoughts: updatedThoughts });
       
-      return thoughtData;
+      return returnedThought;
     } catch (error) {
       console.error('Error generating thought:', error);
-      set({ isLoading: false });
       return null;
     }
   },
@@ -225,12 +255,9 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
   // Helper for common thought operations
   operateOnThought: async (thoughtId: string, operation: string, options = {}) => {
     try {
-      set({ isLoading: true });
-      
       const thought = get().thoughts.find(t => t.id === thoughtId);
       if (!thought) {
         console.error(`Thought with ID ${thoughtId} not found in store`);
-        set({ isLoading: false });
         return;
       }
       
@@ -242,11 +269,8 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       
       const updatedThought = Array.isArray(result) ? result[0] : result;
       get().updateThought(thoughtId, updatedThought);
-      
-      set({ isLoading: false });
     } catch (error) {
       console.error(`Error handling ${operation} for thought ${thoughtId}:`, error);
-      set({ isLoading: false });
     }
   },
   
@@ -278,13 +302,10 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
   // Handle submitting thoughts for articulation
   handleThoughtsSubmit: async () => {
     try {
-      set({ isLoading: true });
-      
       const { thoughts, activeThoughtIds } = get();
       
       if (thoughts.length === 0) {
         console.log('No thoughts to articulate');
-        set({ isLoading: false });
         return null;
       }
       
@@ -325,10 +346,6 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
         }
       }
       
-      // Remove all thoughts that are not persistent
-      // const nonPersistentThoughts = thoughts.filter(t => !t.config.persistent);
-      // nonPersistentThoughts.forEach(t => get().removeThought(t.id));
-      
       // Signal that response is ready
       const onResponseCreated = get().onResponseCreated;
       if (onResponseCreated && response.response) {
@@ -336,16 +353,20 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
         onResponseCreated(response.response);
       }
 
-      set({ isLoading: false });
       return response.response;
     } catch (error) {
       console.error('Error articulating thoughts:', error);
-      set({ isLoading: false });
       return null;
     }
   },
 
   // HELPER FUNCTIONS
+  addThought: (thought: Thought) => {
+    set((state) => ({
+      thoughts: [...state.thoughts, thought]
+    }));
+  },
+
   updateThought: (thoughtId: string, updatedThought: Thought) => {
     set((state) => ({
       thoughts: state.thoughts.map((thought) =>

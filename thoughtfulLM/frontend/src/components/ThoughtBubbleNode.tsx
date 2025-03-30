@@ -315,6 +315,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
           fontFamily="monospace"
           whiteSpace="pre-wrap"
           wordBreak="break-word"
+          maxWidth="120px"
         >
           {content}
         </Text>

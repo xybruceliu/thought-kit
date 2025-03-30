@@ -55,7 +55,7 @@ export const useInputStore = create<InputStoreState>((set, get) => ({
   activeInputId: null,
     
   // Global trigger settings
-  idleTimeThreshold: 17000, // 17 seconds
+  idleTimeThreshold: 3000, // 3 seconds
   wordCountChangeThreshold: 7, // Words added/removed to trigger
   sentenceWordThreshold: 2, // Words in a sentence to trigger
   
