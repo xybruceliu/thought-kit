@@ -29,7 +29,7 @@ Plus a Web UI allowing you to visualize and interact with AI thoughts on a canva
    source thought_kit_env/bin/activate  # On Windows: thought_kit_env\Scripts\activate
    ```
 
-2. Install
+2. Install the package in development mode:
    ```bash
    pip install -e .
    ```
@@ -45,9 +45,14 @@ Plus a Web UI allowing you to visualize and interact with AI thoughts on a canva
 
 
 ### Backend Setup
-1. Start the backend server:
+1. Install the backend dependencies:
    ```bash
    cd thoughtfulLM/backend
+   pip install -r requirements.txt
+   ```
+
+2. Start the backend server:
+   ```bash
    python run.py
    ```
 

@@ -30,8 +30,9 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 cd ../..  # Navigate to root directory
 pip install -e .
 ```
+This will install most required dependencies including FastAPI, uvicorn, python-dotenv, and OpenAI.
 
-3. Install dependencies:
+3. Install any additional backend-specific dependencies (if needed):
 ```bash
 cd thoughtfulLM/backend
 pip install -r requirements.txt
