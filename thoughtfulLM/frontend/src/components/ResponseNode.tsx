@@ -119,10 +119,9 @@ const ResponseNode: React.FC<ResponseNodeProps> = (props) => {
           reactFlowInstance.fitView({
             padding: 0.5,
             minZoom: 0.5,
-            maxZoom: 1.5,
+            maxZoom: 1.2,
             duration: 500,
             nodes: [
-              { id: currentNode.id },
               { id: newInputNode.id }
             ]
           }); 
@@ -141,6 +140,7 @@ const ResponseNode: React.FC<ResponseNodeProps> = (props) => {
       transition="opacity 0.5s ease, transform 0.5s ease"
       opacity={isVisible ? 1 : 0}
       transform={isVisible ? "translateY(0)" : "translateY(10px)"}
+      animation={isVisible ? `${fadeIn} 0.8s ease-out` : undefined}
       data-testid="response-node"
     >
       <Box
@@ -151,6 +151,10 @@ const ResponseNode: React.FC<ResponseNodeProps> = (props) => {
         color="gray.700"
         p={5}
         overflowY="auto"
+        sx={{
+          userSelect: 'text',
+          cursor: 'auto'
+        }}
       >
         <Text whiteSpace="pre-wrap">{displayedContent}</Text>
       </Box>

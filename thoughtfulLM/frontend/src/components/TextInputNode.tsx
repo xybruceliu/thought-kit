@@ -1,10 +1,12 @@
 import React, { useCallback, useRef, useEffect, useState } from 'react';
-import { NodeProps } from 'reactflow';
+import { NodeProps, useReactFlow } from 'reactflow';
 import { Box, Textarea, Kbd } from '@chakra-ui/react';
 import { useThoughtStore } from '../store/thoughtStore';
 import { useInputStore } from '../store/inputStore';
 import { TextInputNodeData } from '../store/nodeStore';
 import { useAutomaticTriggerDetection } from '../hooks';
+import { getNodeByEntityId, repositionNodeByEntityId } from '../hooks/nodeConnectors';
+import { useSettingsStore } from '../store/settingsStore';
 
 // Update the node props to use our new node data type
 type TextInputNodeProps = NodeProps<TextInputNodeData>;
@@ -24,6 +26,11 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
   
   // Use local state for textarea value with initial value from store
   const [text, setText] = useState(inputText);
+  // Track the previous height to calculate how much we need to move thought nodes
+  const [prevHeight, setPrevHeight] = useState<number>(0);
+  
+  // Get the current interface type
+  const interfaceType = useSettingsStore(state => state.interfaceType);
   
   // Use the automatic trigger detection hook instead of manual timer management
   useAutomaticTriggerDetection(inputId);
@@ -70,7 +77,7 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
     [handleThoughtsSubmit]
   );
 
-  // Auto-resize functionality
+  // Enhanced auto-resize functionality that also adjusts thought nodes
   useEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -81,7 +88,32 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
     // Set the height to scrollHeight to fit the content
     const newHeight = Math.max(120, textarea.scrollHeight);
     textarea.style.height = `${newHeight}px`;
-  }, [text]);
+    
+    // Only adjust thought nodes in interface 1
+    if (interfaceType === 1 && prevHeight > 0) {
+      // Calculate how much the height has changed
+      const heightDiff = newHeight - prevHeight;
+      
+      if (heightDiff !== 0) {
+        // Get all active thought IDs
+        const { activeThoughtIds } = useThoughtStore.getState();
+        
+        // Move each active thought node by the heightDiff (positive = down, negative = up)
+        activeThoughtIds.forEach(thoughtId => {
+          const node = getNodeByEntityId('thought', thoughtId);
+          if (node) {
+            repositionNodeByEntityId('thought', thoughtId, {
+              x: node.position.x,
+              y: node.position.y + heightDiff
+            });
+          }
+        });
+      }
+    }
+    
+    // Update the previous height for the next resize
+    setPrevHeight(newHeight);
+  }, [text, interfaceType, prevHeight]);
 
   return (
     <Box
@@ -97,7 +129,6 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         placeholder="Say anything"
-        minHeight="200px"
         resize="none"
         border="none"
         borderRadius="2xl"
@@ -115,7 +146,7 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
           opacity: 1,
           color: "gray.700",
           bg: "gray.200",
-          cursor: "default"
+          cursor: "auto"
         }}
       />
       {isActive ? (

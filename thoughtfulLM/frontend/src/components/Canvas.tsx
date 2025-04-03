@@ -69,8 +69,13 @@ const CanvasContent: React.FC = () => {
         fitViewOptions={{
           padding: 0.5,
           minZoom: 0.5,
-          maxZoom: 1.5
+          maxZoom: 1.2
         }}
+        panOnScroll={true}
+        panOnDrag={false}
+        zoomOnScroll={false}
+        zoomOnPinch={false}
+        zoomOnDoubleClick={false}
       >
         <Controls showInteractive={false} />
         <Background gap={12} size={1} color="none" />
@@ -84,7 +89,11 @@ const CanvasContent: React.FC = () => {
 // The main Canvas component wraps CanvasContent with ReactFlowProvider
 const Canvas: React.FC = () => {
   return (
-    <Box width="100%" height="100vh" bg="gray.100">
+    <Box 
+      width="100%" 
+      height="100vh" 
+      bg="gray.100"
+    >
       <ReactFlowProvider>
         <CanvasContent />
         <AppInfo />

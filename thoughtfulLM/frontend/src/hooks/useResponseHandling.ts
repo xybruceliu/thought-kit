@@ -107,10 +107,9 @@ export const useResponseHandling = () => {
           reactFlowInstance.fitView({
             padding: 0.5,
             minZoom: 0.5,
-            maxZoom: 1.5,
+            maxZoom: 1.2,
             duration: 500,
             nodes: [
-              { id: inputNode.id },
               { id: responseNode.id }
             ]
           });
