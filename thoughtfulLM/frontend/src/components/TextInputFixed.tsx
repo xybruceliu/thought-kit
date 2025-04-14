@@ -1,20 +1,17 @@
 import React, { useCallback, useRef, useEffect, useState } from 'react';
-import { NodeProps, useReactFlow } from 'reactflow';
 import { Box, Textarea, Kbd } from '@chakra-ui/react';
 import { useThoughtStore } from '../store/thoughtStore';
 import { useInputStore } from '../store/inputStore';
-import { TextInputNodeData } from '../store/nodeStore';
 import { useAutomaticTriggerDetection } from '../hooks';
 import { getNodeByEntityId, repositionNodeByEntityId } from '../hooks/nodeConnectors';
 import { useSettingsStore } from '../store/settingsStore';
 
-// Update the node props to use our new node data type
-type TextInputNodeProps = NodeProps<TextInputNodeData>;
+interface TextInputFixedProps {
+  inputId: string;
+  onChange?: (value: string) => void;
+}
 
-const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
-  // Get the input ID from the node data
-  const { inputId } = data;
-  
+const TextInputFixed: React.FC<TextInputFixedProps> = ({ inputId, onChange }) => {
   // Get input text from the input store using the inputId
   const inputText = useInputStore(state => {
     const inputData = state.inputs[inputId];
@@ -54,11 +51,11 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
       useInputStore.getState().updateInput(inputId, newValue);
       
       // If there's an onChange handler in the data, call it too
-      if (data.onChange) {
-        data.onChange(newValue);
+      if (onChange) {
+        onChange(newValue);
       }
     },
-    [data, inputId]
+    [onChange, inputId]
   );
   
   // Handle keyboard shortcuts
@@ -117,56 +114,65 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
 
   return (
     <Box
-      bg="gray.50"
-      borderRadius="2xl"
-      boxShadow="sm"
+      position="fixed"
+      bottom="50px"
+      left="50%"
+      transform="translateX(-50%)"
       width="500px"
-      transition="all 0.2s"
+      zIndex="10"
     >
-      <Textarea
-        ref={textareaRef}
-        value={text}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        placeholder="Say anything"
-        resize="none"
-        border="none"
+      <Box
+        bg="gray.50"
         borderRadius="2xl"
-        _focus={{
-          boxShadow: "md",
-          outline: "none"
-        }}
-        fontSize="md"
-        color="gray.700"
-        bg="gray.200"
-        p={5}
-        overflowY="hidden"
-        isDisabled={!isActive}
-        _disabled={{
-          opacity: 1,
-          color: "gray.700",
-          bg: "gray.200",
-          cursor: "auto"
-        }}
-      />
-      {isActive ? (
-        <Box position="absolute" bottom="-6" right="3">
-          <Box fontSize="xs" color="gray.400" display="flex" alignItems="center">
-            <Kbd>{navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}</Kbd>
-            <Box as="span" mx="1">+</Box>
-            <Kbd>Enter</Kbd>
-            <Box as="span" ml="1">to submit</Box>
+        boxShadow="sm"
+        width="100%"
+        transition="all 0.2s"
+      >
+        <Textarea
+          ref={textareaRef}
+          value={text}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          placeholder="Say anything"
+          resize="none"
+          border="none"
+          borderRadius="2xl"
+          _focus={{
+            boxShadow: "md",
+            outline: "none"
+          }}
+          fontSize="md"
+          color="gray.700"
+          bg="gray.200"
+          p={5}
+          overflowY="hidden"
+          isDisabled={!isActive}
+          _disabled={{
+            opacity: 1,
+            color: "gray.700",
+            bg: "gray.200",
+            cursor: "auto"
+          }}
+        />
+        {isActive ? (
+          <Box position="absolute" bottom="-6" right="3">
+            <Box fontSize="xs" color="gray.400" display="flex" alignItems="center">
+              <Kbd>{navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}</Kbd>
+              <Box as="span" mx="1">+</Box>
+              <Kbd>Enter</Kbd>
+              <Box as="span" ml="1">to submit</Box>
+            </Box>
           </Box>
-        </Box>
-      ) : (
-        <Box position="absolute" bottom="-5" right="3">
-          <Box fontSize="2xs" color="gray.400" display="flex" alignItems="center">
-            You
+        ) : (
+          <Box position="absolute" bottom="-5" right="3">
+            <Box fontSize="2xs" color="gray.400" display="flex" alignItems="center">
+              You
+            </Box>
           </Box>
-        </Box>
-      )}
+        )}
+      </Box>
     </Box>
   );
 };
 
-export default TextInputNode; 
+export default TextInputFixed; 
