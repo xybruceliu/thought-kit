@@ -86,7 +86,7 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
     textarea.style.height = 'auto';
     
     // Set the height to scrollHeight to fit the content
-    const newHeight = Math.max(0, textarea.scrollHeight);
+    const newHeight = Math.max(120, textarea.scrollHeight);
     textarea.style.height = `${newHeight}px`;
     
     // Only adjust thought nodes in interface 1
@@ -150,8 +150,8 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
         }}
       />
       {isActive ? (
-        <Box position="absolute" bottom="-6" right="3">
-          <Box fontSize="xs" color="gray.400" display="flex" alignItems="center">
+        <Box position="absolute" bottom="-5" right="3">
+          <Box fontSize="2xs" color="gray.400" display="flex" alignItems="center">
             <Kbd>{navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}</Kbd>
             <Box as="span" mx="1">+</Box>
             <Kbd>Enter</Kbd>
@@ -161,7 +161,7 @@ const TextInputNode: React.FC<TextInputNodeProps> = ({ data, id }) => {
       ) : (
         <Box position="absolute" bottom="-5" right="3">
           <Box fontSize="2xs" color="gray.400" display="flex" alignItems="center">
-            You
+            Your Input
           </Box>
         </Box>
       )}

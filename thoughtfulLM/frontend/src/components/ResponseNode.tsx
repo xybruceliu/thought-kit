@@ -119,7 +119,7 @@ const ResponseNode: React.FC<ResponseNodeProps> = (props) => {
           reactFlowInstance.fitView({
             padding: 0.5,
             minZoom: 0.5,
-            maxZoom: 1.0,
+            maxZoom: 1.2,
             duration: 500,
             nodes: [
               { id: newInputNode.id }
@@ -160,7 +160,7 @@ const ResponseNode: React.FC<ResponseNodeProps> = (props) => {
       </Box>
       <Box position="absolute" bottom="-5" right="3">
         <Box fontSize="2xs" color="gray.400" display="flex" alignItems="center">
-          AI
+          AI's Response
         </Box>
       </Box>
       {useSettingsStore.getState().interfaceType === 1 && showAddButton && (

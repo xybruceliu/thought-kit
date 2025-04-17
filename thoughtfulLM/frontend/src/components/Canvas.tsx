@@ -9,7 +9,6 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { Box } from '@chakra-ui/react';
 import TextInputNode from './TextInputNode';
-import TextInputFixed from './TextInputFixed';
 import ThoughtBubbleNode from './ThoughtBubbleNode';
 import ResponseNode from './ResponseNode';
 import BoundaryIndicator from './BoundaryIndicator';
@@ -19,7 +18,6 @@ import { useTriggerDetection, useAppInitialization, useResponseHandling } from '
 import { useSettingsStore } from '../store/settingsStore';
 import { useNodeStore } from '../store/nodeStore';
 import { useThoughtStore } from '../store/thoughtStore';
-import { useInputStore } from '../store/inputStore';
 
 // Define custom node types
 const nodeTypes: NodeTypes = {
@@ -41,9 +39,6 @@ const CanvasContent: React.FC = () => {
   
   // Get current interface type from settings store
   const interfaceType = useSettingsStore(state => state.interfaceType);
-  
-  // Get the active input ID for TextInputFixed
-  const activeInputId = useInputStore(state => state.activeInputId);
   
   // Initialize the application with default settings
   // This will respond to interface type changes
@@ -74,7 +69,7 @@ const CanvasContent: React.FC = () => {
         fitViewOptions={{
           padding: 0.5,
           minZoom: 0.5,
-          maxZoom: 1.0
+          maxZoom: 1.2
         }}
         panOnScroll={true}
         panOnDrag={false}
@@ -86,12 +81,6 @@ const CanvasContent: React.FC = () => {
         <Background gap={12} size={1} color="none" />
         <BoundaryIndicator />
       </ReactFlow>
-      
-      {/* Show TextInputFixed only for interface type 2 */}
-      {interfaceType === 2 && activeInputId && (
-        <TextInputFixed inputId={activeInputId} />
-      )}
-      
       <Settings onMicrophoneClick={handleMicrophoneClick} />
     </>
   );

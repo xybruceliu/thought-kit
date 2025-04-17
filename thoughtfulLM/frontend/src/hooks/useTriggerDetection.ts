@@ -4,9 +4,8 @@ import { useInputStore } from '../store/inputStore';
 import { Node as ReactFlowNode, useReactFlow } from 'reactflow';
 import { createThoughtNode, getNodeByEntityId } from './nodeConnectors';
 import { NodeData, useNodeStore } from '../store/nodeStore';
-import { boundedAreaStrategy, createBoundsAboveNode, createBoundsBelowNode, createBoundsRightOfNode, createBoundsLeftOfNode, Bounds } from '../utils/nodePositioning';
+import { boundedAreaStrategy, createBoundsAboveNode, createBoundsBelowNode, createBoundsRightOfNode, createBoundsLeftOfNode } from '../utils/nodePositioning';
 import { useSettingsStore } from '../store/settingsStore';
-import { useBoundsStore } from '../store/boundsStore';
 
 /**
  * Custom hook that handles thought trigger detection logic
@@ -131,69 +130,40 @@ export const useTriggerDetection = () => {
     triggerType: 'SENTENCE_END' | 'WORD_COUNT_CHANGE' | 'IDLE_TIME' | 'NAMED_ENTITY',
     inputAtCheckTime: string
   ): Promise<boolean> => {
-    // Get the current interface type
-    const interfaceType = useSettingsStore.getState().interfaceType;
-    let thoughtBounds: Bounds | undefined;
-    
-    // if interface 1, get the node and set the bounds to below the node
-    if (interfaceType === 1) {
-      const textInputNode = getNodeByEntityId('input', nodeId);
-      if (!textInputNode) {
-        console.warn(`Could not find input node with ID ${nodeId}`);
-        return false;
-      }
-      thoughtBounds = createBoundsBelowNode(textInputNode);
+    // Get the node using our connector function
+    const textInputNode = getNodeByEntityId('input', nodeId);
+    if (!textInputNode) {
+      console.warn(`Could not find input node with ID ${nodeId}`);
+      return false;
     }
-    // if interface 2, set bounds above the fixed text input component
-    else if (interfaceType === 2) {
-      // For fixed text input, create a bounds area in the middle-bottom of the screen
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      
-      // Create a bounds area that's centered horizontally and in the lower part of the screen
-      // but above the fixed text input (which is at the bottom)
-      const boundsStore = useBoundsStore.getState();
-      
-      // Calculate bounds in the XYPosition format required by the Bounds type
-      // Width of the bounds area (matching the TextInputFixed width of 500px)
-      const boundsWidth = 500;
-      
-      // Calculate the corners of our bounds
-      const left = (viewportWidth - boundsWidth) / 2;
-      const right = (viewportWidth + boundsWidth) / 2;
-      const top = viewportHeight * 0.1; // Start from 10% of the viewport height
-      const bottom = viewportHeight - 150; // Leave space for the fixed input
-      
-      // Create the bounds object in the correct format
-      thoughtBounds = {
-        topLeft: { x: left, y: top },
-        topRight: { x: right, y: top },
-        bottomLeft: { x: left, y: bottom },
-        bottomRight: { x: right, y: bottom },
-      };
-      
-      // Set the bounds in the store
-      boundsStore.setBounds(thoughtBounds);
-      console.log('Set thought bounds for interface 2:', thoughtBounds);
-    }
-    
     // Update input baseline
     inputStore.updateInputBaseline(nodeId, inputAtCheckTime);
     // Update activity timestamp
     inputStore.updateActivityTimestamp(nodeId);
 
-    // Get active thought IDs
+    // Create a bounds object for the thought
+    let thoughtBounds;
+    // Get the current interface type
+    const interfaceType = useSettingsStore.getState().interfaceType;
+    // if interface 1 create below node
+    if (interfaceType === 1) {
+      thoughtBounds = createBoundsBelowNode(textInputNode);
+    }
+    // if interface 2 create above node
+    else if (interfaceType === 2) {
+      thoughtBounds = createBoundsAboveNode(textInputNode);
+    }
+    // Default fallback for other interface types
+    else {
+      thoughtBounds = createBoundsLeftOfNode(textInputNode);
+    }
+
+    // No need to call setBounds again as createBoundsAboveNode already sets bounds in the store
     const activeThoughtIds = useThoughtStore.getState().activeThoughtIds;
     // use getNodeByEntityId to get the active thoughts
     const activeThoughts = activeThoughtIds
       .map(id => getNodeByEntityId('thought', id))
       .filter((node): node is ReactFlowNode<NodeData> => node !== undefined);
-
-    // Only proceed if we have valid bounds
-    if (!thoughtBounds) {
-      console.warn('No valid bounds defined for thought positioning');
-      return false;
-    }
 
     let thoughtPosition;
     if (interfaceType === 1) {
@@ -215,6 +185,7 @@ export const useTriggerDetection = () => {
     
     return false;
   }, [
+    getNodeByEntityId,
     inputStore
   ]);
   

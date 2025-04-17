@@ -45,22 +45,12 @@ export const useAppInitialization = (customPosition?: XYPosition) => {
         nodeStore.clearAllNodes();
         inputStore.clearInputs();
 
-        // Handle initialization based on interface type
-        if (interfaceType === 1) {
-          // Create a node-based input for interface 1
-          console.log('Creating input node for interface type 1');
-          createInputNode(position);
-        } 
-        else if (interfaceType === 2) {
-          // For interface 2, we just need to create an input in the store
-          // The TextInputFixed component will use this inputId
-          console.log('Creating input for interface type 2 (fixed position)');
-          const inputId = `input-${Date.now()}`;
-          inputStore.addInput(inputId);
-          inputStore.setActiveInputId(inputId);
-        }
-        else {
-          console.log(`Skipping input creation for interface type ${interfaceType}`);
+        // Create an initial input node only if interfaceType is 1 or 2
+        if (interfaceType === 1 || interfaceType === 2) {
+          console.log(`Creating initial input node for interface type ${interfaceType}`);
+          const inputNode = createInputNode(position);
+        } else {
+          console.log(`Skipping input node creation for interface type ${interfaceType}`);
         }
         
         console.log('Application initialized successfully');
