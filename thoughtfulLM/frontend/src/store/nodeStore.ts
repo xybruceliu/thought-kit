@@ -16,49 +16,24 @@ import { v4 as uuidv4 } from 'uuid';
 // Import existing store types
 import { Thought } from '../types/thought';
 
-// Node types
-export type NodeType = 'thoughtBubble' | 'textInput' | 'response';
-
-// Node data base type with discriminator
-interface BaseNodeData {
-  type: NodeType;
-}
+// Node types - since we only have one type now
+export type NodeType = 'thoughtBubble';
 
 // Thought bubble node data
-export interface ThoughtBubbleNodeData extends BaseNodeData {
-  type: 'thoughtBubble';
+export interface ThoughtBubbleNodeData {
+  type: NodeType;
   thoughtId: string; // The ID of the thought this node represents
   blobVariant?: number;
   // Add other thought-specific properties here
 }
 
-// Text input node data
-export interface TextInputNodeData extends BaseNodeData {
-  type: 'textInput';
-  inputId: string;
-  onChange?: (value: string) => void;
-  // Add other input-specific properties here
-}
-
-// Response node data
-export interface ResponseNodeData extends BaseNodeData {
-  type: 'response';
-  responseId: string;
-  responseText?: string;
-  // Add other response-specific properties here
-}
-
-// Union type for all node data
-export type NodeData = ThoughtBubbleNodeData | TextInputNodeData | ResponseNodeData;
+// We only have ThoughtBubbleNodeData now
+export type NodeData = ThoughtBubbleNodeData;
 
 // Interface for node creation parameters
 export interface NodeCreationParams {
   thoughtId?: string;
-  inputId?: string;
-  responseId?: string;
-  responseText?: string;
   blobVariant?: number;
-  onChange?: (value: string) => void;
   [key: string]: any;
 }
 
@@ -75,10 +50,10 @@ interface NodeStoreState {
   onEdgesChange: (changes: EdgeChange[]) => void;
   
   // Specialized node operations
-  addNode: (type: NodeType, position: XYPosition, data: NodeCreationParams, options?: { draggable?: boolean }) => Node<NodeData>;
+  addNode: (position: XYPosition, data: NodeCreationParams, options?: { draggable?: boolean }) => Node<NodeData>;
   updateNodeData: (nodeId: string, newData: Partial<NodeData>) => void;
   getNodeById: (nodeId: string) => Node<NodeData> | undefined;
-  getNodeByEntityId: (entityType: 'thought' | 'input' | 'response', entityId: string) => Node<NodeData> | undefined;
+  getNodeByThoughtId: (thoughtId: string) => Node<NodeData> | undefined;
   removeNode: (nodeId: string) => void;
   
   // Batch operations
@@ -112,45 +87,21 @@ export const useNodeStore = create<NodeStoreState>((set, get) => ({
     }));
   },
   
-  // Add a new node
-  addNode: (type, position, data, options = {}) => {
-    let nodeData: NodeData;
-    
-    // Create the correct node data type based on the node type
-    switch (type) {
-      case 'thoughtBubble':
-        nodeData = {
-          type: 'thoughtBubble',
-          thoughtId: data.thoughtId || uuidv4(),
-          blobVariant: data.blobVariant,
-          ...data
-        } as ThoughtBubbleNodeData;
-        break;
-      case 'textInput':
-        nodeData = {
-          type: 'textInput',
-          inputId: data.inputId || uuidv4(),
-          onChange: data.onChange,
-          ...data
-        } as TextInputNodeData;
-        break;
-      case 'response':
-        nodeData = {
-          type: 'response',
-          responseId: data.responseId || uuidv4(),
-          responseText: data.responseText,
-          ...data
-        } as ResponseNodeData;
-        break;
-      default:
-        throw new Error(`Unknown node type: ${type}`);
-    }
+  // Add a new node - simplified to only handle thought nodes
+  addNode: (position, data, options = {}) => {
+    const nodeData: ThoughtBubbleNodeData = {
+      type: 'thoughtBubble',
+      thoughtId: data.thoughtId || uuidv4(),
+      blobVariant: data.blobVariant,
+      ...data
+    };
     
     const newNode: Node<NodeData> = {
       id: uuidv4(),
-      type,
+      type: 'thoughtBubble',
       position,
       data: nodeData,
+      draggable: true,
       ...options
     };
     
@@ -171,7 +122,7 @@ export const useNodeStore = create<NodeStoreState>((set, get) => ({
             ...node.data,
             ...newData,
             type: node.data.type, // Ensure type doesn't change
-          } as NodeData;
+          };
           
           return {
             ...node,
@@ -188,30 +139,10 @@ export const useNodeStore = create<NodeStoreState>((set, get) => ({
     return get().nodes.find((node) => node.id === nodeId);
   },
   
-  // Get node by entity ID (thought, input, or response ID)
-  getNodeByEntityId: (entityType, entityId) => {
-    let nodeType: NodeType;
-    let idProperty: string;
-    
-    switch (entityType) {
-      case 'thought':
-        nodeType = 'thoughtBubble';
-        idProperty = 'thoughtId';
-        break;
-      case 'input':
-        nodeType = 'textInput';
-        idProperty = 'inputId';
-        break;
-      case 'response':
-        nodeType = 'response';
-        idProperty = 'responseId';
-        break;
-      default:
-        return undefined;
-    }
-    
+  // Get node by thought ID - simplified from getNodeByEntityId
+  getNodeByThoughtId: (thoughtId) => {
     return get().nodes.find(
-      (node) => node.data.type === nodeType && (node.data as any)[idProperty] === entityId
+      (node) => node.data.thoughtId === thoughtId
     );
   },
   

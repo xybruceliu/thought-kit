@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -7,23 +7,22 @@ import ReactFlow, {
   NodeChange
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Box } from '@chakra-ui/react';
-import TextInputNode from './TextInputNode';
+import { Box, Button, Input, Textarea } from '@chakra-ui/react';
 import ThoughtBubbleNode from './ThoughtBubbleNode';
-import ResponseNode from './ResponseNode';
 import BoundaryIndicator from './BoundaryIndicator';
 import Settings from './Settings';
 import AppInfo from './AppInfo';
-import { useTriggerDetection, useAppInitialization, useResponseHandling } from '../hooks';
+import { useTriggerDetection } from '../hooks';
 import { useSettingsStore } from '../store/settingsStore';
 import { useNodeStore } from '../store/nodeStore';
 import { useThoughtStore } from '../store/thoughtStore';
-
+import { useMemoryStore } from '../store/memoryStore';
+import { useInputStore } from '../store/inputStore';
+import { useChatStore } from '../store/chatStore';
+import { MessageInput, MessageContainer } from './chat';
 // Define custom node types
 const nodeTypes: NodeTypes = {
-  textInput: TextInputNode,
   thoughtBubble: ThoughtBubbleNode,
-  response: ResponseNode,
 };
 
 // The inner component that has access to the ReactFlow hooks
@@ -40,24 +39,111 @@ const CanvasContent: React.FC = () => {
   // Get current interface type from settings store
   const interfaceType = useSettingsStore(state => state.interfaceType);
   
-  // Initialize the application with default settings
-  // This will respond to interface type changes
-  useAppInitialization();
+  // Get chat store data
+  const { messages, addUserMessage, isProcessing } = useChatStore();
   
-  // Set up response handling
-  useResponseHandling();
+  // Initialize the application when the component mounts or interface type changes
+  useEffect(() => {
+    console.log(`Initializing application for interface type ${interfaceType}...`);
+    
+    // Get the store actions directly
+    const thoughtStore = useThoughtStore.getState();
+    const memoryStore = useMemoryStore.getState();
+    const nodeStore = useNodeStore.getState();
+    const inputStore = useInputStore.getState();
+    const chatStore = useChatStore.getState();
+    
+    // Clear all existing data
+    thoughtStore.clearThoughts();
+    memoryStore.clearMemories();
+    nodeStore.clearAllNodes();
+    inputStore.clearInput();
+    chatStore.clearMessages();
+    
+    console.log('Application initialized successfully');
+  }, [interfaceType]);
   
   // Get thoughts to monitor for changes
   const thoughts = useThoughtStore(state => state.thoughts);
 
-  // Web Speech API implementation placeholder
-  const handleMicrophoneClick = useCallback(() => {
-    console.log('Microphone clicked - Web Speech API to be implemented');
-    // Toggle microphone state in settings
-    const { microphoneEnabled, setMicrophoneEnabled } = useSettingsStore.getState();
-    setMicrophoneEnabled(!microphoneEnabled);
-  }, []);
+  // Handle message submission for the chat interface
+  const handleSendMessage = useCallback((message: string) => {
+    console.log('Message sent:', message);
+    // Add the message to the chat store
+    addUserMessage(message);
+    // Input is already being tracked by the input store through the MessageInput component
+  }, [addUserMessage]);
 
+
+  if (interfaceType === 1) {
+    return (
+      <>
+        <ReactFlow
+          nodes={nodes}
+          nodeTypes={nodeTypes}
+          onNodesChange={onNodesChange}
+          onPaneClick={onPaneClick}
+          fitView
+          fitViewOptions={{
+            padding: 0.5,
+            minZoom: 0.5,
+            maxZoom: 1.2
+          }}
+          panOnScroll={false}
+          panOnDrag={false}
+          zoomOnScroll={false}
+          zoomOnPinch={false}
+          zoomOnDoubleClick={false}
+        >
+          <Controls showInteractive={false} />
+          <Background gap={12} size={1} color="none" />
+          <BoundaryIndicator />
+        </ReactFlow>
+  
+        <Settings onMicrophoneClick={() => {}} />
+  
+        {/* Message Container */}
+        <Box
+          position="absolute" 
+          top="35px"
+          width="100%"
+          maxWidth="600px"
+          height="50%"
+          zIndex={1}
+          mx="auto"
+          left="50%"
+          transform="translateX(-50%)"
+          borderColor="gray.300"
+          borderWidth="1px"
+
+          display="flex"
+          flexDirection="column"
+        >
+          <MessageContainer messages={messages} />
+        </Box>
+        
+        {/* Message input */}
+        <Box
+          position="absolute" 
+          bottom="35px"
+          width="100%"
+          maxWidth="600px"
+          zIndex={1}
+          mx="auto"
+          left="50%"
+          transform="translateX(-50%)"
+        >
+          <MessageInput
+            onSubmit={handleSendMessage}
+            placeholder="Say anything"
+            disabled={isProcessing}
+          />
+        </Box>
+      </>
+    );
+  }
+  
+  // Default return for other interface types
   return (
     <>
       <ReactFlow
@@ -71,7 +157,7 @@ const CanvasContent: React.FC = () => {
           minZoom: 0.5,
           maxZoom: 1.2
         }}
-        panOnScroll={true}
+        panOnScroll={false}
         panOnDrag={false}
         zoomOnScroll={false}
         zoomOnPinch={false}
@@ -81,7 +167,8 @@ const CanvasContent: React.FC = () => {
         <Background gap={12} size={1} color="none" />
         <BoundaryIndicator />
       </ReactFlow>
-      <Settings onMicrophoneClick={handleMicrophoneClick} />
+      
+      <Settings onMicrophoneClick={() => {}} />
     </>
   );
 };

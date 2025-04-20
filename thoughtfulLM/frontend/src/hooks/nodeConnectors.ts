@@ -3,9 +3,8 @@
 
 import { XYPosition, Node as ReactFlowNode } from 'reactflow';
 import { Thought } from '../types/thought';
-import nodeStore, { useNodeStore, NodeType, ThoughtBubbleNodeData, TextInputNodeData, ResponseNodeData, NodeData } from '../store/nodeStore';
+import nodeStore, { useNodeStore, ThoughtBubbleNodeData, NodeData } from '../store/nodeStore';
 import { useThoughtStore } from '../store/thoughtStore';
-import { useInputStore } from '../store/inputStore';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -28,77 +27,30 @@ export function createThoughtNode(thought: Thought, position: XYPosition): React
   const blobVariant = Math.floor(Math.random() * 5);
   
   // Add the thought node
-  return nodeStore.addNode('thoughtBubble', position, {
+  return nodeStore.addNode(position, {
     thoughtId: thought.id,
     blobVariant
   });
 }
 
 /**
- * Creates a node in the NodeStore to represent a text input field
- * @param position The position for the node on the canvas
- * @param onChange Optional callback for text changes
- * @returns The created ReactFlow node
+ * Checks if a node exists for a specific thought
+ * @param thoughtId The ID of the thought to check
+ * @returns True if a node exists for the thought, false otherwise
  */
-export function createInputNode(position: XYPosition, onChange?: (value: string) => void): ReactFlowNode<NodeData> {
-  // Get the stores
-  const nodeStore = useNodeStore.getState();  
-  const inputStore = useInputStore.getState();
-  
-  // Create a unique ID for new input
-  const inputId = uuidv4();
-  
-  // Add the input to the input store first
-  inputStore.addInput(inputId);
-  // Set as active input
-  inputStore.setActiveInputId(inputId);
-  
-  // Add the node to the flow
-  return nodeStore.addNode('textInput', position, {
-    inputId,
-    onChange
-  }, { draggable: false });  // Set draggable to false here
+export function doesNodeExistForThought(thoughtId: string): boolean {
+  return !!getNodeByThoughtId(thoughtId);
 }
 
 /**
- * Creates a node in the NodeStore to represent a response
- * @param responseText The text content for the response
- * @param position The position for the node on the canvas
- * @returns The created ReactFlow node
+ * Gets a node by its associated thought ID
+ * @param thoughtId The ID of the thought
+ * @returns The node associated with the thought, or undefined if not found
  */
-export function createResponseNode(responseText: string, position: XYPosition): ReactFlowNode<NodeData> {
-  // Get the node store instance
-  const nodeStore = useNodeStore.getState();
-  
-  // Generate a unique response ID
-  const responseId = `response-${Date.now()}`;
-  
-  // Add the response node
-  return nodeStore.addNode('response', position, {
-    responseId,
-    responseText
-  }, { draggable: false });  // Set draggable to false to make it non-draggable
-}
-
-
-/**
- * Checks if a node exists for a specific entity (thought, input, or response)
- * @param entityType The type of entity to check
- * @param entityId The ID of the entity
- * @returns True if a node exists for the entity, false otherwise
- */
-export function doesNodeExistByEntityId(entityType: 'thought' | 'input' | 'response', entityId: string): boolean {
-  return !!useNodeStore.getState().getNodeByEntityId(entityType, entityId);
-}
-
-/**
- * Gets a node by its associated entity ID
- * @param entityType The type of entity to look for
- * @param entityId The ID of the entity
- * @returns The node associated with the entity, or undefined if not found
- */
-export function getNodeByEntityId(entityType: 'thought' | 'input' | 'response', entityId: string): ReactFlowNode<NodeData> | undefined {
-  return useNodeStore.getState().getNodeByEntityId(entityType, entityId);
+export function getNodeByThoughtId(thoughtId: string): ReactFlowNode<NodeData> | undefined {
+  return useNodeStore.getState().nodes.find(node => 
+    node.data.thoughtId === thoughtId
+  );
 }
 
 /**
@@ -109,15 +61,6 @@ export function getNodeByEntityId(entityType: 'thought' | 'input' | 'response', 
 export function getNodeById(nodeId: string): ReactFlowNode<NodeData> | undefined {
   return useNodeStore.getState().getNodeById(nodeId);
 }
-
-/**
- * Gets all nodes of a specific type
- * @param entityType The type of entity to look for
- * @returns All nodes of the specified type
- */
-export function getNodesByType(entityType: 'thought' | 'input' | 'response'): ReactFlowNode<NodeData>[] {
-  return useNodeStore.getState().nodes.filter(node => node.data.type === entityType);
-} 
 
 
 // -------------------- DELETE METHODS --------------------
@@ -132,46 +75,12 @@ export function deleteThoughtNode(thoughtId: string): void {
   const thoughtStore = useThoughtStore.getState();
 
   // Find the node in the NodeStore
-  const node = getNodeByEntityId('thought', thoughtId);
+  const node = getNodeByThoughtId(thoughtId);
   if (node) {
     // Remove from NodeStore
     nodeStore.removeNode(node.id);
     // Remove from ThoughtStore
     thoughtStore.removeThought(thoughtId)
-  }
-}
-
-/**
- * Removes an input node and handles cleanup in both stores
- * @param inputId The ID of the input to remove
- */
-export function deleteInputNode(inputId: string): void {
-  const nodeStore = useNodeStore.getState();
-  const inputStore = useInputStore.getState();
-
-  // Find the node in the NodeStore
-  const node = getNodeByEntityId('input', inputId);
-  if (node) {
-    // Remove from NodeStore
-    nodeStore.removeNode(node.id);
-    // Remove from InputStore
-    inputStore.removeInput(inputId);
-  }
-}
-
-/**
- * Removes a response node from the NodeStore
- * @param responseId The ID of the response to remove
- */
-export function deleteResponseNode(responseId: string): void {
-  const nodeStore = useNodeStore.getState();
-
-  // Find the node in the NodeStore
-  const node = getNodeByEntityId('response', responseId);
-  if (node) {
-    // Remove from NodeStore
-    nodeStore.removeNode(node.id);
-    // Note: If you have a dedicated response store, you would remove it from there too
   }
 }
 
@@ -184,53 +93,13 @@ export function deleteResponseNode(responseId: string): void {
  */
 export function updateThoughtNode(thoughtId: string, properties: Partial<Omit<ThoughtBubbleNodeData, 'type' | 'thoughtId'>>): void {
   const nodeStore = useNodeStore.getState();
-  const node = getNodeByEntityId('thought', thoughtId);
+  const node = getNodeByThoughtId(thoughtId);
   if (node) {
     // Ensure we're not changing the node type or ID
     const updatedProperties: Partial<ThoughtBubbleNodeData> = {
       ...properties,
       type: 'thoughtBubble',
       thoughtId
-    };
-    
-    nodeStore.updateNodeData(node.id, updatedProperties);
-  }
-}
-
-/**
- * Updates properties of an existing input node
- * @param inputId The ID of the input to update
- * @param properties New properties to apply to the node
- */
-export function updateInputNode(inputId: string, properties: Partial<Omit<TextInputNodeData, 'type' | 'inputId'>>): void {
-  const nodeStore = useNodeStore.getState();
-  const node = getNodeByEntityId('input', inputId);
-  if (node) {
-    // Ensure we're not changing the node type or ID
-    const updatedProperties: Partial<TextInputNodeData> = {
-      ...properties,
-      type: 'textInput',
-      inputId
-    };
-    
-    nodeStore.updateNodeData(node.id, updatedProperties);
-  }
-}
-
-/**
- * Updates properties of an existing response node
- * @param responseId The ID of the response to update
- * @param properties New properties to apply to the node
- */
-export function updateResponseNode(responseId: string, properties: Partial<Omit<ResponseNodeData, 'type' | 'responseId'>>): void {
-  const nodeStore = useNodeStore.getState();
-  const node = getNodeByEntityId('response', responseId);
-  if (node) {
-    // Ensure we're not changing the node type or ID
-    const updatedProperties: Partial<ResponseNodeData> = {
-      ...properties,
-      type: 'response',
-      responseId
     };
     
     nodeStore.updateNodeData(node.id, updatedProperties);
@@ -258,23 +127,20 @@ export function repositionNode(nodeId: string, position: XYPosition): void {
 }
 
 /**
- * Repositions a node by its associated entity ID
- * @param entityType The type of entity to reposition
- * @param entityId The ID of the entity
+ * Repositions a node by its associated thought ID
+ * @param thoughtId The ID of the thought
  * @param position The new position
  */
-export function repositionNodeByEntityId(entityType: 'thought' | 'input' | 'response', entityId: string, position: XYPosition): void {
-  const node = getNodeByEntityId(entityType, entityId);
+export function repositionNodeByThoughtId(thoughtId: string, position: XYPosition): void {
+  const node = getNodeByThoughtId(thoughtId);
   if (node) {
     repositionNode(node.id, position);
   }
 }
 
-// -------------------- STATE TRANSITION METHODS --------------------
-
 /**
- * Marks a node as being in the process of removal (for animations)
- * @param nodeId The ID of the node to mark
+ * Marks a node as being removed, allowing for animations
+ * @param nodeId The ID of the node to mark for removal
  */
 export function markNodeForRemoval(nodeId: string): void {
   const nodeStore = useNodeStore.getState();

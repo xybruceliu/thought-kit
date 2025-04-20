@@ -9,7 +9,7 @@ import {
 import { EventType } from '../types/event';
 import { thoughtApi } from '../api/thoughtApi';
 import { useSettingsStore } from './settingsStore';
-import { deleteThoughtNode, getNodeByEntityId, markNodeForRemoval } from '../hooks/nodeConnectors';
+import { deleteThoughtNode, getNodeByThoughtId, markNodeForRemoval } from '../hooks/nodeConnectors';
 import { computeSimilarity } from '../utils/embeddingUtils';
 
 // Define the store state
@@ -93,15 +93,8 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       // Get input data
       const inputStoreModule = await import('./inputStore');
       const { useInputStore } = inputStoreModule;
-      const { activeInputId, getInputData } = useInputStore.getState();
+      const inputData = useInputStore.getState().getInputData();
       
-      if (!activeInputId) {
-        console.error('No active input node found');
-        return null;
-      }
-      
-      const inputData = getInputData(activeInputId);
-
       // Get the last sentence or use the whole input
       const sentences = inputData.currentInput.split(/[.!?]/).filter(s => s.trim().length > 0);
       const lastSentence = sentences.length > 0 ? sentences[sentences.length - 1].trim() : inputData.currentInput;
@@ -184,7 +177,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
         );
         
         console.log(`🗑 Removing thought ${lowestScoreThought.id} due to exceeding max count (${maxThoughtCount})`);
-        const node = getNodeByEntityId('thought', lowestScoreThought.id);
+        const node = getNodeByThoughtId(lowestScoreThought.id);
         if (node) {
           markNodeForRemoval(node.id);
           setTimeout(() => {

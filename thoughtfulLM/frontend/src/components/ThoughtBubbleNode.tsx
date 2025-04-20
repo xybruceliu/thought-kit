@@ -283,6 +283,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
         justifyContent="center"
         cursor="grab"
         className="thought-bubble"
+        zIndex="10"
         opacity={isExiting ? 0 : opacity}
         style={{
           transform: `scale(${sizeScale * hoverScaleModifier})`,
@@ -328,7 +329,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
           opacity={thought.config.persistent || showPinButton ? opacity : 0}
           visibility={thought.config.persistent || showPinButton ? "visible" : "hidden"}
           transition="opacity 0.2s ease-in-out, visibility 0.2s ease-in-out"
-          zIndex="1"
+          zIndex="10"
           style={{
             transform: `scale(${1/sizeScale})`
           }}
@@ -356,7 +357,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
           opacity={showDeleteButton ? opacity : 0}
           visibility={showDeleteButton ? "visible" : "hidden"}
           transition="opacity 0.2s ease-in-out, visibility 0.2s ease-in-out"
-          zIndex="1"
+          zIndex="10"
           style={{
             transform: `scale(${1/sizeScale})`
           }}

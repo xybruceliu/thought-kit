@@ -92,7 +92,7 @@ const Settings: React.FC<SettingsProps> = ({
           colorScheme="gray"
         />
         
-        <Popover placement="right-start">
+        <Popover placement="right-start" strategy="fixed" gutter={2}>
           <PopoverTrigger>
             <IconButton
               aria-label="Settings"
@@ -111,8 +111,8 @@ const Settings: React.FC<SettingsProps> = ({
             <PopoverCloseButton />
             <PopoverBody>
               <Flex direction="column" gap={3}>
-                <Box>
-                  <Text mb={1} fontSize="sm">Interface</Text>
+               
+                  {/* <Text mb={1} fontSize="sm">Interface</Text> */}
                   <Select 
                     size="sm" 
                     value={interfaceType} 
@@ -123,7 +123,7 @@ const Settings: React.FC<SettingsProps> = ({
                     <option value={3}>Interface 3</option>
                     <option value={4}>Interface 4</option>
                   </Select>
-                </Box>
+              
                 
                 <Box>
                   <Text mb={1} fontSize="sm">Max Thoughts</Text>
