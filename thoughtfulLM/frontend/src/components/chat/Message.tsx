@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Box, Text, Flex } from '@chakra-ui/react';
 
 export interface MessageProps {
@@ -11,6 +11,26 @@ export interface MessageProps {
 const Message: React.FC<MessageProps> = ({ content, sender, timestamp }) => {
   // Calculate message styling based on sender
   const isUser = sender === 'user';
+  const [displayedContent, setDisplayedContent] = useState(isUser ? content : '');
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const messageEndRef = useRef<HTMLDivElement>(null);
+  
+  // Streaming effect for AI messages
+  useEffect(() => {
+    if (isUser) return;
+    
+    if (currentIndex < content.length) {
+      const timer = setTimeout(() => {
+        setDisplayedContent(prev => prev + content[currentIndex]);
+        setCurrentIndex(currentIndex + 1);
+        
+        // Scroll to bottom with each character update
+        messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 5); // Adjust speed here (lower = faster)
+      
+      return () => clearTimeout(timer);
+    }
+  }, [content, currentIndex, isUser]);
   
   const formattedTime = new Date(timestamp).toLocaleTimeString([], { 
     hour: '2-digit', 
@@ -20,24 +40,25 @@ const Message: React.FC<MessageProps> = ({ content, sender, timestamp }) => {
   return (
     <Flex
       justify={isUser ? 'flex-end' : 'flex-start'}
-      mb={3}
+      mb={4}
       width="100%"
     >
       <Box
-        bg={isUser ? 'gray.200' : 'blue.100'}
-        color={isUser ? 'gray.700' : 'gray.800'}
+        bg={isUser ? 'gray.200' : 'none'}
+        color="gray.700"
         borderRadius="lg"
         px={4}
         py={3}
-        maxWidth="70%"
-        boxShadow="sm"
+        maxWidth={isUser ? '70%' : '100%'}
+        boxShadow={isUser ? 'sm' : 'none'}
       >
         <Text fontSize="md" whiteSpace="pre-wrap" wordBreak="break-word">
-          {content}
+          {displayedContent}
         </Text>
         {/* <Text fontSize="xs" color="gray.500" textAlign="right" mt={1}>
           {formattedTime}
         </Text> */}
+        <div ref={messageEndRef} />
       </Box>
     </Flex>
   );

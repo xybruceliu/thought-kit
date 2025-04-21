@@ -30,12 +30,12 @@ const MessageInput: React.FC<MessageInputProps> = ({
   useAutomaticTriggerDetection();
 
   // Add auto-resize effect
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-    }
-  }, [message]);
+  // useEffect(() => {
+  //   if (textareaRef.current) {
+  //     textareaRef.current.style.height = 'auto';
+  //     textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+  //   }
+  // }, [message]);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newMessage = e.target.value;
@@ -84,8 +84,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         resize="none"
-        minH="60px"
-        overflow="hidden"
+        minH="125px"
+        // overflow="hidden"
         border="none"
         borderRadius="2xl"
         _focus={{

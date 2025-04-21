@@ -14,7 +14,6 @@ import { v4 as uuidv4 } from 'uuid';
  * @returns The created ReactFlow node
  */
 export function createThoughtNode(thought: Thought, position: XYPosition): ReactFlowNode<NodeData> {
-  console.log('DEBUG: Creating thought node:', thought, position);
   // Get the node store instance
   const nodeStore = useNodeStore.getState();
   const thoughtStore = useThoughtStore.getState();

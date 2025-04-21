@@ -21,20 +21,6 @@ const MessageContainer: React.FC<MessageContainerProps> = ({ messages }) => {
       flex="1"
       overflowY="auto"
       px={4}
-      pb={4}
-      css={{
-        '&::-webkit-scrollbar': {
-          width: '8px',
-        },
-        '&::-webkit-scrollbar-track': {
-          background: 'rgba(0,0,0,0.05)',
-          borderRadius: '10px',
-        },
-        '&::-webkit-scrollbar-thumb': {
-          background: 'rgba(0,0,0,0.15)',
-          borderRadius: '10px',
-        },
-      }}
     >
       {messages.map((message, index) => (
         <Message

@@ -71,6 +71,26 @@ const CanvasContent: React.FC = () => {
     console.log('Message sent:', message);
     // Add the message to the chat store
     addUserMessage(message);
+    
+    // Set processing state to true to show loading indicator
+    useChatStore.getState().setIsProcessing(true);
+    
+    // Use the existing handleThoughtsSubmit method from thoughtStore
+    useThoughtStore.getState().handleThoughtsSubmit()
+      .then((response) => {
+        if (response) {
+          // Add the AI response to the chat
+          useChatStore.getState().addAIResponse(response);
+        } else {
+          // Handle case where response is null
+          console.error('No response from handleThoughtsSubmit');
+        }
+      })
+      .catch(() => {
+        // Add a fallback response if there's an error
+        console.error('Error getting AI response');
+      });
+    
     // Input is already being tracked by the input store through the MessageInput component
   }, [addUserMessage]);
 
@@ -102,14 +122,14 @@ const CanvasContent: React.FC = () => {
           top="35px"
           width="100%"
           maxWidth="600px"
-          height="50%"
+          maxHeight="50%"
           zIndex={1}
           mx="auto"
           left="50%"
           transform="translateX(-50%)"
-
           display="flex"
           flexDirection="column"
+          overflow="hidden"
         >
           <MessageContainer messages={messages} />
         </Box>
