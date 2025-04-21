@@ -251,23 +251,48 @@ export const positioningStrategies = {
 };
 
 /**
- * Creates a bounded area above a given input node and updates the global bounds store
+ * Get dimensions and position for either a ReactFlow node or a DOM element
  */
-export const createBoundsAboveNode = (node: ReactFlowNode, showVisually?: boolean): Bounds => {
-  if (!node) {
+const getElementDimensions = (element: ReactFlowNode | HTMLElement): { x: number, y: number, width: number, height: number } => {
+  if (!element) {
+    return { x: 0, y: 0, width: 500, height: 200 };
+  }
+  
+  // If it's a ReactFlow node
+  if ('position' in element) {
+    return {
+      x: element.position.x,
+      y: element.position.y,
+      width: element.width || 500,
+      height: element.height || 200
+    };
+  }
+  
+  // If it's a DOM element
+  const rect = element.getBoundingClientRect();
+  return {
+    x: rect.left,
+    y: rect.top,
+    width: rect.width,
+    height: rect.height
+  };
+};
+
+/**
+ * Creates a bounded area above a given element and updates the global bounds store
+ */
+export const createBoundsAboveNode = (element: ReactFlowNode | HTMLElement, showVisually?: boolean): Bounds => {
+  if (!element) {
     const defaultBounds = useBoundsStore.getState().defaultBounds;
     return defaultBounds;
   }
   
-  const nodeX = node.position.x;
-  const nodeY = node.position.y;
-  const nodeWidth = node.width || 500;
-  const nodeHeight = node.height || 200;
+  const { x: nodeX, y: nodeY, width: nodeWidth, height: nodeHeight } = getElementDimensions(element);
 
   // Width is 120% of the node width
   const boundsWidth = nodeWidth * 1.2;
   // Height is 3 times the thought node height
-  const boundsHeight =  nodeHeight * 0.7;
+  const boundsHeight = 200;
   // X offset to center the bounds above the node (accounts for the extra width)
   const xOffset = (boundsWidth - nodeWidth) / 2;
   // Y is 5pt above the input node upper bound
@@ -292,18 +317,15 @@ export const createBoundsAboveNode = (node: ReactFlowNode, showVisually?: boolea
 };
 
 /**
- * Creates a bounded area to the right of a given response node
+ * Creates a bounded area to the right of a given element
  */
-export const createBoundsRightOfNode = (node: ReactFlowNode, showVisually?: boolean): Bounds => {
-  if (!node) {
+export const createBoundsRightOfNode = (element: ReactFlowNode | HTMLElement, showVisually?: boolean): Bounds => {
+  if (!element) {
     const defaultBounds = useBoundsStore.getState().defaultBounds;
     return defaultBounds;
   }
   
-  const nodeX = node.position.x;
-  const nodeY = node.position.y - 20;
-  const nodeWidth = 500;
-  const nodeHeight = 200;
+  const { x: nodeX, y: nodeY, width: nodeWidth, height: nodeHeight } = getElementDimensions(element);
 
   // Width is 50% of the node width
   const boundsWidth = nodeWidth * 0.8;
@@ -330,18 +352,15 @@ export const createBoundsRightOfNode = (node: ReactFlowNode, showVisually?: bool
 };
 
 /**
- * Creates a bounded area below a given node and updates the global bounds store
+ * Creates a bounded area below a given element and updates the global bounds store
  */
-export const createBoundsBelowNode = (node: ReactFlowNode, showVisually?: boolean): Bounds => {
-  if (!node) {
+export const createBoundsBelowNode = (element: ReactFlowNode | HTMLElement, showVisually?: boolean): Bounds => {
+  if (!element) {
     const defaultBounds = useBoundsStore.getState().defaultBounds;
     return defaultBounds;
   }
   
-  const nodeX = node.position.x;
-  const nodeY = node.position.y;
-  const nodeWidth = node.width || 500;
-  const nodeHeight = node.height || 200;
+  const { x: nodeX, y: nodeY, width: nodeWidth, height: nodeHeight } = getElementDimensions(element);
 
   // Width is 120% of the node width
   const boundsWidth = nodeWidth * 1.2;
@@ -371,18 +390,15 @@ export const createBoundsBelowNode = (node: ReactFlowNode, showVisually?: boolea
 };
 
 /**
- * Creates a bounded area to the left of a given node and updates the global bounds store
+ * Creates a bounded area to the left of a given element and updates the global bounds store
  */
-export const createBoundsLeftOfNode = (node: ReactFlowNode, showVisually?: boolean): Bounds => {
-  if (!node) {
+export const createBoundsLeftOfNode = (element: ReactFlowNode | HTMLElement, showVisually?: boolean): Bounds => {
+  if (!element) {
     const defaultBounds = useBoundsStore.getState().defaultBounds;
     return defaultBounds;
   }
   
-  const nodeX = node.position.x;
-  const nodeY = node.position.y - 20;
-  const nodeWidth = 500;
-  const nodeHeight = 200;
+  const { x: nodeX, y: nodeY, width: nodeWidth, height: nodeHeight } = getElementDimensions(element);
 
   // Width is 80% of the node width (matching the right bounds pattern)
   const boundsWidth = nodeWidth * 0.8;

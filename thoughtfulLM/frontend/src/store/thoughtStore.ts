@@ -32,7 +32,7 @@ interface ThoughtStoreState {
   isThoughtActive: (thoughtId: string) => boolean;
   
   // Actions
-  generateThought: (triggerType: EventType, position?: { x: number, y: number }) => Promise<Thought | null>;
+  generateThought: (triggerType: EventType) => Promise<Thought | null>;
   addThought: (thought: Thought) => void;
   updateThought: (thoughtId: string, updatedThought: Thought) => void;
   removeThought: (thoughtId: string) => void;
@@ -87,7 +87,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
     return get().activeThoughtIds.includes(thoughtId);
   },
   
-  generateThought: async (triggerType: EventType, position?: { x: number, y: number }) => {
+  generateThought: async (triggerType: EventType) => {
     try {
       let returnedThought = null;
       // Get input data
@@ -342,7 +342,6 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       // Signal that response is ready
       const onResponseCreated = get().onResponseCreated;
       if (onResponseCreated && response.response) {
-        // Just pass the content, the hook will handle positioning
         onResponseCreated(response.response);
       }
 

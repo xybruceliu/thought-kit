@@ -2,10 +2,11 @@ import { useCallback, useRef, useEffect } from 'react';
 import { useThoughtStore } from '../store/thoughtStore';
 import { useInputStore } from '../store/inputStore';
 import { Node as ReactFlowNode, useReactFlow } from 'reactflow';
-import { createThoughtNode } from './nodeConnectors';
+import { createThoughtNode, generateAndCreateThoughtNode } from './nodeConnectors';
 import { NodeData } from '../store/nodeStore';
-import { boundedAreaStrategy } from '../utils/nodePositioning';
+import { boundedAreaStrategy, createBoundsAboveNode } from '../utils/nodePositioning';
 import { useSettingsStore } from '../store/settingsStore';
+import { useNodeStore } from '../store/nodeStore';
 
 // Interface for input data that will be used by the trigger detection
 export interface InputTriggerData {
@@ -108,35 +109,42 @@ export const useTriggerDetection = () => {
     triggerType: 'SENTENCE_END' | 'WORD_COUNT_CHANGE' | 'IDLE_TIME' | 'CLICK',
     inputText: string
   ): Promise<boolean> => {
-    // Calculate position based on canvas center
-    const viewport = reactFlowInstance.getViewport();
-    // Get the dimensions of the viewport container
-    const container = document.querySelector('.react-flow__renderer');
-    const containerWidth = container?.clientWidth || 800;
-    const containerHeight = container?.clientHeight || 600;
+    // Get existing nodes from the node store
+    const existingNodes = useNodeStore.getState().nodes;
     
-    // Use random position in the canvas center area
-    const randomOffset = () => (Math.random() - 0.5) * 200; // ±100px random offset
+    // Find the message input element
+    const messageInputElement = document.getElementById('message-input'); 
     
-    const position = reactFlowInstance.screenToFlowPosition({
-      x: containerWidth / 2 + randomOffset(),
-      y: containerHeight / 2 + randomOffset()
-    });
+    let position;
     
-    try {
-      // Generate the thought
-      const thought = await useThoughtStore.getState().generateThought(triggerType, position);
+    if (messageInputElement) {
+      // Create bounds above the message input
+      const bounds = createBoundsAboveNode(messageInputElement as HTMLElement);
       
-      // Create a thought node if successful
-      if (thought) {
-        createThoughtNode(thought, position);
-        return true;
-      }
-    } catch (error) {
-      console.error('Error generating thought:', error);
+      // Use the bounded area strategy to get a position within these bounds
+      // Pass in the existing nodes so the strategy can avoid overlaps
+      position = boundedAreaStrategy.calculateNodePosition(
+        bounds, 
+        existingNodes, 
+        'bottom' // Prefer positioning at the bottom
+      );
+    } else {
+      // Fallback to top left of canvas
+      console.log('No message input element found, falling back to top left of canvas');
+      position = reactFlowInstance.screenToFlowPosition({
+        x: 0,
+        y: 0
+      });
     }
     
-    return false;
+    try {
+      // Use the combined function to generate thought and create node in one step
+      const node = await generateAndCreateThoughtNode(triggerType, position);
+      return node !== null;
+    } catch (error) {
+      console.error('Error generating thought:', error);
+      return false;
+    }
   }, [reactFlowInstance]);
   
   // Handle clicks on the pane to generate thoughts
@@ -162,13 +170,8 @@ export const useTriggerDetection = () => {
       try {
         console.log('Trigger: Pane click 🖱️');
         
-        // Generate the thought
-        const thought = await useThoughtStore.getState().generateThought('CLICK', finalPosition);
-        
-        if (thought) {
-          // Add the thought to thought store and create a node via connector function
-          createThoughtNode(thought, finalPosition);
-        }
+        // Use the combined function to generate thought and create node
+        await generateAndCreateThoughtNode('CLICK', finalPosition);
       } catch (error) {
         console.error('Error generating thought from click:', error);
       }

@@ -14,6 +14,7 @@ import { v4 as uuidv4 } from 'uuid';
  * @returns The created ReactFlow node
  */
 export function createThoughtNode(thought: Thought, position: XYPosition): ReactFlowNode<NodeData> {
+  console.log('DEBUG: Creating thought node:', thought, position);
   // Get the node store instance
   const nodeStore = useNodeStore.getState();
   const thoughtStore = useThoughtStore.getState();
@@ -31,6 +32,32 @@ export function createThoughtNode(thought: Thought, position: XYPosition): React
     thoughtId: thought.id,
     blobVariant
   });
+}
+
+/**
+ * Generates a thought and creates a node for it in one operation
+ * @param triggerType The event type that triggered the thought generation
+ * @param position The position for the node on the canvas
+ * @returns Promise resolving to the created node or null if thought generation failed
+ */
+export async function generateAndCreateThoughtNode(
+  triggerType: 'SENTENCE_END' | 'WORD_COUNT_CHANGE' | 'IDLE_TIME' | 'CLICK',
+  position: XYPosition
+): Promise<ReactFlowNode<NodeData> | null> {
+  try {
+    // Generate the thought
+    const thought = await useThoughtStore.getState().generateThought(triggerType);
+    
+    // Create a thought node if successful
+    if (thought) {
+      return createThoughtNode(thought, position);
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error generating and creating thought node:', error);
+    return null;
+  }
 }
 
 /**

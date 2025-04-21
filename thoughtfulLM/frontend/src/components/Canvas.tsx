@@ -83,12 +83,6 @@ const CanvasContent: React.FC = () => {
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
           onPaneClick={onPaneClick}
-          fitView
-          fitViewOptions={{
-            padding: 0.5,
-            minZoom: 0.5,
-            maxZoom: 1.2
-          }}
           panOnScroll={false}
           panOnDrag={false}
           zoomOnScroll={false}
@@ -149,12 +143,6 @@ const CanvasContent: React.FC = () => {
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onPaneClick={onPaneClick}
-        fitView
-        fitViewOptions={{
-          padding: 0.5,
-          minZoom: 0.5,
-          maxZoom: 1.2
-        }}
         panOnScroll={false}
         panOnDrag={false}
         zoomOnScroll={false}

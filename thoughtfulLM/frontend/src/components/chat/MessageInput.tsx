@@ -69,6 +69,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
   return (
     <Box
+      id="message-input"
       bg="gray.50"
       borderRadius="2xl"
       boxShadow="sm"
