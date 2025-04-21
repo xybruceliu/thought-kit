@@ -113,8 +113,6 @@ const CanvasContent: React.FC = () => {
           mx="auto"
           left="50%"
           transform="translateX(-50%)"
-          borderColor="gray.300"
-          borderWidth="1px"
 
           display="flex"
           flexDirection="column"
