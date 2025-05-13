@@ -345,6 +345,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
         onResponseCreated(response.response);
       }
 
+      // Return the response text only
       return response.response;
     } catch (error) {
       console.error('Error articulating thoughts:', error);

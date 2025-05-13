@@ -79,8 +79,11 @@ const CanvasContent: React.FC = () => {
     useThoughtStore.getState().handleThoughtsSubmit()
       .then((response) => {
         if (response) {
-          // Add the AI response to the chat
-          useChatStore.getState().addAIResponse(response);
+          // Get the current active thought IDs from the thought store
+          const activeThoughtIds = useThoughtStore.getState().activeThoughtIds;
+          
+          // Add the AI response to the chat with related thought IDs
+          useChatStore.getState().addAIResponse(response, activeThoughtIds);
         } else {
           // Handle case where response is null
           console.error('No response from handleThoughtsSubmit');

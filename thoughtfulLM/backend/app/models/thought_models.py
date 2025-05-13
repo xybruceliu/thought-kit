@@ -107,6 +107,23 @@ class ArticulationRequest(BaseModel):
             }   
         }
     )
+
+# Add new response model for articulation
+class ArticulationResponse(BaseModel):
+    """
+    Model for thought articulation response.
+    """
+    response: str = Field(..., description="The articulated response text")
+    thought_ids: List[str] = Field(default_factory=list, description="List of thought IDs used to generate the response")
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "response": "AI is transforming healthcare through faster and more accurate diagnoses, which could lead to better patient outcomes.",
+                "thought_ids": ["thought-123", "thought-456"]
+            }
+        }
+    )
     
 class ThoughtUpdateRequest(BaseModel):
     """Request model for updating thought properties"""

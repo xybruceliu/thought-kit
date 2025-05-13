@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status, Body
-from app.models.thought_models import GenerationRequest, OperationRequest, ArticulationRequest, ThoughtUpdateRequest
+from app.models.thought_models import GenerationRequest, OperationRequest, ArticulationRequest, ThoughtUpdateRequest, ArticulationResponse
 from app.utils.similarity import cosine_similarity
 from thought_kit import thoughtkit
 import random
@@ -181,7 +181,7 @@ async def articulate_thoughts(request: ArticulationRequest):
                 optional memory, and articulation options
     
     Returns:
-        The articulated response
+        The articulated response with the IDs of thoughts used to generate it
     """
     try:
         # Convert Pydantic model to dict
@@ -195,7 +195,14 @@ async def articulate_thoughts(request: ArticulationRequest):
         # Articulate thoughts using ThoughtKit directly
         result = await thoughtkit.articulate(request_data)
         
-        return {"response": result}
+        # Collect thought IDs from the request
+        thought_ids = [thought.id for thought in request.thoughts]
+        
+        # Return response with thought IDs
+        return ArticulationResponse(
+            response=result,
+            thought_ids=thought_ids
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 

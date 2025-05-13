@@ -49,6 +49,7 @@ export interface ArticulateThoughtsRequest {
 
 export interface ArticulateThoughtsResponse {
   response: string;
+  thought_ids: string[];
 }
 
 export interface CreateMemoryRequest {
