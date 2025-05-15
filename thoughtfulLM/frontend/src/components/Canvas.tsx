@@ -79,8 +79,9 @@ const CanvasContent: React.FC = () => {
     useThoughtStore.getState().handleThoughtsSubmit()
       .then((response) => {
         if (response) {
-          // Get the current active thought IDs from the thought store
-          const activeThoughtIds = useThoughtStore.getState().activeThoughtIds;
+          // Get the active thought IDs from the thought store
+          const activeThoughts = useThoughtStore.getState().getActiveThoughts();
+          const activeThoughtIds = activeThoughts.map(thought => thought.id);
           
           // Add the AI response to the chat with related thought IDs
           useChatStore.getState().addAIResponse(response, activeThoughtIds);

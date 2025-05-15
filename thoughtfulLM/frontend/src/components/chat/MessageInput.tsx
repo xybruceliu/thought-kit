@@ -25,17 +25,15 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const [message, setMessage] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const updateInput = useInputStore(state => state.updateInput);
+  const updateActivityTimestamp = useInputStore(state => state.updateActivityTimestamp);
   
   // Set up automatic trigger detection
   useAutomaticTriggerDetection();
 
-  // Add auto-resize effect
-  // useEffect(() => {
-  //   if (textareaRef.current) {
-  //     textareaRef.current.style.height = 'auto';
-  //     textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-  //   }
-  // }, [message]);
+  // Update activity timestamp on any user interaction
+  const updateActivity = () => {
+    updateActivityTimestamp();
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newMessage = e.target.value;
@@ -46,6 +44,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Update activity timestamp on any keydown
+    updateActivity();
+    
     // Submit on Cmd/Ctrl + Enter
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       e.preventDefault();
@@ -82,6 +83,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
         value={message}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
+        onFocus={updateActivity}
+        onClick={updateActivity}
         placeholder={placeholder}
         resize="none"
         minH="125px"

@@ -17,19 +17,10 @@ interface ThoughtStoreState {
   // Data
   thoughts: Thought[];
   
-  // Active thought IDs - thoughts that are currently active in the system
-  activeThoughtIds: string[];
-  
   // Settings
   maxThoughtCount: number; // Maximum number of thoughts to display
   decay: number; // Time decay for saliency
   likeAmount: number; // Amount to like a thought
-
-  // Active thought management
-  addActiveThought: (thoughtId: string) => void;
-  removeActiveThought: (thoughtId: string) => void;
-  clearActiveThoughts: () => void;
-  isThoughtActive: (thoughtId: string) => boolean;
   
   // Actions
   generateThought: (triggerType: EventType) => Promise<Thought | null>;
@@ -37,6 +28,11 @@ interface ThoughtStoreState {
   updateThought: (thoughtId: string, updatedThought: Thought) => void;
   removeThought: (thoughtId: string) => void;
   clearThoughts: () => void;
+  
+  // Thought activity
+  setThoughtActive: (thoughtId: string, isActive: boolean) => void;
+  isThoughtActive: (thoughtId: string) => boolean;
+  getActiveThoughts: () => Thought[];
   
   // Thought operations
   operateOnThought: (thoughtId: string, operation: string, options?: object) => Promise<void>;
@@ -46,6 +42,9 @@ interface ThoughtStoreState {
   handleThoughtDelete: (thoughtId: string) => Promise<void>;
   handleThoughtsSubmit: () => Promise<string | null>;
   
+  // Get thoughts by IDs
+  getThoughtsByIds: (thoughtIds: string[]) => Thought[];
+  
   // Signal for response creation
   onResponseCreated?: (content: string) => string;
 }
@@ -54,38 +53,11 @@ interface ThoughtStoreState {
 export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
   // Data
   thoughts: [],
-  activeThoughtIds: [], // Track active thought IDs
   
   // SETTINGS
   maxThoughtCount: useSettingsStore.getState().maxThoughtCount,
   decay: useSettingsStore.getState().decay,
   likeAmount: useSettingsStore.getState().likeAmount, 
-  
-  // Active thought management methods
-  addActiveThought: (thoughtId: string) => {
-    set((state) => {
-      // Only add if it doesn't already exist in the active list
-      if (state.activeThoughtIds.includes(thoughtId)) return state;
-      
-      return {
-        activeThoughtIds: [...state.activeThoughtIds, thoughtId]
-      };
-    });
-  },
-  
-  removeActiveThought: (thoughtId: string) => {
-    set((state) => ({
-      activeThoughtIds: state.activeThoughtIds.filter(id => id !== thoughtId)
-    }));
-  },
-  
-  clearActiveThoughts: () => {
-    set({ activeThoughtIds: [] });
-  },
-  
-  isThoughtActive: (thoughtId: string) => {
-    return get().activeThoughtIds.includes(thoughtId);
-  },
   
   generateThought: async (triggerType: EventType) => {
     try {
@@ -129,7 +101,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
         get().updateThought(thoughtData.id, thoughtData);
         
         // Make sure the thought is in the active list
-        get().addActiveThought(thoughtData.id);
+        get().setThoughtActive(thoughtData.id, true);
 
         // Don't return the thought data
         returnedThought = null;
@@ -137,6 +109,10 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
 
       // If the thought is new, return the thought data
       else{
+        // Initialize is_active for new thoughts
+        if (thoughtData && !('is_active' in thoughtData)) {
+          (thoughtData as Thought).is_active = true;
+        }
         returnedThought = thoughtData;
       }
 
@@ -295,7 +271,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
   // Handle submitting thoughts for articulation
   handleThoughtsSubmit: async () => {
     try {
-      const { thoughts, activeThoughtIds } = get();
+      const { thoughts } = get();
       
       if (thoughts.length === 0) {
         console.log('No thoughts to articulate');
@@ -309,9 +285,12 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       const { useMemoryStore } = memoryStoreModule;
       const { memory } = useMemoryStore.getState();
       
+      // Use only active thoughts for articulation
+      const activeThoughts = get().getActiveThoughts();
+      
       // Articulate the thoughts into a response
       const response = await thoughtApi.articulateThoughts({
-        thoughts,
+        thoughts: activeThoughts.length > 0 ? activeThoughts : thoughts,
         memory
       });
       
@@ -355,40 +334,67 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
 
   // HELPER FUNCTIONS
   addThought: (thought: Thought) => {
+    // Ensure thought has is_active property (for backwards compatibility)
+    const thoughtWithActive = {
+      ...thought,
+      is_active: thought.is_active !== undefined ? thought.is_active : false
+    };
+    
     set((state) => ({
-      thoughts: [...state.thoughts, thought]
+      thoughts: [...state.thoughts, thoughtWithActive]
     }));
   },
 
   updateThought: (thoughtId: string, updatedThought: Thought) => {
     set((state) => ({
-      thoughts: state.thoughts.map((thought) =>
-        thought.id === thoughtId ? updatedThought : thought
-      )
+      thoughts: state.thoughts.map((thought) => {
+        if (thought.id === thoughtId) {
+          // Preserve the is_active property from the existing thought
+          return { 
+            ...updatedThought, 
+            is_active: thought.is_active !== undefined ? thought.is_active : false
+          };
+        }
+        return thought;
+      })
     }));
   },
   
   removeThought: (thoughtId: string) => {
-    try {
-      // Remove from active thoughts if it's still active
-      get().removeActiveThought(thoughtId);
-      
-      // Remove the thought from state
-      set((state) => ({
-        thoughts: state.thoughts.filter(t => t.id !== thoughtId)
-      }));
-    } catch (error) {
-      console.error(`Error removing thought ${thoughtId}:`, error);
-    }
+    // Remove the thought from state
+    set((state) => ({
+      thoughts: state.thoughts.filter(t => t.id !== thoughtId)
+    }));
   },
 
   clearThoughts: () => {
     set({
-      thoughts: [],
-      activeThoughtIds: []
+      thoughts: []
     });
   },
 
   // Signal for response creation
-  onResponseCreated: undefined
+  onResponseCreated: undefined,
+
+  // Thought activity
+  setThoughtActive: (thoughtId: string, isActive: boolean) => {
+    set((state) => ({
+      thoughts: state.thoughts.map((thought) =>
+        thought.id === thoughtId ? { ...thought, is_active: isActive } : thought
+      )
+    }));
+  },
+
+  isThoughtActive: (thoughtId: string) => {
+    return get().thoughts.find(t => t.id === thoughtId)?.is_active === true;
+  },
+
+  getActiveThoughts: () => {
+    return get().thoughts.filter(t => t.is_active === true);
+  },
+
+  // Get thoughts by IDs
+  getThoughtsByIds: (thoughtIds: string[]) => {
+    return get().thoughts.filter(t => thoughtIds.includes(t.id));
+  }
 })); 

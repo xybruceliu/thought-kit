@@ -20,8 +20,8 @@ export function createThoughtNode(thought: Thought, position: XYPosition): React
 
   // Add the thought to the thought store
   thoughtStore.addThought(thought); 
-  // Add the thought to the active thoughts list
-  thoughtStore.addActiveThought(thought.id);  
+  // Set the thought as active
+  thoughtStore.setThoughtActive(thought.id, true);
   
   // Generate a random blob variant (0-4)
   const blobVariant = Math.floor(Math.random() * 5);
@@ -105,8 +105,8 @@ export function deleteThoughtNode(thoughtId: string): void {
   if (node) {
     // Remove from NodeStore
     nodeStore.removeNode(node.id);
-    // Remove from ThoughtStore
-    thoughtStore.removeThought(thoughtId)
+    // Set the thought as inactive
+    thoughtStore.setThoughtActive(thoughtId, false);
   }
 }
 

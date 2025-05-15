@@ -27,6 +27,7 @@ export interface Thought {
   references: string[];
   user_comments: string[];
   score: Score;
+  is_active: boolean;
 }
 
 export interface ThoughtSeed {

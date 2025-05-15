@@ -18,7 +18,8 @@ const AppInfo: React.FC = () => {
   // Always call hooks, but conditionally select data inside the selector function
   const nodeCount = useNodeStore(state => debugMode ? state.nodes.length : 0);
   const thoughtCount = useThoughtStore(state => debugMode ? state.thoughts.length : 0);
-  const activeThoughts = useThoughtStore(state => debugMode ? state.activeThoughtIds.length : 0);
+  const activeThoughts = useThoughtStore(state => debugMode ? state.getActiveThoughts().length : 0);
+  const inactiveThoughts = useThoughtStore(state => debugMode ? state.thoughts.length - state.getActiveThoughts().length : 0);
   const memoryItems = useMemoryStore(state => debugMode 
     ? state.memory.long_term.length + state.memory.short_term.length 
     : 0);
@@ -54,7 +55,7 @@ const AppInfo: React.FC = () => {
             <Text fontWeight="medium">Store Data</Text>
             <Box pl={2} width="100%">
               <Text>Thought Nodes: {nodeCount}</Text>
-              <Text>Thoughts: {thoughtCount} (Active: {activeThoughts})</Text>
+              <Text>Thoughts: {thoughtCount} (Active: {activeThoughts}, Inactive: {inactiveThoughts})</Text>
               <Text>Memory: {memoryItems} (LT: {memoryLongTerm}, ST: {memoryShortTerm})</Text>
               <Text>Chat Messages: {messageCount}</Text>
               <Text>Input Length: {inputLength} chars</Text>

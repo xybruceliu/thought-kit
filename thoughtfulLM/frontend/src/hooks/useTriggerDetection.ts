@@ -35,8 +35,14 @@ export const useTriggerDetection = () => {
     }
     
     const now = Date.now();
-    if ((now - inputData.lastActivityTimestamp) > idleTimeThreshold) {
+    const timeSinceLastActivity = now - inputData.lastActivityTimestamp;
+    
+    if (timeSinceLastActivity > idleTimeThreshold) {
       console.log(`Trigger: Idle time > ${idleTimeThreshold}ms ⏱️`);
+      
+      // Set the idle trigger as fired in the input store
+      useInputStore.getState().setIdleTriggerFired(true);
+      
       return true;
     }
     return false;
@@ -93,6 +99,7 @@ export const useTriggerDetection = () => {
       return { triggerType: 'WORD_COUNT_CHANGE', inputAtCheckTime };
     }
     else if (checkIdleTrigger(inputData)) {
+      console.log("DEBUG: Idle trigger fired");
       return { triggerType: 'IDLE_TIME', inputAtCheckTime };
     }
     
@@ -251,6 +258,30 @@ export const useAutomaticTriggerDetection = (
       }
     };
   }, [inputData, checkTriggers, generateThoughtFromInput, onTrigger, debounceMs]);
+  
+  // Set up a separate interval specifically for checking idle time
+  useEffect(() => {
+    const idleCheckInterval = setInterval(() => {
+      // Only check for idle trigger if there's input and the idle trigger hasn't fired yet
+      if (inputData.currentInput.trim() && !inputData.idleTriggerFired) {
+        const { triggerType, inputAtCheckTime } = checkTriggers(inputData);
+        
+        if (triggerType === 'IDLE_TIME') {
+          generateThoughtFromInput(triggerType, inputAtCheckTime);
+          
+          if (onTrigger) {
+            onTrigger(triggerType);
+          }
+          
+          useInputStore.getState().updateInputBaseline(inputData.currentInput);
+        }
+      }
+    }, 1000); // Check every second
+    
+    return () => {
+      clearInterval(idleCheckInterval);
+    };
+  }, [inputData, checkTriggers, generateThoughtFromInput, onTrigger]);
   
   return {
     isMonitoring: true
