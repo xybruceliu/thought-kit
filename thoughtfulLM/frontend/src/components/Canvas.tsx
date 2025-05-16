@@ -4,7 +4,8 @@ import ReactFlow, {
   Controls,
   ReactFlowProvider,
   NodeTypes,
-  NodeChange
+  NodeChange,
+  applyNodeChanges
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Box, Button, Input, Textarea } from '@chakra-ui/react';
@@ -19,7 +20,9 @@ import { useThoughtStore } from '../store/thoughtStore';
 import { useMemoryStore } from '../store/memoryStore';
 import { useInputStore } from '../store/inputStore';
 import { useChatStore } from '../store/chatStore';
-import { MessageInput, MessageContainer } from './chat';
+import MessageContainer from './chat/MessageContainer';
+import MessageInput from './chat/MessageInput';
+import { deleteThoughtNode, getNodeByThoughtId, markNodeForRemoval } from '../hooks/nodeConnectors';
 // Define custom node types
 const nodeTypes: NodeTypes = {
   thoughtBubble: ThoughtBubbleNode,
@@ -38,6 +41,7 @@ const CanvasContent: React.FC = () => {
   
   // Get current interface type from settings store
   const interfaceType = useSettingsStore(state => state.interfaceType);
+  const { clearThoughtsOnSubmit } = useSettingsStore();
   
   // Get chat store data
   const { messages, addUserMessage, isProcessing } = useChatStore();
@@ -67,10 +71,11 @@ const CanvasContent: React.FC = () => {
   const thoughts = useThoughtStore(state => state.thoughts);
 
   // Handle message submission for the chat interface
-  const handleSendMessage = useCallback((message: string) => {
-    console.log('Message sent:', message);
-    // Add the message to the chat store
-    addUserMessage(message);
+  const handleSendMessage = useCallback((text: string) => {
+    if (!text.trim()) return;
+    
+    // Add user message to chat
+    addUserMessage(text);
     
     // Set processing state to true to show loading indicator
     useChatStore.getState().setIsProcessing(true);
@@ -85,6 +90,25 @@ const CanvasContent: React.FC = () => {
           
           // Add the AI response to the chat with related thought IDs
           useChatStore.getState().addAIResponse(response, activeThoughtIds);
+          
+          // AFTER processing the response, clear thoughts if the setting is enabled
+          if (clearThoughtsOnSubmit) {
+            // Get non-persistent active thoughts
+            const nonPersistentThoughts = activeThoughts.filter(t => !t.config.persistent);
+            
+            // Delete nodes for each non-persistent thought
+            nonPersistentThoughts.forEach(thought => {
+              const node = getNodeByThoughtId(thought.id);
+              if (node) {
+                // Mark for removal (for animation)
+                markNodeForRemoval(node.id);
+                // Delete after animation completes
+                setTimeout(() => {
+                  deleteThoughtNode(thought.id);
+                }, 1000);
+              }
+            });
+          }
         } else {
           // Handle case where response is null
           console.error('No response from handleThoughtsSubmit');
@@ -96,7 +120,7 @@ const CanvasContent: React.FC = () => {
       });
     
     // Input is already being tracked by the input store through the MessageInput component
-  }, [addUserMessage]);
+  }, [addUserMessage, clearThoughtsOnSubmit]);
 
 
   if (interfaceType === 1) {

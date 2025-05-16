@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Box, Text, Flex, Wrap, WrapItem, Tooltip } from '@chakra-ui/react';
 import { useThoughtStore } from '../../store/thoughtStore';
+import { useSettingsStore } from '../../store/settingsStore';
 import { Thought } from '../../types/thought';
 
 export interface MessageProps {
@@ -76,6 +77,9 @@ const Message: React.FC<MessageProps> = ({ content, sender, timestamp, relatedTh
   const [currentIndex, setCurrentIndex] = useState(0);
   const messageEndRef = useRef<HTMLDivElement>(null);
   
+  // Get showThoughtPills setting
+  const showThoughtPills = useSettingsStore(state => state.showThoughtPills);
+  
   // Get thoughts content when this is an AI message with related thought IDs
   const relatedThoughts = useThoughtStore(state => 
     !isUser && relatedThoughtIds.length > 0 
@@ -120,7 +124,7 @@ const Message: React.FC<MessageProps> = ({ content, sender, timestamp, relatedTh
       flexDirection="column"
     >
       {/* Display thought pills for AI messages */}
-      {!isUser && sortedThoughts.length > 0 && (
+      {!isUser && showThoughtPills && sortedThoughts.length > 0 && (
         <Flex px={4}>
           <Wrap spacing={2}>
             {sortedThoughts.map(thought => (

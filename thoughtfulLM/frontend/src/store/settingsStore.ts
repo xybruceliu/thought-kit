@@ -11,6 +11,8 @@ interface SettingsStoreState {
   maxThoughtCount: number;
   decay: number;
   likeAmount: number;
+  showThoughtPills: boolean;
+  clearThoughtsOnSubmit: boolean;
   
   // Audio settings
   microphoneEnabled: boolean;
@@ -23,6 +25,8 @@ interface SettingsStoreState {
   setMaxThoughtCount: (count: number) => void;
   setMicrophoneEnabled: (enabled: boolean) => void;
   setDebugMode: (enabled: boolean) => void;
+  setShowThoughtPills: (show: boolean) => void;
+  setClearThoughtsOnSubmit: (clear: boolean) => void;
 }
 
 export const useSettingsStore = create<SettingsStoreState>((set) => ({
@@ -31,6 +35,8 @@ export const useSettingsStore = create<SettingsStoreState>((set) => ({
   maxThoughtCount: 5,
   decay: 0.1,
   likeAmount: 0.2,
+  showThoughtPills: true,
+  clearThoughtsOnSubmit: false,
   microphoneEnabled: false,
   debugMode: false,
   
@@ -39,4 +45,6 @@ export const useSettingsStore = create<SettingsStoreState>((set) => ({
   setMaxThoughtCount: (count: number) => set({ maxThoughtCount: count }),
   setMicrophoneEnabled: (enabled: boolean) => set({ microphoneEnabled: enabled }),
   setDebugMode: (enabled: boolean) => set({ debugMode: enabled }),
+  setShowThoughtPills: (show: boolean) => set({ showThoughtPills: show }),
+  setClearThoughtsOnSubmit: (clear: boolean) => set({ clearThoughtsOnSubmit: clear }),
 })); 

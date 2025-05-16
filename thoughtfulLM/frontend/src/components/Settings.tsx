@@ -49,9 +49,13 @@ const Settings: React.FC<SettingsProps> = ({
     interfaceType,
     maxThoughtCount, 
     debugMode,
+    showThoughtPills,
+    clearThoughtsOnSubmit,
     setInterfaceType, 
     setMaxThoughtCount,
-    setDebugMode 
+    setDebugMode,
+    setShowThoughtPills,
+    setClearThoughtsOnSubmit
   } = useSettingsStore();
 
   const { setShowBounds } = useBoundsStore();
@@ -69,6 +73,14 @@ const Settings: React.FC<SettingsProps> = ({
     const isEnabled = e.target.checked;
     setDebugMode(isEnabled);
     setShowBounds(isEnabled);
+  };
+
+  const handleThoughtPillsToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setShowThoughtPills(e.target.checked);
+  };
+  
+  const handleClearThoughtsToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setClearThoughtsOnSubmit(e.target.checked);
   };
 
   return (
@@ -120,8 +132,6 @@ const Settings: React.FC<SettingsProps> = ({
                   >
                     <option value={1}>Interface 1</option>
                     <option value={2}>Interface 2</option>
-                    <option value={3}>Interface 3</option>
-                    <option value={4}>Interface 4</option>
                   </Select>
               
                 
@@ -143,8 +153,34 @@ const Settings: React.FC<SettingsProps> = ({
                 </Box>
 
                 <FormControl display='flex' alignItems='center' mt={1}>
+                  <FormLabel htmlFor='show-thought-pills' mb='0' fontSize="sm">
+                    Thought History
+                  </FormLabel>
+                  <Switch 
+                    id='show-thought-pills' 
+                    size='sm' 
+                    isChecked={showThoughtPills}
+                    onChange={handleThoughtPillsToggle}
+                  />
+                </FormControl>
+
+
+                <FormControl display='flex' alignItems='center' mt={1}>
+                  <FormLabel htmlFor='clear-thoughts-on-submit' mb='0' fontSize="sm">
+                    Clear Thoughts on Submit
+                  </FormLabel>
+                  <Switch 
+                    id='clear-thoughts-on-submit' 
+                    size='sm' 
+                    isChecked={clearThoughtsOnSubmit}
+                    onChange={handleClearThoughtsToggle}
+                  />
+                </FormControl>
+                
+
+                <FormControl display='flex' alignItems='center' mt={1}>
                   <FormLabel htmlFor='debug-mode' mb='0' fontSize="sm">
-                    Debug
+                    Debug Mode
                   </FormLabel>
                   <Switch 
                     id='debug-mode' 
@@ -153,6 +189,9 @@ const Settings: React.FC<SettingsProps> = ({
                     onChange={handleDebugToggle}
                   />
                 </FormControl>
+
+                
+
               </Flex>
             </PopoverBody>
           </PopoverContent>
