@@ -30,7 +30,7 @@ export const useTriggerDetection = () => {
   // Check if idle time trigger condition is met
   const checkIdleTrigger = useCallback((inputData: InputTriggerData) => {
     // Only trigger if we haven't already fired an idle trigger and there is input text
-    if (inputData.idleTriggerFired || !inputData.currentInput.trim()) {
+    if (inputData.idleTriggerFired || !inputData.newInput) {
       return false;
     }
     
