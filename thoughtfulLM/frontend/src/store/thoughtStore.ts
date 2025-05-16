@@ -61,8 +61,8 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
   
   generateThought: async (triggerType: EventType) => {
     try {
-      let activeThoughts = get().getActiveThoughts();
       let returnedThought = null;
+      
       // Get input data
       const inputStoreModule = await import('./inputStore');
       const { useInputStore } = inputStoreModule;
@@ -77,11 +77,11 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       const { useMemoryStore } = memoryStoreModule;
       const { memory } = useMemoryStore.getState();
       
-      // Generate thought from backend
+      // Generate thought from backend - use current active thoughts
       const thoughtData = await thoughtApi.generateThought({
         event_text: lastSentence,
         event_type: triggerType,
-        thoughts: activeThoughts,
+        thoughts: get().getActiveThoughts(), // Get fresh list of active thoughts
         memory: memory
       });
 
@@ -90,9 +90,12 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
         return null;
       }
       
+      // Get a fresh snapshot of active thoughts for each operation
+      const currentActiveThoughts = get().getActiveThoughts();
+      
       // Check if this thought already exists (update case)
       // Our backend returns the same thought id if the thought is similar, with UPDATED saliency
-      const existingThoughtIndex = activeThoughts.findIndex(t => t.id === thoughtData.id);
+      const existingThoughtIndex = currentActiveThoughts.findIndex(t => t.id === thoughtData.id);
       const isUpdate = existingThoughtIndex >= 0;
       
       if (isUpdate) {
@@ -133,37 +136,41 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
         memory.short_term.push(memoryItem);
       }
         
-
-      // Remove excess non-persistent thoughts if needed
-      let nonPersistentThoughts = activeThoughts.filter(t => !t.config.persistent);
-      // Get max thoughts count from settings store 
-      const { maxThoughtCount } = useSettingsStore.getState();
-      
-      if (nonPersistentThoughts.length >= maxThoughtCount) {
-        // Find and remove the thought with the lowest score that is NOT the new thought
-        const thoughtsWithScore = nonPersistentThoughts
-          .filter(t => t.id !== thoughtData.id) // Exclude the newly added thought
-          .map(t => ({
+      // Check if we need to remove excess thoughts BEFORE adding the new thought
+      if (!isUpdate) {
+        // Get fresh list of active thoughts again
+        const currentActiveThoughts = get().getActiveThoughts();
+        let nonPersistentThoughts = currentActiveThoughts.filter(t => !t.config.persistent);
+        
+        // Get max thoughts count from settings store 
+        const { maxThoughtCount } = useSettingsStore.getState();
+        
+        // Account for the new thought we're about to add
+        if (nonPersistentThoughts.length >= maxThoughtCount) {
+          // Find and remove the thought with the lowest score
+          const thoughtsWithScore = nonPersistentThoughts.map(t => ({
             id: t.id,
             score: t.score.saliency + t.score.weight
           }));
+            
+          const lowestScoreThought = thoughtsWithScore.reduce((lowest, current) => 
+            current.score < lowest.score ? current : lowest
+          );
           
-        const lowestScoreThought = thoughtsWithScore.reduce((lowest, current) => 
-          current.score < lowest.score ? current : lowest
-        );
-        
-        console.log(`🗑 Removing thought ${lowestScoreThought.id} due to exceeding max count (${maxThoughtCount})`);
-        const node = getNodeByThoughtId(lowestScoreThought.id);
-        if (node) {
-          markNodeForRemoval(node.id);
-          setTimeout(() => {
-            deleteThoughtNode(lowestScoreThought.id);
-          }, 1000);
+          console.log(`🗑 Removing thought ${lowestScoreThought.id} due to exceeding max count (${maxThoughtCount})`);
+          const node = getNodeByThoughtId(lowestScoreThought.id);
+          if (node) {
+            markNodeForRemoval(node.id);
+            setTimeout(() => {
+              deleteThoughtNode(lowestScoreThought.id);
+            }, 1000);
+          }
         }
       }
       
-      // Apply time decay to older thoughts
-      const updatedThoughts = activeThoughts.map(thought => {
+      // Apply time decay to the current active thoughts (get fresh list again)
+      const activeThoughtsForDecay = get().getActiveThoughts();
+      const updatedThoughts = activeThoughtsForDecay.map(thought => {
         if (thought.id !== thoughtData.id && !thought.config.persistent) {
           const thoughtCopy = { ...thought };
 
@@ -182,7 +189,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
           
           // If not similar to the new thought, check with all other thoughts
           if (!hasHighSimilarity) {
-            for (const otherThought of activeThoughts) {
+            for (const otherThought of activeThoughtsForDecay) {
               // Skip comparison with itself or the new thought (we already checked that)
               if (otherThought.id === thought.id || otherThought.id === thoughtData.id) {
                 continue;
@@ -212,7 +219,10 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
         return thought;
       });
       
-      set({ thoughts: updatedThoughts });
+      // Update thoughts individually instead of replacing all thoughts
+      for (const thought of updatedThoughts) {
+        get().updateThought(thought.id, thought);
+      }
       
       return returnedThought;
     } catch (error) {
@@ -226,14 +236,16 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
     try {
       const activeThoughts = get().getActiveThoughts();
       const thought = activeThoughts.find(t => t.id === thoughtId);
+      
       if (!thought) {
         console.error(`Thought with ID ${thoughtId} not found in store`);
         return;
       }
       
+      // Only send the specific thought we're operating on, not all active thoughts
       const result = await thoughtApi.operateOnThought({
         operation,
-        thoughts: activeThoughts,
+        thoughts: [thought], // Only send the specific thought we're operating on
         options
       });
       
@@ -264,7 +276,8 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
 
   handleThoughtDelete: async (thoughtId: string) => {
     try {
-      get().removeThought(thoughtId);
+      // set the thought as inactive
+      get().setThoughtActive(thoughtId, false);
     } catch (error) {
       console.error(`Error handling thought deletion for ${thoughtId}:`, error);
     }

@@ -33,6 +33,11 @@ export const useTriggerDetection = () => {
     if (inputData.idleTriggerFired || !inputData.newInput) {
       return false;
     }
+
+    // if new input length is smaller than 3 characters, don't trigger idle trigger
+    if (inputData.newInput.length < 3) {
+      return false;
+    }
     
     const now = Date.now();
     const timeSinceLastActivity = now - inputData.lastActivityTimestamp;
@@ -99,7 +104,6 @@ export const useTriggerDetection = () => {
       return { triggerType: 'WORD_COUNT_CHANGE', inputAtCheckTime };
     }
     else if (checkIdleTrigger(inputData)) {
-      console.log("DEBUG: Idle trigger fired");
       return { triggerType: 'IDLE_TIME', inputAtCheckTime };
     }
     
