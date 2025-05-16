@@ -123,30 +123,50 @@ export const useTriggerDetection = () => {
     // Get existing nodes from the node store
     const existingNodes = useNodeStore.getState().nodes;
     
+    // Get current interface type from settings store
+    const interfaceType = useSettingsStore.getState().interfaceType;
+    
     // Find the message input element
     const messageInputElement = document.getElementById('message-input'); 
     
-    let position;
+    // Determine the position of the thought bubble
+    let position = reactFlowInstance.screenToFlowPosition({ x: 100, y: 100 }); // Default position
     
-    if (messageInputElement) {
-      // Create bounds above the message input
-      const bounds = createBoundsAboveNode(messageInputElement as HTMLElement);
+    // if interface type is 1, position the thought bubble above the message input
+    if (interfaceType === 1) {
+      if (messageInputElement) {
+        // Create bounds above the message input
+        const bounds = createBoundsAboveNode(messageInputElement as HTMLElement);
+        
+        // Use the bounded area strategy to get a position within these bounds
+        // Pass in the existing nodes so the strategy can avoid overlaps
+        position = boundedAreaStrategy.calculateNodePosition(
+          bounds, 
+          existingNodes, 
+          'bottom' // Prefer positioning at the bottom
+        );
+      } else {
+        // Fallback to top left of canvas
+        console.log('No message input element found, falling back to top left of canvas');
+        position = reactFlowInstance.screenToFlowPosition({
+          x: 0,
+          y: 0
+        });
+      }
+    } 
+    // For interface type 2 (split-screen layout), position thoughts in the left panel
+    else if (interfaceType === 2) {
+      // Simple random positioning in the left side of the screen
+      const randomX = Math.random() * 500; // Random X within the left panel (0-500px)
+      const randomY = 100 + Math.random() * 500; // Random Y (100-600px)
       
-      // Use the bounded area strategy to get a position within these bounds
-      // Pass in the existing nodes so the strategy can avoid overlaps
-      position = boundedAreaStrategy.calculateNodePosition(
-        bounds, 
-        existingNodes, 
-        'bottom' // Prefer positioning at the bottom
-      );
-    } else {
-      // Fallback to top left of canvas
-      console.log('No message input element found, falling back to top left of canvas');
       position = reactFlowInstance.screenToFlowPosition({
-        x: 0,
-        y: 0
+        x: randomX,
+        y: randomY
       });
     }
+
+    
     
     try {
       // Use the combined function to generate thought and create node in one step

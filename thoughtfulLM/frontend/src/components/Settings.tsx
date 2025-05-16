@@ -167,7 +167,7 @@ const Settings: React.FC<SettingsProps> = ({
 
                 <FormControl display='flex' alignItems='center' mt={1}>
                   <FormLabel htmlFor='clear-thoughts-on-submit' mb='0' fontSize="sm">
-                    Clear Thoughts on Submit
+                    Clear on Submit
                   </FormLabel>
                   <Switch 
                     id='clear-thoughts-on-submit' 
@@ -176,7 +176,7 @@ const Settings: React.FC<SettingsProps> = ({
                     onChange={handleClearThoughtsToggle}
                   />
                 </FormControl>
-                
+
 
                 <FormControl display='flex' alignItems='center' mt={1}>
                   <FormLabel htmlFor='debug-mode' mb='0' fontSize="sm">

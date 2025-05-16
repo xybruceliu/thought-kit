@@ -184,6 +184,66 @@ const CanvasContent: React.FC = () => {
   }
   
   // Default return for other interface types
+  if (interfaceType === 2) {
+    return (
+      <>
+        {/* Split-screen layout */}
+        <Box display="flex" width="100%" height="100vh">
+          {/* Left side - ReactFlow canvas (larger portion) */}
+          <Box flex="2" position="relative" height="100vh">
+            <ReactFlow
+              nodes={nodes}
+              nodeTypes={nodeTypes}
+              onNodesChange={onNodesChange}
+              onPaneClick={onPaneClick}
+              panOnScroll={false}
+              panOnDrag={false}
+              zoomOnScroll={false}
+              zoomOnPinch={false}
+              zoomOnDoubleClick={false}
+            >
+              <Controls showInteractive={false} />
+              <Background gap={12} size={1} color="none" />
+              <BoundaryIndicator />
+            </ReactFlow>
+            
+            <Settings onMicrophoneClick={() => {}} />
+          </Box>
+          
+          {/* Right side - Chat panel */}
+          <Box 
+            flex="1" 
+            bg="gray.100" 
+            height="100vh" 
+            display="flex"
+            flexDirection="column"
+            borderLeft="1px solid"
+            borderColor="gray.200"
+          >
+            {/* Message Container - fills available space */}
+            <Box
+              flex="1"
+              overflow="auto"
+              p={4}
+            >
+              <MessageContainer messages={messages} />
+            </Box>
+            
+            {/* Message input - fixed at bottom */}
+            <Box p={4}>
+              <MessageInput
+                onSubmit={handleSendMessage}
+                placeholder="Say anything"
+                disabled={isProcessing}
+              />
+            </Box>
+          </Box>
+        </Box>
+      </>
+    );
+  }
+  
+  // Default return for other interface types
   return (
     <>
       <ReactFlow
