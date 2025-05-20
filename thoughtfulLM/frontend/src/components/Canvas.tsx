@@ -23,6 +23,52 @@ import { useChatStore } from '../store/chatStore';
 import MessageContainer from './chat/MessageContainer';
 import MessageInput from './chat/MessageInput';
 import { deleteThoughtNode, getNodeByThoughtId, markNodeForRemoval } from '../hooks/nodeConnectors';
+
+// TypeScript declarations for Web Speech API
+interface SpeechRecognitionEvent {
+  results: SpeechRecognitionResultList;
+  resultIndex: number;
+  error: any;
+}
+
+interface SpeechRecognitionResultList {
+  readonly length: number;
+  [index: number]: SpeechRecognitionResult;
+  item(index: number): SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionResult {
+  readonly length: number;
+  [index: number]: SpeechRecognitionAlternative;
+  item(index: number): SpeechRecognitionAlternative;
+  isFinal: boolean;
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string;
+  confidence: number;
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start(): void;
+  stop(): void;
+  abort(): void;
+  onresult: (event: SpeechRecognitionEvent) => void;
+  onerror: (event: any) => void;
+  onend: () => void;
+}
+
+// Augment the Window interface
+declare global {
+  interface Window {
+    SpeechRecognition?: new () => SpeechRecognition;
+    webkitSpeechRecognition?: new () => SpeechRecognition;
+  }
+}
+
 // Define custom node types
 const nodeTypes: NodeTypes = {
   thoughtBubble: ThoughtBubbleNode,
@@ -42,9 +88,74 @@ const CanvasContent: React.FC = () => {
   // Get current interface type from settings store
   const interfaceType = useSettingsStore(state => state.interfaceType);
   const { clearThoughtsOnSubmit } = useSettingsStore();
+  const { microphoneEnabled, setMicrophoneEnabled } = useSettingsStore();
   
   // Get chat store data
   const { messages, addUserMessage, isProcessing } = useChatStore();
+  
+  // Speech recognition state
+  const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
+  
+  // Initialize speech recognition
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Use the browser's SpeechRecognition API
+      const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+      
+      if (SpeechRecognitionAPI) {
+        const recognitionInstance = new SpeechRecognitionAPI();
+        
+        // Configure the recognition
+        recognitionInstance.continuous = true;
+        recognitionInstance.interimResults = true;
+        
+        // Store the recognition instance
+        setRecognition(recognitionInstance);
+        
+        // Handle cleanup
+        return () => {
+          recognitionInstance.stop();
+        };
+      } else {
+        console.warn('Speech Recognition API is not supported in this browser');
+      }
+    }
+  }, []);
+  
+  // Handle microphone click
+  const handleMicrophoneClick = useCallback(() => {
+    if (!recognition) return;
+    
+    if (microphoneEnabled) {
+      // Stop listening
+      recognition.stop();
+      setMicrophoneEnabled(false);
+    } else {
+      // Start listening
+      recognition.start();
+      
+      // Add event listeners
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
+        const transcript = Array.from(event.results)
+          .map(result => result[0].transcript)
+          .join('');
+          
+        // Update the input with the recognized text
+        useInputStore.getState().updateInput(transcript);
+      };
+      
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error', event.error);
+        setMicrophoneEnabled(false);
+      };
+      
+      recognition.onend = () => {
+        setMicrophoneEnabled(false);
+      };
+      
+      setMicrophoneEnabled(true);
+    }
+  }, [recognition, microphoneEnabled, setMicrophoneEnabled]);
   
   // Initialize the application when the component mounts or interface type changes
   useEffect(() => {
@@ -142,7 +253,7 @@ const CanvasContent: React.FC = () => {
           <BoundaryIndicator />
         </ReactFlow>
   
-        <Settings onMicrophoneClick={() => {}} />
+        <Settings onMicrophoneClick={handleMicrophoneClick} />
   
         {/* Message Container */}
         <Box
@@ -207,7 +318,7 @@ const CanvasContent: React.FC = () => {
               <BoundaryIndicator />
             </ReactFlow>
             
-            <Settings onMicrophoneClick={() => {}} />
+            <Settings onMicrophoneClick={handleMicrophoneClick} />
           </Box>
           
           {/* Right side - Chat panel */}
@@ -262,7 +373,7 @@ const CanvasContent: React.FC = () => {
         <BoundaryIndicator />
       </ReactFlow>
       
-      <Settings onMicrophoneClick={() => {}} />
+      <Settings onMicrophoneClick={handleMicrophoneClick} />
     </>
   );
 };

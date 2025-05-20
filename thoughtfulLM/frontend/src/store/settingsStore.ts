@@ -36,7 +36,7 @@ export const useSettingsStore = create<SettingsStoreState>((set) => ({
   decay: 0.1,
   likeAmount: 0.2,
   showThoughtPills: true,
-  clearThoughtsOnSubmit: false,
+  clearThoughtsOnSubmit: true,
   microphoneEnabled: false,
   debugMode: false,
   

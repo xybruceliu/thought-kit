@@ -1,12 +1,11 @@
-import { useCallback, useRef, useEffect } from 'react';
+import React, { useCallback, useRef, useEffect } from 'react';
+import { useReactFlow } from 'reactflow';
 import { useThoughtStore } from '../store/thoughtStore';
 import { useInputStore } from '../store/inputStore';
-import { Node as ReactFlowNode, useReactFlow } from 'reactflow';
-import { createThoughtNode, generateAndCreateThoughtNode } from './nodeConnectors';
-import { NodeData } from '../store/nodeStore';
-import { boundedAreaStrategy, createBoundsAboveNode } from '../utils/nodePositioning';
 import { useSettingsStore } from '../store/settingsStore';
 import { useNodeStore } from '../store/nodeStore';
+import { boundedAreaStrategy, createBoundsAboveNode } from '../utils/nodePositioning';
+import { generateAndCreateThoughtNode } from './nodeConnectors';
 
 // Interface for input data that will be used by the trigger detection
 export interface InputTriggerData {
@@ -60,8 +59,14 @@ export const useTriggerDetection = () => {
     
     // Use newInput word count for trigger
     const newWordCount = inputData.newInput.split(/\s+/).filter(Boolean).length;
-    // Only trigger when new word count has reached the threshold and the last character is a " " to make sure user finished typing a word
-    if (newWordCount >= wordCountChangeThreshold && inputData.newInput.slice(-1) === " ") {
+    
+    // Get the microphone state from the settings store
+    const microphoneEnabled = useSettingsStore.getState().microphoneEnabled;
+    
+    // For typing: only trigger when word count reached threshold and last char is space
+    // For voice: just check the word count without requiring space at the end
+    if (newWordCount >= wordCountChangeThreshold && 
+        (microphoneEnabled || inputData.newInput.slice(-1) === " ")) {
       console.log(`Trigger: Word count increase > ${wordCountChangeThreshold} ✍️`);
       return true;
     }

@@ -19,11 +19,19 @@ import {
   Divider,
   Switch,
   FormControl,
-  FormLabel
+  FormLabel,
+  keyframes
 } from '@chakra-ui/react';
 import { SettingsIcon, createIcon } from '@chakra-ui/icons';
 import { useSettingsStore } from '../store/settingsStore';
 import { useBoundsStore } from '../store/boundsStore';
+
+// Define pulse animation
+const pulseAnimation = keyframes`
+  0% { box-shadow: 0 0 0 0 rgba(229, 62, 62, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(229, 62, 62, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(229, 62, 62, 0); }
+`;
 
 // Create custom microphone icon
 const MicrophoneIcon = createIcon({
@@ -51,6 +59,7 @@ const Settings: React.FC<SettingsProps> = ({
     debugMode,
     showThoughtPills,
     clearThoughtsOnSubmit,
+    microphoneEnabled,
     setInterfaceType, 
     setMaxThoughtCount,
     setDebugMode,
@@ -101,7 +110,14 @@ const Settings: React.FC<SettingsProps> = ({
           size="md"
           variant="ghost"
           onClick={onMicrophoneClick}
-          colorScheme="gray"
+          colorScheme={microphoneEnabled ? "red" : "gray"}
+          bg={microphoneEnabled ? "red.100" : "transparent"}
+          _hover={{
+            bg: microphoneEnabled ? "red.200" : "gray.200"
+          }}
+          sx={{
+            animation: microphoneEnabled ? `${pulseAnimation} 1.5s infinite` : "none"
+          }}
         />
         
         <Popover placement="right-start" strategy="fixed" gutter={2}>

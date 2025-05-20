@@ -10,6 +10,7 @@ import {
 import { ArrowUpIcon } from '@chakra-ui/icons';
 import { useInputStore } from '../../store/inputStore';
 import { useAutomaticTriggerDetection } from '../../hooks/useTriggerDetection';
+import { useSettingsStore } from '../../store/settingsStore';
 
 interface MessageInputProps {
   onSubmit?: (message: string) => void;
@@ -24,11 +25,22 @@ const MessageInput: React.FC<MessageInputProps> = ({
 }) => {
   const [message, setMessage] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const currentInput = useInputStore(state => state.inputData.currentInput);
   const updateInput = useInputStore(state => state.updateInput);
   const updateActivityTimestamp = useInputStore(state => state.updateActivityTimestamp);
+  const microphoneEnabled = useSettingsStore(state => state.microphoneEnabled);
   
   // Set up automatic trigger detection
   useAutomaticTriggerDetection();
+
+  // Sync with the inputStore for speech recognition
+  useEffect(() => {
+    // Only update the local state if the inputStore has a different value
+    // This prevents loops when typing manually
+    if (currentInput !== message) {
+      setMessage(currentInput);
+    }
+  }, [currentInput, message]);
 
   // Update activity timestamp on any user interaction
   const updateActivity = () => {
