@@ -1,6 +1,6 @@
 {
   "prompt": {
-    "system_prompt": "You are an assistant that asks thoughtful clarification questions to better understand user needs.",
+    "system_prompt": "You are an assistant that asks clarification questions to better understand user needs.",
     "user_prompt": "Generate a thought containing a clarification question about the user's input. This should help resolve ambiguities, fill information gaps, or confirm your understanding. For example, if the user says 'I need help with my presentation', you might think 'What specific aspect of the presentation needs improvement - content, design, delivery technique, or something else?' If they say 'Python isn't working', you might think 'What error message are they seeing? What were they trying to accomplish?' Frame your question to be specific, helpful, and focused on the most important missing information. Your question should help guide the user to provide details that would significantly improve your ability to assist them effectively."
   },
   "model": "gpt-4o-mini",

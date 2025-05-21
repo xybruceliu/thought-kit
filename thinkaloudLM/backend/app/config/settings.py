@@ -1,5 +1,5 @@
 """
-Configuration settings for the ThoughtfulLM backend.
+Configuration settings for the ThinkaloudLM backend.
 """
 
 import os
@@ -10,7 +10,7 @@ load_dotenv()
 
 # API settings
 API_PREFIX = "/api/v1"
-API_TITLE = "ThoughtfulLM API"
+API_TITLE = "ThinkaloudLM API"
 API_DESCRIPTION = "API for ThoughtKit functionality"
 API_VERSION = "0.1.0"
 

@@ -39,15 +39,15 @@ Plus a Web UI allowing you to visualize and interact with AI thoughts on a canva
    # Set as environment variable
    export OPENAI_API_KEY=your_api_key_here  # On Windows: set OPENAI_API_KEY=your_api_key_here
    
-   # Or create a .env file in thoughtfulLM/backend directory
-   echo "OPENAI_API_KEY=your_api_key_here" > thoughtfulLM/backend/.env
+   # Or create a .env file in thinkaloudLM/backend directory
+   echo "OPENAI_API_KEY=your_api_key_here" > thinkaloudLM/backend/.env
    ```
 
 
 ### Backend Setup
 1. Install the backend dependencies:
    ```bash
-   cd thoughtfulLM/backend
+   cd thinkaloudLM/backend
    pip install -r requirements.txt
    ```
 
@@ -58,7 +58,7 @@ Plus a Web UI allowing you to visualize and interact with AI thoughts on a canva
 
 2. Start the frontend development server:
    ```bash
-   cd thoughtfulLM/frontend
+   cd thinkaloudLM/frontend
    npm start
    ```
 
@@ -66,7 +66,7 @@ Plus a Web UI allowing you to visualize and interact with AI thoughts on a canva
 ### Frontend Setup
 1. Navigate to the frontend directory:
    ```bash
-   cd thoughtfulLM/frontend
+   cd thinkaloudLM/frontend
    ```
 
 2. Install dependencies:
@@ -114,7 +114,7 @@ async def generate():
         },
         "seed": {
             "prompt": {
-                "system_prompt": "You are a thoughtful AI assistant.",
+                "system_prompt": "You are an AI assistant.",
                 "user_prompt": "Generate a thought about the user's research topic."
             },
             "model": "gpt-4o-mini",
@@ -176,7 +176,7 @@ Currently, ThoughtKit includes the following operations:
 
 ThoughtKit includes a modern React frontend for visualizing thoughts on an interactive canvas.
 
-For more details, see the [Frontend Architecture Document](/thoughtfulLM/frontend/ARCHITECTURE.md).
+For more details, see the [Frontend Architecture Document](/thinkaloudLM/frontend/ARCHITECTURE.md).
 
 ### Multi-layered Architecture
 
@@ -192,7 +192,7 @@ The frontend follows a multi-layered architecture:
 - **ThoughtBubbleNode**: Visualizations of AI thoughts
 - **ResponseNode**: AI responses with animations
 
-For more information, see the [frontend README](/thoughtfulLM/frontend/README.md).
+For more information, see the [frontend README](/thinkaloudLM/frontend/README.md).
 
 ## Examples
 

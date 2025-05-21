@@ -1,4 +1,4 @@
-# Root .gitignore for thoughtfulLM project
+# Root .gitignore for thinkaloudLM project
 
 # Python backend
 __pycache__/

@@ -1,6 +1,6 @@
 {
-  "short_name": "ThoughtfulLM",
-  "name": "ThoughtfulLM - Interacting with Intermediate Thoughts of LLMs",
+  "short_name": "ThinkaloudLM",
+  "name": "ThinkaloudLM - Interacting with Intermediate Thoughts of LLMs",
   "icons": [
     {
       "src": "favicon.ico",

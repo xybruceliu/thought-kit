@@ -30,7 +30,7 @@ app.include_router(memories.router, prefix=settings.API_PREFIX)
 # Move the API welcome message to the API prefix path
 @app.get(settings.API_PREFIX)
 async def api_root():
-    return {"message": "Welcome to ThoughtfulLM API"}
+    return {"message": "Welcome to ThinkaloudLM API"}
 
 # Mount the React build directory - this needs to come AFTER API routes but BEFORE the catch-all route
 frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../..", "frontend", "build"))

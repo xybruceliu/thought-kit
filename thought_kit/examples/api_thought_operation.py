@@ -15,7 +15,7 @@ async def main():
         },
         "seed": {
             "prompt": {
-                "system_prompt": "You are a thoughtful AI assistant.",
+                "system_prompt": "You are an AI assistant.",
                 "user_prompt": "Generate a thought about AI ethics."
             },
             "model": "gpt-4o-mini",

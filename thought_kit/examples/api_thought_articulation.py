@@ -15,7 +15,7 @@ async def main():
         },
         "seed": {
             "prompt": {
-                "system_prompt": "You are a thoughtful AI assistant.",
+                "system_prompt": "You are an AI assistant.",
                 "user_prompt": "Generate a thought about the importance of regular exercise for physical health."
             },
             "model": "gpt-4o-mini",
@@ -41,7 +41,7 @@ async def main():
         },
         "seed": {
             "prompt": {
-                "system_prompt": "You are a thoughtful AI assistant.",
+                "system_prompt": "You are an AI assistant.",
                 "user_prompt": "Generate a thought about the mental health benefits of exercise."
             },
             "model": "gpt-4o-mini",
@@ -67,7 +67,7 @@ async def main():
         },
         "seed": {
             "prompt": {
-                "system_prompt": "You are a thoughtful AI assistant.",
+                "system_prompt": "You are an AI assistant.",
                 "user_prompt": "Generate a thought about practical ways to incorporate exercise into daily routines."
             },
             "model": "gpt-4o-mini",

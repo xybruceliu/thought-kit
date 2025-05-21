@@ -1,4 +1,4 @@
-// API service for ThoughtfulLM
+// API service for ThinkaloudLM
 // This file will contain functions for interacting with the backend API
 //
 // NOTE: API Format Update

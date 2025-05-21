@@ -28,9 +28,9 @@ import { useBoundsStore } from '../store/boundsStore';
 
 // Define pulse animation
 const pulseAnimation = keyframes`
-  0% { box-shadow: 0 0 0 0 rgba(229, 62, 62, 0.4); }
-  70% { box-shadow: 0 0 0 10px rgba(229, 62, 62, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(229, 62, 62, 0); }
+  0% { background-color: rgba(229, 62, 62, 0.1); }
+  50% { background-color: rgba(229, 62, 62, 0.3); }
+  100% { background-color: rgba(229, 62, 62, 0.1); }
 `;
 
 // Create custom microphone icon
@@ -116,7 +116,8 @@ const Settings: React.FC<SettingsProps> = ({
             bg: microphoneEnabled ? "red.200" : "gray.200"
           }}
           sx={{
-            animation: microphoneEnabled ? `${pulseAnimation} 1.5s infinite` : "none"
+            animation: microphoneEnabled ? `${pulseAnimation} 1.5s infinite` : "none",
+            transition: "background-color 0.3s ease"
           }}
         />
         

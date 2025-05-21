@@ -1,7 +1,7 @@
 """
-ThoughtfulLM Backend API Test Script
+ThinkaloudLM Backend API Test Script
 
-This script tests the main API endpoints of the ThoughtfulLM backend.
+This script tests the main API endpoints of the ThinkaloudLM backend.
 It has been updated to align with the current implementation of the API
 as defined in thought_models.py and thoughts.py.
 
