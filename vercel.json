@@ -19,8 +19,16 @@
       "dest": "thinkaloudLM/backend/app/main.py"
     },
     {
-      "src": "/(.*)",
+      "src": "/static/(.*)",
+      "dest": "thinkaloudLM/frontend/build/static/$1"
+    },
+    {
+      "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot))",
       "dest": "thinkaloudLM/frontend/build/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "thinkaloudLM/frontend/build/index.html"
     }
   ],
   "installCommand": "cd thinkaloudLM/frontend && npm install",
