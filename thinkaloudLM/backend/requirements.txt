@@ -4,4 +4,6 @@ pydantic==2.4.2
 httpx==0.25.0
 python-dotenv==1.0.0
 openai>=1.0.0
+# Install the local thought_kit package
+-e ../../
 # thought_kit will be installed in development mode (editable) 

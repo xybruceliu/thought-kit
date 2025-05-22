@@ -19,6 +19,7 @@ CORS_ORIGINS = [
     "http://localhost:3000",  # React app
     "http://localhost:8000",  # FastAPI docs
     "https://*.ngrok-free.app",  # Ngrok domains
+    "https://*.up.railway.app",  # Railway domains
 ]
 
 # Default model settings
