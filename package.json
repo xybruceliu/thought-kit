@@ -1,0 +1,11 @@
+{
+  "name": "thought-kit",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "cd thinkaloudLM/frontend && npm install && npm run build && cd ../backend && pip install -r requirements.txt",
+    "start": "cd thinkaloudLM/backend && python run.py"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+} 
