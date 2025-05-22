@@ -17,11 +17,6 @@ fi
 
 echo "✅ Frontend build successful!"
 
-# Install Vercel CLI if not already installed
-if ! command -v vercel &> /dev/null; then
-    echo "📥 Installing Vercel CLI..."
-    npm install -g vercel
-fi
-
 echo "🌐 Ready for Vercel deployment!"
-echo "Run 'vercel' to deploy or 'vercel --prod' for production deployment" 
+echo "Run 'npx vercel' to deploy or 'npx vercel --prod' for production deployment"
+echo "No need to install Vercel CLI globally - npx will handle it!" 

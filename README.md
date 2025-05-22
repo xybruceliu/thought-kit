@@ -8,6 +8,7 @@ Plus a Web UI allowing you to visualize and interact with AI thoughts on a canva
 ## Contents
 
 - [Local Setup](#local-setup)
+- [Deployment](#deployment)
 - [Core Components](#core-components)
 - [Thought Generation](#thought-generation)
 - [Thought Operations](#thought-operations)
@@ -80,6 +81,38 @@ Plus a Web UI allowing you to visualize and interact with AI thoughts on a canva
    ```
 
 4. Open your browser and visit `http://localhost:3000`
+
+## Deployment
+
+### Deploy to Vercel (Recommended)
+
+1. **Prepare for deployment:**
+   ```bash
+   chmod +x deploy.sh
+   ./deploy.sh
+   ```
+
+2. **Push to GitHub:**
+   ```bash
+   git add .
+   git commit -m "Deploy to Vercel"
+   git push origin main
+   ```
+
+3. **Deploy via Vercel Dashboard:**
+   - Go to [vercel.com/dashboard](https://vercel.com/dashboard)
+   - Click "New Project" and import your GitHub repository
+   - Add environment variable: `OPENAI_API_KEY` with your OpenAI API key
+   - Click "Deploy"
+
+4. **Alternative - Deploy via CLI:**
+   ```bash
+   npx vercel
+   # Follow prompts, then for production:
+   npx vercel --prod
+   ```
+
+Your demo will be live at `https://your-project-name.vercel.app`
 
 ## Core Components
 
