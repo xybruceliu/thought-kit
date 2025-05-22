@@ -23,9 +23,6 @@
       "dest": "thinkaloudLM/frontend/build/$1"
     }
   ],
-  "env": {
-    "OPENAI_API_KEY": "@openai_api_key"
-  },
   "installCommand": "cd thinkaloudLM/frontend && npm install",
   "buildCommand": "cd thinkaloudLM/frontend && npm run build"
 } 
