@@ -24,5 +24,5 @@
     }
   ],
   "installCommand": "cd thinkaloudLM/frontend && npm install",
-  "buildCommand": "cd thinkaloudLM/frontend && DISABLE_ESLINT_PLUGIN=true npm run build"
+  "buildCommand": "cd thinkaloudLM/frontend && CI=false npm run build"
 } 
