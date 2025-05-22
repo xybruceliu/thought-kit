@@ -1,7 +1,0 @@
-[build]
-builder = "nixpacks"
-buildCommand = "cd thinkaloudLM/frontend && npm install && npm run build && cd ../backend && pip install -r requirements.txt"
-
-[deploy]
-startCommand = "cd thinkaloudLM/backend && python run.py"
-restartPolicyType = "on_failure" 
