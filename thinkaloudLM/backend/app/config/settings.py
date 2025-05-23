@@ -25,7 +25,6 @@ CORS_ORIGINS = [
 # Default model settings
 DEFAULT_MODEL = "gpt-4o-mini"
 DEFAULT_TEMPERATURE = 0.7
-DEFAULT_MAX_TOKENS = 500
 
 # Environment-specific settings
 DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "t")

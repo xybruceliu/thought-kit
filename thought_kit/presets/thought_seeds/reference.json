@@ -5,6 +5,5 @@
   },
   "model": "gpt-4o-mini",
   "temperature": 0.4,
-  "type": "reference",
-  "max_tokens": 150
+  "type": "reference"
 }

@@ -22,7 +22,6 @@ class ThoughtArticulator:
         memory: Optional[Memory] = None,
         model: str = "gpt-4o",
         temperature: float = 0.7,
-        max_tokens: int = 500
     ) -> str:
         """
         Articulate a set of thoughts into a coherent response.
@@ -32,8 +31,7 @@ class ThoughtArticulator:
             memory: Optional memory context
             model: LLM model to use for articulation
             temperature: Temperature for LLM generation
-            max_tokens: Maximum tokens for the generated response
-            
+                
         Returns:
             The articulated response as a string
         """
@@ -87,10 +85,9 @@ class ThoughtArticulator:
         context_str = "\n".join(context_sections)
         
         # Create system prompt
-        system_prompt = """You are an articulate AI assistant that transforms thoughts into coherent responses.
-Your task is to convert the provided thoughts into a natural, fluent response to the user.
+        system_prompt = """You are an articulate AI assistant that generate a response to the user based on your previous thoughts.
 Do not mention that you are transforming thoughts or that you have access to internal thoughts.
-Just create a natural response using the provided thoughts as your foundation."""
+Just create a natural response to the previous user message using the provided thoughts as your foundation."""
         
         # Create user prompt
         user_prompt = f"""<Context>
@@ -110,7 +107,6 @@ Consider the following guidelines:
 <Response Format>
 Provide your response directly, as if you are responding to the user.
 Do not include any meta-commentary about the process or the thoughts.
-Use less than 100 words.
 """
         
         # Get completion from LLM
@@ -119,7 +115,6 @@ Use less than 100 words.
             user_prompt=user_prompt,
             model=model,
             temperature=temperature,
-            max_tokens=max_tokens
         )
         
         return response.strip()

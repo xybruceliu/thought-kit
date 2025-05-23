@@ -5,6 +5,5 @@
   },
   "model": "gpt-4o-mini",
   "temperature": 0.5,
-  "type": "disambiguation",
-  "max_tokens": 100
+  "type": "disambiguation"
 }

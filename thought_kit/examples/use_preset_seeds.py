@@ -61,7 +61,6 @@ async def main():
         "model": "gpt-4o",
         "temperature": 0.8,
         "type": "custom",
-        "max_tokens": 120
     }
     
     success = thoughtkit.save_thought_seed("custom_example", custom_seed)

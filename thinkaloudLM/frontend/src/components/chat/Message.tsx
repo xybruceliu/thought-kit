@@ -23,6 +23,8 @@ const colors = [
 
 // Custom thought pill component
 const ThoughtPill: React.FC<{ thought: Thought }> = ({ thought }) => {
+  const [isHovered, setIsHovered] = useState(false);
+  
   // Determine color index based on thought type (same logic as ThoughtBubbleNode)
   const colorIndex = thought.seed?.type === 'association' ? 0 : 
                      thought.seed?.type === 'disambiguation' ? 1 : 
@@ -41,6 +43,7 @@ const ThoughtPill: React.FC<{ thought: Thought }> = ({ thought }) => {
   const opacity = thought.config.persistent ? 1 : baseOpacity;
   
   const text = thought.content.text;
+  const displayText = isHovered || text.length <= 20 ? text : text.substring(0, 20) + '...';
   
   return (
     <Box
@@ -64,8 +67,13 @@ const ThoughtPill: React.FC<{ thought: Thought }> = ({ thought }) => {
       transition="all 0.3s ease"
       cursor="pointer"
       position="relative"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      whiteSpace="nowrap"
+      overflow="hidden"
+      maxWidth={isHovered ? "300px" : "auto"}
     >
-      {text.length > 20 ? text.substring(0, 20) + '...' : text}
+      {displayText}
     </Box>
   );
 };

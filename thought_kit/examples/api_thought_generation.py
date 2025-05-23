@@ -22,7 +22,6 @@ async def main():
             "model": "gpt-4o-mini",
             "temperature": 0.7,
             "type": "interpretative",
-            "max_tokens": 100
         },
         "config": {
             "modality": "TEXT",

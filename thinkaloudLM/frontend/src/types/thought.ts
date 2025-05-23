@@ -35,5 +35,4 @@ export interface ThoughtSeed {
   model: 'gpt-4o' | 'gpt-4o-mini';
   temperature: number;
   type: string;
-  max_tokens: number;
 }

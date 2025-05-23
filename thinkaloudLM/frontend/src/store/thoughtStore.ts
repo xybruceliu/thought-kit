@@ -35,7 +35,6 @@ interface ThoughtStoreState {
   getActiveThoughts: () => Thought[];
   
   // Thought operations
-  operateOnThought: (thoughtId: string, operation: string, options?: object) => Promise<void>;
   handleThoughtLike: (thoughtId: string) => Promise<void>; 
   handleThoughtDislike: (thoughtId: string) => Promise<void>;
   handleThoughtPin: (thoughtId: string) => Promise<void>;
@@ -231,47 +230,45 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
     }
   },
   
-  // Helper for common thought operations
-  operateOnThought: async (thoughtId: string, operation: string, options = {}) => {
-    try {
-      const activeThoughts = get().getActiveThoughts();
-      const thought = activeThoughts.find(t => t.id === thoughtId);
-      
-      if (!thought) {
-        console.error(`Thought with ID ${thoughtId} not found in store`);
-        return;
-      }
-      
-      // Only send the specific thought we're operating on, not all active thoughts
-      const result = await thoughtApi.operateOnThought({
-        operation,
-        thoughts: [thought], // Only send the specific thought we're operating on
-        options
-      });
-      
-      const updatedThought = Array.isArray(result) ? result[0] : result;
-      get().updateThought(thoughtId, updatedThought);
-    } catch (error) {
-      console.error(`Error handling ${operation} for thought ${thoughtId}:`, error);
-    }
-  },
-  
-  // Handle like/dislike/pin operations using the common helper
+  // Handle like/dislike/pin operations with optimistic updates
   handleThoughtLike: async (thoughtId: string) => {
-    return get().operateOnThought(thoughtId, 'like', { amount: get().likeAmount });
+    const thought = get().thoughts.find(t => t.id === thoughtId);
+    if (!thought || thought.config.interactivity === "VIEW") return;
+    
+    // Optimistic update: immediately update UI
+    const likeAmount = get().likeAmount;
+    const newWeight = Math.min(thought.score.weight + likeAmount, 2.0 - thought.score.saliency);
+    const updatedThought = { 
+      ...thought, 
+      score: { ...thought.score, weight: Math.round(newWeight * 100) / 100 }
+    };
+    get().updateThought(thoughtId, updatedThought);
   },
   
   handleThoughtDislike: async (thoughtId: string) => {
-    return get().operateOnThought(thoughtId, 'dislike', { amount: get().likeAmount });
+    const thought = get().thoughts.find(t => t.id === thoughtId);
+    if (!thought || thought.config.interactivity === "VIEW") return;
+    
+    // Optimistic update: immediately update UI  
+    const likeAmount = get().likeAmount;
+    const newWeight = Math.max(thought.score.weight - likeAmount, 0.0);
+    const updatedThought = { 
+      ...thought, 
+      score: { ...thought.score, weight: Math.round(newWeight * 100) / 100 }
+    };
+    get().updateThought(thoughtId, updatedThought);
   },
 
   handleThoughtPin: async (thoughtId: string) => {
-    const activeThoughts = get().getActiveThoughts();
-    const thought = activeThoughts.find(t => t.id === thoughtId);
+    const thought = get().thoughts.find(t => t.id === thoughtId);
     if (!thought) return;
     
-    const operation = thought.config.persistent ? "unpin" : "pin";
-    return get().operateOnThought(thoughtId, operation);
+    // Optimistic update: immediately toggle pin state
+    const updatedThought = { 
+      ...thought, 
+      config: { ...thought.config, persistent: !thought.config.persistent }
+    };
+    get().updateThought(thoughtId, updatedThought);
   },
 
   handleThoughtDelete: async (thoughtId: string) => {

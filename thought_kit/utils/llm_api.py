@@ -36,7 +36,6 @@ async def get_completion(
     user_prompt: str,
     model: str = "gpt-4o-mini",
     temperature: float = 1.0,
-    max_tokens: Optional[int] = None,
     max_retries: int = 3,
     response_format: Optional[str] = None
 ) -> Dict[str, Any]:
@@ -47,7 +46,6 @@ async def get_completion(
         user_prompt: User message/query
         model: Model to use (default: gpt-4o-mini)
         temperature: Sampling temperature (default: 1.0)
-        max_tokens: Maximum tokens in response (optional)
         max_retries: Maximum number of retry attempts (default: 3)
         response_format: Response format type, e.g. "json" (optional)
         
@@ -68,7 +66,6 @@ async def get_completion(
                     {"role": "user", "content": user_prompt}
                 ],
                 "temperature": temperature,
-                "max_tokens": max_tokens,
                 "top_p": 1.0
             }
             

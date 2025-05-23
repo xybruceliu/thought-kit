@@ -120,7 +120,6 @@ async def generate():
             "model": "gpt-4o-mini",
             "temperature": 0.7,
             "type": "reflective",
-            "max_tokens": 100
         },
         "config": {
             "modality": "TEXT",

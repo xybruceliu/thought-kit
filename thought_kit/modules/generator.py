@@ -232,7 +232,6 @@ Respond with a JSON object containing:
             user_prompt=final_user_prompt,
             model=seed.model,
             temperature=seed.temperature,
-            max_tokens=seed.max_tokens,
             response_format="json_object"
         )
         

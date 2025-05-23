@@ -190,7 +190,6 @@ class ThoughtKitAPI:
                 - memory (optional): Memory context
                 - model (optional): LLM model to use (default: gpt-4o)
                 - temperature (optional): Temperature for LLM (default: 0.7)
-                - max_tokens (optional): Max tokens for response (default: 500)
             **kwargs: Additional arguments to pass to the articulator
             
         Returns:
@@ -227,7 +226,6 @@ class ThoughtKitAPI:
         # Extract articulation parameters
         model = data.get("model", "gpt-4o")
         temperature = data.get("temperature", 0.7)
-        max_tokens = data.get("max_tokens", 500)
         
         # Articulate the thoughts
         response = await self.articulator.articulate(
@@ -235,7 +233,6 @@ class ThoughtKitAPI:
             memory=memory,
             model=model,
             temperature=temperature,
-            max_tokens=max_tokens,
             **kwargs
         )
         
@@ -295,7 +292,6 @@ class ThoughtKitAPI:
                 "model": "gpt-4o",
                 "temperature": 0.5,
                 "type": "custom",
-                "max_tokens": 100
             })
         """
         return save_thought_seed(name, seed_data)

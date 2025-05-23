@@ -190,7 +190,6 @@ async def articulate_thoughts(request: ArticulationRequest):
         # Specify the model, temperature, and max tokens for the articulation
         request_data["model"] = "gpt-4o"
         request_data["temperature"] = 0.7
-        request_data["max_tokens"] = 500
         
         # Articulate thoughts using ThoughtKit directly
         result = await thoughtkit.articulate(request_data)

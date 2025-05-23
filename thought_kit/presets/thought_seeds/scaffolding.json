@@ -5,6 +5,5 @@
   },
   "model": "gpt-4o-mini",
   "temperature": 0.5,
-  "type": "scaffolding",
-  "max_tokens": 150
+  "type": "scaffolding"
 }

@@ -76,7 +76,6 @@ def save_thought_seed(name: str, seed_data: Dict[str, Any]) -> bool:
             "model": "gpt-4o",
             "temperature": 0.5,
             "type": "custom",
-            "max_tokens": 100
         })
     """
     # Create directory if it doesn't exist

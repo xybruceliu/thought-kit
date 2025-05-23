@@ -21,7 +21,6 @@ async def main():
             "model": "gpt-4o-mini",
             "temperature": 0.7,
             "type": "reflective",
-            "max_tokens": 50
         },
         "config": {
             "modality": "TEXT",
@@ -47,7 +46,6 @@ async def main():
             "model": "gpt-4o-mini",
             "temperature": 0.7,
             "type": "reflective",
-            "max_tokens": 50
         },
         "config": {
             "modality": "TEXT",
@@ -73,7 +71,6 @@ async def main():
             "model": "gpt-4o-mini",
             "temperature": 0.7,
             "type": "reflective",
-            "max_tokens": 50
         },
         "config": {
             "modality": "TEXT",
@@ -134,7 +131,6 @@ async def main():
         "memory": memory,
         "model": "gpt-4o",
         "temperature": 0.7,
-        "max_tokens": 500
     }
     
     # Articulate the thoughts into a response
