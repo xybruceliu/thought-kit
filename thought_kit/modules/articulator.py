@@ -35,28 +35,25 @@ class ThoughtArticulator:
         Returns:
             The articulated response as a string
         """
-        # If no thoughts provided, return empty response
-        if not thoughts:
-            return ""
-            
-        # Sort thoughts by saliency + weight
-        sorted_thoughts = sorted(thoughts, key=lambda t: t.score.saliency + t.score.weight, reverse=True)
-        
         # Build context for articulation
         context_sections = []
         
-        # Thoughts context section
-        thought_lines = ["## Selected Thoughts (ordered by importance)"]
-        for i, thought in enumerate(sorted_thoughts, 1):
-            importance_score = thought.score.saliency + thought.score.weight
-            user_comments = thought.user_comments
-            if user_comments:
-                user_comments_str = ", ".join(user_comments)
-                thought_lines.append(f"{i}. [Importance: {importance_score:.2f}] \"{thought.content.text}\" (User comments: {user_comments_str})")
-            else:
-                thought_lines.append(f"{i}. [Importance: {importance_score:.2f}] \"{thought.content.text}\"")
-        thought_lines.append("")
-        context_sections.append("\n".join(thought_lines))
+        # Thoughts context section (only if thoughts exist)
+        if thoughts:
+            # Sort thoughts by saliency + weight
+            sorted_thoughts = sorted(thoughts, key=lambda t: t.score.saliency + t.score.weight, reverse=True)
+            
+            thought_lines = ["## Selected Thoughts (ordered by importance)"]
+            for i, thought in enumerate(sorted_thoughts, 1):
+                importance_score = thought.score.saliency + thought.score.weight
+                user_comments = thought.user_comments
+                if user_comments:
+                    user_comments_str = ", ".join(user_comments)
+                    thought_lines.append(f"{i}. [Importance: {importance_score:.2f}] \"{thought.content.text}\" (User comments: {user_comments_str})")
+                else:
+                    thought_lines.append(f"{i}. [Importance: {importance_score:.2f}] \"{thought.content.text}\"")
+            thought_lines.append("")
+            context_sections.append("\n".join(thought_lines))
         
         # Memory context section
         if memory:
@@ -81,6 +78,10 @@ class ThoughtArticulator:
             memory_lines.append("")
             context_sections.append("\n".join(memory_lines))
         
+        # If no thoughts and no memory, return a default response
+        if not thoughts and not memory:
+            return "I'd be happy to help! Could you please provide more details about what you'd like to discuss?"
+        
         # Combine all context sections
         context_str = "\n".join(context_sections)
         
@@ -89,8 +90,9 @@ class ThoughtArticulator:
 Do not mention that you are transforming thoughts or that you have access to internal thoughts.
 Just create a natural response to the previous user message using the provided thoughts as your foundation."""
         
-        # Create user prompt
-        user_prompt = f"""<Context>
+        # Create user prompt - adjust based on whether we have thoughts or not
+        if thoughts:
+            user_prompt = f"""<Context>
 {context_str}
 
 <Task>
@@ -107,6 +109,23 @@ Consider the following guidelines:
 <Response Format>
 Provide your response directly, as if you are responding to the user.
 Do not include any meta-commentary about the process or the thoughts.
+"""
+        else:
+            # No thoughts, but we have memory context
+            user_prompt = f"""<Context>
+{context_str}
+
+<Task>
+Based on the conversation history and memory context provided, generate a natural response to the user's most recent message.
+Consider the following guidelines:
+1. Use the conversation history to understand the context and flow
+2. Provide a helpful and relevant response based on what the user has said
+3. Use a natural, conversational tone
+4. Be consistent with the conversation history
+
+<Response Format>
+Provide your response directly, as if you are responding to the user.
+Do not mention memory or internal processes.
 """
         
         # Get completion from LLM

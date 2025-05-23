@@ -186,7 +186,7 @@ class ThoughtKitAPI:
         
         Args:
             input_data: A JSON string or dictionary containing:
-                - thoughts: List of thoughts to articulate
+                - thoughts: List of thoughts to articulate (optional, can be empty)
                 - memory (optional): Memory context
                 - model (optional): LLM model to use (default: gpt-4o)
                 - temperature (optional): Temperature for LLM (default: 0.7)
@@ -208,9 +208,7 @@ class ThoughtKitAPI:
             data = input_data
             
         # Extract and validate components
-        thoughts_data = data.get("thoughts")
-        if not thoughts_data:
-            raise ValueError("Thoughts are required in input_data")
+        thoughts_data = data.get("thoughts", [])  # Default to empty list if not provided
             
         # Convert thoughts to Thought objects
         thoughts = []

@@ -285,11 +285,6 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
     try {
       const activeThoughts = get().getActiveThoughts();
       
-      if (activeThoughts.length === 0) {
-        console.log('No thoughts to articulate');
-        return null;
-      }
-      
       console.log('📝 Articulating thoughts');
       
       // Get memory from memoryStore
@@ -297,7 +292,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       const { useMemoryStore } = memoryStoreModule;
       const { memory } = useMemoryStore.getState();
 
-      // Articulate the thoughts into a response
+      // Articulate the thoughts into a response (even if no active thoughts)
       const response = await thoughtApi.articulateThoughts({
         thoughts: activeThoughts,
         memory
