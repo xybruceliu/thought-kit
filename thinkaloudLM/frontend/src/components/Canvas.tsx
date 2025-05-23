@@ -307,15 +307,11 @@ const CanvasContent: React.FC = () => {
               nodeTypes={nodeTypes}
               onNodesChange={onNodesChange}
               onPaneClick={onPaneClick}
-              panOnScroll={false}
-              panOnDrag={false}
-              zoomOnScroll={false}
-              zoomOnPinch={false}
-              zoomOnDoubleClick={false}
+              panOnScroll={true}
+              minZoom={1}
             >
               <Controls showInteractive={false} />
               <Background gap={12} size={1} color="none" />
-              <BoundaryIndicator />
             </ReactFlow>
             
             <Settings onMicrophoneClick={handleMicrophoneClick} />
@@ -341,7 +337,14 @@ const CanvasContent: React.FC = () => {
             </Box>
             
             {/* Message input - fixed at bottom */}
-            <Box p={4}>
+            <Box
+              position="relative" 
+              bottom="35px"
+              width="100%"
+              maxWidth="450px"
+              zIndex={1}
+              mx="auto"
+            >
               <MessageInput
                 onSubmit={handleSendMessage}
                 placeholder="Say anything"
