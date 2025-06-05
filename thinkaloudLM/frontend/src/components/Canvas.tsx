@@ -253,7 +253,7 @@ const CanvasContent: React.FC = () => {
           <BoundaryIndicator />
         </ReactFlow>
   
-        <Settings onMicrophoneClick={handleMicrophoneClick} />
+        <Settings />
   
         {/* Message Container */}
         <Box
@@ -286,6 +286,7 @@ const CanvasContent: React.FC = () => {
         >
           <MessageInput
             onSubmit={handleSendMessage}
+            onMicrophoneClick={handleMicrophoneClick}
             placeholder="Say anything"
             disabled={isProcessing}
           />
@@ -314,7 +315,7 @@ const CanvasContent: React.FC = () => {
               <Background gap={12} size={1} color="none" />
             </ReactFlow>
             
-            <Settings onMicrophoneClick={handleMicrophoneClick} />
+            <Settings />
           </Box>
           
           {/* Right side - Chat panel */}
@@ -347,6 +348,7 @@ const CanvasContent: React.FC = () => {
             >
               <MessageInput
                 onSubmit={handleSendMessage}
+                onMicrophoneClick={handleMicrophoneClick}
                 placeholder="Say anything"
                 disabled={isProcessing}
               />
@@ -376,7 +378,7 @@ const CanvasContent: React.FC = () => {
         <BoundaryIndicator />
       </ReactFlow>
       
-      <Settings onMicrophoneClick={handleMicrophoneClick} />
+      <Settings />
     </>
   );
 };

@@ -22,36 +22,13 @@ import {
   FormLabel,
   keyframes
 } from '@chakra-ui/react';
-import { SettingsIcon, createIcon } from '@chakra-ui/icons';
+import { SettingsIcon, InfoIcon } from '@chakra-ui/icons';
 import { useSettingsStore } from '../store/settingsStore';
 import { useBoundsStore } from '../store/boundsStore';
 
-// Define pulse animation
-const pulseAnimation = keyframes`
-  0% { background-color: rgba(229, 62, 62, 0.1); }
-  50% { background-color: rgba(229, 62, 62, 0.3); }
-  100% { background-color: rgba(229, 62, 62, 0.1); }
-`;
+interface SettingsProps {}
 
-// Create custom microphone icon
-const MicrophoneIcon = createIcon({
-  displayName: 'MicrophoneIcon',
-  viewBox: '0 0 24 24',
-  path: (
-    <path
-      fill="currentColor"
-      d="M12,2C10.34,2 9,3.34 9,5V11C9,12.66 10.34,14 12,14C13.66,14 15,12.66 15,11V5C15,3.34 13.66,2 12,2M12,4C12.55,4 13,4.45 13,5V11C13,11.55 12.55,12 12,12C11.45,12 11,11.55 11,11V5C11,4.45 11.45,4 12,4M19,10V12C19,15.87 15.87,19 12,19C8.13,19 5,15.87 5,12V10H3V12C3,16.25 6.09,19.78 10,20.73V23H14V20.73C17.91,19.78 21,16.25 21,12V10H19Z"
-    />
-  ),
-});
-
-interface SettingsProps {
-  onMicrophoneClick: () => void;
-}
-
-const Settings: React.FC<SettingsProps> = ({ 
-  onMicrophoneClick 
-}) => {
+const Settings: React.FC<SettingsProps> = () => {
   // Get values and setters from the settings store
   const { 
     interfaceType,
@@ -59,7 +36,6 @@ const Settings: React.FC<SettingsProps> = ({
     debugMode,
     showThoughtPills,
     clearThoughtsOnSubmit,
-    microphoneEnabled,
     setInterfaceType, 
     setMaxThoughtCount,
     setDebugMode,
@@ -105,19 +81,14 @@ const Settings: React.FC<SettingsProps> = ({
     >
       <Flex direction="column" alignItems="center" gap={2}>
         <IconButton
-          aria-label="Microphone"
-          icon={<MicrophoneIcon />}
+          aria-label="Information"
+          icon={<InfoIcon />}
           size="md"
           variant="ghost"
-          onClick={onMicrophoneClick}
-          colorScheme={microphoneEnabled ? "red" : "gray"}
-          bg={microphoneEnabled ? "red.100" : "transparent"}
+          onClick={() => {}}
+          colorScheme="gray"
           _hover={{
-            bg: microphoneEnabled ? "red.200" : "gray.200"
-          }}
-          sx={{
-            animation: microphoneEnabled ? `${pulseAnimation} 1.5s infinite` : "none",
-            transition: "background-color 0.3s ease"
+            bg: "gray.200"
           }}
         />
         
@@ -129,6 +100,9 @@ const Settings: React.FC<SettingsProps> = ({
               size="md"
               variant="ghost"
               colorScheme="gray"
+              _hover={{
+                bg: "gray.200"
+              }}
             />
           </PopoverTrigger>
           <PopoverContent 
