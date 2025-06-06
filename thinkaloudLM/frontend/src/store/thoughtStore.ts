@@ -10,7 +10,7 @@ import { EventType } from '../types/event';
 import { thoughtApi } from '../api/thoughtApi';
 import { useSettingsStore } from './settingsStore';
 import { deleteThoughtNode, getNodeByThoughtId, markNodeForRemoval } from '../hooks/nodeConnectors';
-import { computeSimilarity } from '../utils/embeddingUtils';
+import { computeSimilarity, findSimilarThought } from '../utils/embeddingUtils';
 
 // Define the store state
 interface ThoughtStoreState {
@@ -60,8 +60,6 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
   
   generateThought: async (triggerType: EventType) => {
     try {
-      let returnedThought = null;
-      
       // Get input data
       const inputStoreModule = await import('./inputStore');
       const { useInputStore } = inputStoreModule;
@@ -76,47 +74,49 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       const { useMemoryStore } = memoryStoreModule;
       const { memory } = useMemoryStore.getState();
       
-      // Generate thought from backend - use current active thoughts
-      const thoughtData = await thoughtApi.generateThought({
+      // Generate thought from backend (backend uses thoughts for context, not similarity checking)
+      const newThought = await thoughtApi.generateThought({
         event_text: lastSentence,
         event_type: triggerType,
-        thoughts: get().getActiveThoughts(), // Get fresh list of active thoughts
+        thoughts: get().getActiveThoughts(), // Send for context/generation quality
         memory: memory
       });
 
-      if (!thoughtData) {
+      if (!newThought) {
         console.log('❌ No thought data returned from backend');
         return null;
       }
       
-      // Get a fresh snapshot of active thoughts for each operation
+      // Check for similarity against existing active thoughts (frontend-only)
       const currentActiveThoughts = get().getActiveThoughts();
+      const similarThought = findSimilarThought(newThought, currentActiveThoughts, 0.7);
       
-      // Check if this thought already exists (update case)
-      // Our backend returns the same thought id if the thought is similar, with UPDATED saliency
-      const existingThoughtIndex = currentActiveThoughts.findIndex(t => t.id === thoughtData.id);
-      const isUpdate = existingThoughtIndex >= 0;
+      let returnedThought: Thought | null = null;
+      let updatedThoughtId: string | null = null;
       
-      if (isUpdate) {
-        console.log(`🫵 Found similar thought in store: ${thoughtData.id}`);
+      if (similarThought) {
+        console.log(`🫵 Found similar thought in store: ${similarThought.id}`);
         
-        // Update the thought in the store
-        get().updateThought(thoughtData.id, thoughtData);
+        // Update the existing similar thought
+        const updatedThought = {
+          ...similarThought,
+          score: {
+            ...similarThought.score,
+            saliency: Math.min(similarThought.score.saliency + 0.2, 2.0 - similarThought.score.weight)
+          }
+        };
         
-        // Make sure the thought is in the active list
-        get().setThoughtActive(thoughtData.id, true);
-
-        // Don't return the thought data
+        get().updateThought(similarThought.id, updatedThought);
+        get().setThoughtActive(similarThought.id, true);
+        
+        updatedThoughtId = similarThought.id;
         returnedThought = null;
-      }
-
-      // If the thought is new, return the thought data
-      else{
+      } else {
         // Initialize is_active for new thoughts
-        if (thoughtData && !('is_active' in thoughtData)) {
-          (thoughtData as Thought).is_active = true;
+        if (newThought && !('is_active' in newThought)) {
+          (newThought as Thought).is_active = true;
         }
-        returnedThought = thoughtData;
+        returnedThought = newThought;
       }
 
       // Update memory  
@@ -136,7 +136,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       }
         
       // Check if we need to remove excess thoughts BEFORE adding the new thought
-      if (!isUpdate) {
+      if (returnedThought) { // Only check if we're adding a new thought
         // Get fresh list of active thoughts again
         const currentActiveThoughts = get().getActiveThoughts();
         let nonPersistentThoughts = currentActiveThoughts.filter(t => !t.config.persistent);
@@ -170,7 +170,12 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
       // Apply time decay to the current active thoughts (get fresh list again)
       const activeThoughtsForDecay = get().getActiveThoughts();
       const updatedThoughts = activeThoughtsForDecay.map(thought => {
-        if (thought.id !== thoughtData.id && !thought.config.persistent) {
+        // Skip decay for new thoughts, updated thoughts, and persistent thoughts
+        const shouldSkip = (returnedThought && thought.id === returnedThought.id) || 
+                          (updatedThoughtId && thought.id === updatedThoughtId) || 
+                          thought.config.persistent;
+        
+        if (!shouldSkip) {
           const thoughtCopy = { ...thought };
 
           let similarityThreshold = 0.2;
@@ -178,9 +183,9 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
           // Check if this thought has similarity > threshold with any other thought (including the new one)
           let hasHighSimilarity = false;
           
-          // Check similarity with the new thought first
-          if (thought.content.embedding && thoughtData.content.embedding) {
-            const similarity = computeSimilarity(thought.content.embedding, thoughtData.content.embedding);
+          // Check similarity with the new thought first (if we have one)
+          if (returnedThought && thought.content.embedding && returnedThought.content.embedding) {
+            const similarity = computeSimilarity(thought.content.embedding, returnedThought.content.embedding);
             if (similarity > similarityThreshold) {
               hasHighSimilarity = true;
             }
@@ -190,7 +195,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
           if (!hasHighSimilarity) {
             for (const otherThought of activeThoughtsForDecay) {
               // Skip comparison with itself or the new thought (we already checked that)
-              if (otherThought.id === thought.id || otherThought.id === thoughtData.id) {
+              if (otherThought.id === thought.id || (returnedThought && otherThought.id === returnedThought.id)) {
                 continue;
               }
               

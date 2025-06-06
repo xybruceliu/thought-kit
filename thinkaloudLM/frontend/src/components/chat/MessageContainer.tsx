@@ -21,6 +21,13 @@ const MessageContainer: React.FC<MessageContainerProps> = ({ messages }) => {
       flex="1"
       overflowY="auto"
       px={4}
+      sx={{
+        '&::-webkit-scrollbar': {
+          display: 'none'
+        },
+        '-ms-overflow-style': 'none',
+        'scrollbar-width': 'none'
+      }}
     >
       {messages.map((message, index) => (
         <Message

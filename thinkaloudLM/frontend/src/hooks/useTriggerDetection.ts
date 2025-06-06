@@ -159,12 +159,11 @@ export const useTriggerDetection = () => {
         });
       }
     } 
-    // For interface type 2 (split-screen layout), position thoughts in the left panel
+    // For interface type 2 (split-screen layout)
     else if (interfaceType === 2) {
-      // Simple random positioning in the left side of the screen
-      const randomX = Math.random() * 500; // Random X within the left panel (0-500px)
-      const randomY = 100 + Math.random() * 500; // Random Y (100-600px)
-      
+      // Simple random positioning on the react flow canvas
+      const randomX = Math.random() * 1000;
+      const randomY = Math.random() * 1000;
       position = reactFlowInstance.screenToFlowPosition({
         x: randomX,
         y: randomY

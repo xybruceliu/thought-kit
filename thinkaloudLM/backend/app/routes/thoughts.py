@@ -84,28 +84,6 @@ async def generate_thought(request: GenerationRequest):
             print("❌ No thought generated, saliency is less than 0.6")
             return None
 
-        # Check if the thought is similar to one of the existing thoughts
-        similar_thought_found = False
-        updated_thought = None
-        
-        for thought in request.thoughts or []:
-            if result.content.embedding and thought.content and thought.content.embedding:
-                if cosine_similarity(result.content.embedding, thought.content.embedding) > 0.7:
-                    # Create a copy with updated saliency
-                    updated_thought = thought.model_copy()
-                    # Increase saliency by 0.2, but make sure weight + saliency doesn't exceed 2.0
-                    updated_thought.score.saliency = min(updated_thought.score.saliency + 0.2, 2.0 - updated_thought.score.weight)
-                    similar_thought_found = True
-                    break  # Exit loop once we find a similar thought
-
-        if similar_thought_found and updated_thought:
-            # Return the updated thought directly
-            print("--------------------------------")
-            print("🫵 Similar Thought Found - Returning Updated Thought:")
-            print(f"ID: {updated_thought.id}, Saliency: {updated_thought.score.saliency}")
-            print("--------------------------------")
-            return updated_thought
-
         log_output_data = {
             "id": result.id,
             "content": {

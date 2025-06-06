@@ -66,4 +66,32 @@ export function findMostSimilar(targetEmbedding?: number[], embeddings?: number[
   }
   
   return maxIndex;
+}
+
+/**
+ * Find a similar thought in the existing thoughts array
+ * @param newThought The new thought to check for similarity
+ * @param existingThoughts Array of existing thoughts to compare against
+ * @param threshold Similarity threshold (default: 0.7)
+ * @returns The similar thought if found, null otherwise
+ */
+export function findSimilarThought(
+  newThought: any, 
+  existingThoughts: any[], 
+  threshold: number = 0.7
+): any | null {
+  if (!newThought.content?.embedding) {
+    return null;
+  }
+
+  for (const thought of existingThoughts) {
+    if (thought.content?.embedding) {
+      const similarity = computeSimilarity(newThought.content.embedding, thought.content.embedding);
+      if (similarity > threshold) {
+        return thought;
+      }
+    }
+  }
+  
+  return null;
 } 

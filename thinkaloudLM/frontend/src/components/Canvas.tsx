@@ -299,61 +299,20 @@ const CanvasContent: React.FC = () => {
   if (interfaceType === 2) {
     return (
       <>
-        {/* Split-screen layout */}
-        <Box display="flex" width="100%" height="100vh">
-          {/* Left side - ReactFlow canvas (larger portion) */}
-          <Box flex="2" position="relative" height="100vh">
-            <ReactFlow
-              nodes={nodes}
-              nodeTypes={nodeTypes}
-              onNodesChange={onNodesChange}
-              onPaneClick={onPaneClick}
-              panOnScroll={true}
-              minZoom={1}
-            >
-              <Controls showInteractive={false} />
-              <Background gap={12} size={1} color="none" />
-            </ReactFlow>
-            
-            <Settings />
-          </Box>
-          
-          {/* Right side - Chat panel */}
-          <Box 
-            flex="1" 
-            bg="gray.100" 
-            height="100vh" 
-            display="flex"
-            flexDirection="column"
-            borderLeft="1px solid"
-            borderColor="gray.200"
+        <Box position="relative" height="100vh" width="100%">  
+          <ReactFlow
+            nodes={nodes}
+            nodeTypes={nodeTypes}
+            onNodesChange={onNodesChange}
+            onPaneClick={onPaneClick}
+            panOnScroll={true}
+            minZoom={1}
           >
-            {/* Message Container - fills available space */}
-            <Box
-              flex="1"
-              overflow="auto"
-              p={4}
-            >
-              <MessageContainer messages={messages} />
-            </Box>
-            
-            {/* Message input - fixed at bottom */}
-            <Box
-              position="relative" 
-              bottom="35px"
-              width="100%"
-              maxWidth="450px"
-              zIndex={1}
-              mx="auto"
-            >
-              <MessageInput
-                onSubmit={handleSendMessage}
-                onMicrophoneClick={handleMicrophoneClick}
-                placeholder="Say anything"
-                disabled={isProcessing}
-              />
-            </Box>
-          </Box>
+            <Controls showInteractive={false} />
+            <Background gap={12} size={1} color="none" />
+          </ReactFlow>
+          
+          <Settings />
         </Box>
       </>
     );
