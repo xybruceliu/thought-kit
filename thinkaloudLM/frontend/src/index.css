@@ -88,3 +88,100 @@ Override ReactFlow cursors to use the default cursor
   scrollbar-width: thin;
   scrollbar-color: rgba(160, 174, 192, 0.5) rgba(0, 0, 0, 0.05);
 }
+
+/* Global Lucide Icon Styling */
+.lucide {
+  /* Default icon properties */
+  stroke-width: 2;
+  stroke: currentColor;
+  fill: none;
+  transition: all 0.2s ease-in-out;
+  vertical-align: middle;
+}
+
+/* Icon size variants */
+.lucide-sm {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.5;
+}
+
+.lucide-md {
+  width: 18px;
+  height: 18px;
+}
+
+.lucide-lg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 1.5;
+}
+
+.lucide-xl {
+  width: 28px;
+  height: 28px;
+  stroke-width: 1.5;
+}
+
+/* Icon hover states */
+.lucide:hover {
+  transform: scale(1.05);
+}
+
+/* Interactive icon states */
+.lucide-interactive {
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.lucide-interactive:hover {
+  transform: scale(1.1);
+  opacity: 0.8;
+}
+
+.lucide-interactive:active {
+  transform: scale(0.95);
+}
+
+/* Disabled icon state */
+.lucide-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.lucide-disabled:hover {
+  transform: none;
+}
+
+/* Icon color variants */
+.lucide-primary {
+  stroke: #3182ce; /* blue.500 */
+}
+
+.lucide-secondary {
+  stroke: #718096; /* gray.500 */
+}
+
+.lucide-success {
+  stroke: #38a169; /* green.500 */
+}
+
+.lucide-warning {
+  stroke: #d69e2e; /* yellow.500 */
+}
+
+.lucide-danger {
+  stroke: #e53e3e; /* red.500 */
+}
+
+/* Icon in buttons - prevent extra margin/padding issues */
+button .lucide {
+  margin: 0;
+  vertical-align: top;
+}
+
+/* Icon in Chakra UI IconButton - ensure proper alignment */
+.chakra-button .lucide {
+  display: block;
+  margin: auto;
+}

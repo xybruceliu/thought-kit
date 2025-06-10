@@ -40,12 +40,12 @@ class ThoughtArticulator:
         
         # Thoughts context section (only if thoughts exist)
         if thoughts:
-            # Sort thoughts by saliency + weight
-            sorted_thoughts = sorted(thoughts, key=lambda t: t.score.saliency + t.score.weight, reverse=True)
+            # Sort thoughts by weight
+            sorted_thoughts = sorted(thoughts, key=lambda t: t.score.weight, reverse=True)
             
             thought_lines = ["## Selected Thoughts (ordered by importance)"]
             for i, thought in enumerate(sorted_thoughts, 1):
-                importance_score = thought.score.saliency + thought.score.weight
+                importance_score = thought.score.weight
                 user_comments = thought.user_comments
                 if user_comments:
                     user_comments_str = ", ".join(user_comments)
@@ -127,7 +127,6 @@ Consider the following guidelines:
 Provide your response directly, as if you are responding to the user.
 Do not mention memory or internal processes.
 """
-        
         # Get completion from LLM
         response = await get_completion(
             system_prompt=system_prompt,

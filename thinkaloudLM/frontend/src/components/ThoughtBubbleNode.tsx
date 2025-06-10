@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NodeProps, Handle, Position } from 'reactflow';
 import { Box, Text, keyframes, IconButton, Fade, Icon } from '@chakra-ui/react';
 import { useThoughtStore } from '../store/thoughtStore';
-import { DeleteIcon, StarIcon } from '@chakra-ui/icons';
+import { X, Pin, Heart, ThumbsDown, MessageCircle, Brain, Bubbles, Minus, Plus } from 'lucide-react';
 import { ThoughtBubbleNodeData, useNodeStore } from '../store/nodeStore';
 import { deleteThoughtNode } from '../hooks/nodeConnectors';
 
@@ -18,7 +18,6 @@ const blobVariants = [
   "90% 60% 70% 80% / 60% 90% 60% 70%",  // Variant 4 - egg shape
   "70% 90% 60% 90% / 90% 60% 90% 60%",  // Variant 5 - diagonal blob
 ];
-
 
 // Array of modern vibrant colors
 const colors = [
@@ -57,6 +56,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
   const [hoverSide, setHoverSide] = useState<'left' | 'right' | null>(null);
   const [showDeleteButton, setShowDeleteButton] = useState(false);
   const [showPinButton, setShowPinButton] = useState(false);
+  const [showBottomToolbar, setShowBottomToolbar] = useState(false);
   const bubbleRef = useRef<HTMLDivElement>(null);
 
   // Add ref for tracking last mouse position for drag trailing effect
@@ -106,22 +106,17 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
       lastPositionRef.current = { x: e.clientX, y: e.clientY };
       return;
     }
-
-    // Show a small tag on the bottom right of the bubble to indicate the type of thought
     
-    
-    // Make the detection areas smaller by adjusting the thresholds
-    // Check if mouse is in the top right quadrant - smaller area
-    const isTopRight = x > rect.width * 0.7 && y < rect.height * 0.5;
-    // Check if mouse is in the top left quadrant - smaller area
-    const isTopLeft = x < rect.width * 0.3 && y < rect.height * 0.5;
-    
-    setShowDeleteButton(isTopLeft);
-    setShowPinButton(isTopRight);
-    
-    // Determine which side of the bubble the mouse is on
-    // Use the same boundary as the click handler for consistency
-    setHoverSide(x < rect.width * (3/7) ? 'left' : 'right');
+    // Only set hover side if mouse is within the actual bubble boundaries
+    // This prevents size scaling when hovering over tooltip zones
+    if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
+      // Determine which side of the bubble the mouse is on for click handling and size scaling
+      // Use the same boundary as the click handler for consistency
+      setHoverSide(x < rect.width * (3/7) ? 'left' : 'right');
+    } else {
+      // Reset hover side when outside bubble boundaries to prevent scaling
+      setHoverSide(null);
+    }
   };
   
   // Handle click on bubble and determine if it's left or right side
@@ -192,8 +187,8 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
                      thought.seed?.type === 'scaffolding' ? 5 : 
                      Math.floor(Math.random() * colors.length);
   
-  // Calculate importance score from weight and saliency
-  const importanceScore = thought.score.weight + thought.score.saliency;
+  // Calculate importance score from weight
+  const importanceScore = thought.score.weight;
   
   // Calculate size scale based on importance score (0.5 to 1.5)
   const sizeScale = 0.7 + (importanceScore * 0.5);
@@ -210,8 +205,8 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
   const opacity = thought.config.persistent ? 1 : baseOpacity;
 
   // Calculate shadow size based on importance score
-  const shadowSize = 7 + (importanceScore * 9); 
-  const shadowBlur = 10 + (importanceScore * 12); 
+  const shadowSize = 5 + (importanceScore * 7); 
+  const shadowBlur = 8 + (importanceScore * 10); 
   
 
   // Create a dynamic keyframe animation for this specific bubble with multiple stages
@@ -262,8 +257,6 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
         setIsDragging(false);
         setIsHovering(false);
         setHoverSide(null);
-        setShowDeleteButton(false);
-        setShowPinButton(false);
       }}
       onMouseEnter={() => setIsHovering(true)}
       onMouseMove={handleMouseMove}
@@ -321,60 +314,253 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
           {content}
         </Text>
         
-        {/* Star (pin) button */}
-        <Box 
+        {/* Left shrink icon overlay */}
+        <Fade in={hoverSide === 'left'} unmountOnExit>
+          <Box 
+            position="absolute" 
+            left="5px" 
+            top="50%" 
+            transform="translateY(-50%)"
+            zIndex="12"
+            style={{
+              transform: `translateY(-50%) scale(${1/sizeScale})`
+            }}
+          >
+            <Minus className="lucide" style={{width: '14px', height: '14px', color: '#9CA3AF', opacity: 0.6}} />
+          </Box>
+        </Fade>
+
+        {/* Right enlarge icon overlay */}
+        <Fade in={hoverSide === 'right'} unmountOnExit>
+          <Box 
+            position="absolute" 
+            right="5px" 
+            top="50%" 
+            transform="translateY(-50%)"
+            zIndex="12"
+            style={{
+              transform: `translateY(-50%) scale(${1/sizeScale})`
+            }}
+          >
+            <Plus className="lucide" style={{width: '14px', height: '14px', color: '#9CA3AF', opacity: 0.6}} />
+          </Box>
+        </Fade>
+        
+        {/* Pin button hover zone */}
+        <Box
           position="absolute"
-          top="-16px"
-          right="-19px"
-          opacity={thought.config.persistent || showPinButton ? opacity : 0}
-          visibility={thought.config.persistent || showPinButton ? "visible" : "hidden"}
-          transition="opacity 0.2s ease-in-out, visibility 0.2s ease-in-out"
-          zIndex="10"
+          top="-25px"
+          left="-35px"
+          width="50px"
+          height="50px"
+          zIndex="11"
           style={{
             transform: `scale(${1/sizeScale})`
           }}
+          onMouseEnter={() => setShowPinButton(true)}
+          onMouseLeave={() => setShowPinButton(false)}
         >
-          <IconButton
-            aria-label={thought.config.persistent ? "Unpin thought" : "Pin thought"}
-            icon={<StarIcon />}
-            size="md"
-            isRound
-            variant="ghost"
-            color={thought.config.persistent ? "yellow.300" : "gray.500"}
-            onClick={onPinThought}
-            _hover={{
-              bg: "none",
-              color: "yellow.600"
-            }}
-          />
+          {/* Star (pin) button */}
+          <Box 
+            position="absolute"
+            top="13px"
+            left="14px"
+            opacity={thought.config.persistent || showPinButton ? opacity : 0}
+            visibility={thought.config.persistent || showPinButton ? "visible" : "hidden"}
+            transition="opacity 0.2s ease-in-out, visibility 0.2s ease-in-out"
+            zIndex="10"
+          >
+            <IconButton
+              aria-label={thought.config.persistent ? "Unpin thought" : "Pin thought"}
+              icon={<Pin className="lucide lucide-sm"/>}
+              size="md"
+              isRound
+              variant="ghost"
+              color={thought.config.persistent ? "red.600" : "gray.500"}
+              onClick={onPinThought}
+              _hover={{
+                bg: "none",
+                color: "red.600"
+              }}
+            />
+          </Box>
         </Box>
         
-        {/* Delete button */}
-        <Box 
+        {/* Delete button hover zone */}
+        <Box
           position="absolute"
-          top="-10px"
-          left="-15px"
-          opacity={showDeleteButton ? opacity : 0}
-          visibility={showDeleteButton ? "visible" : "hidden"}
-          transition="opacity 0.2s ease-in-out, visibility 0.2s ease-in-out"
-          zIndex="10"
+          top="-25px"
+          right="-35px"
+          width="50px"
+          height="50px"
+          zIndex="11"
           style={{
             transform: `scale(${1/sizeScale})`
           }}
+          onMouseEnter={() => setShowDeleteButton(true)}
+          onMouseLeave={() => setShowDeleteButton(false)}
         >
-          <IconButton
-            aria-label="Delete thought"
-            icon={<DeleteIcon />}
-            size="sm"
-            isRound
-            variant="ghost"
-            color="gray.500"
-            onClick={onDeleteThought}
-            _hover={{
-              bg: "none",
-              color: "red.600"
-            }}
-          />
+          {/* Delete button */}
+          <Box 
+            position="absolute"
+            top="15px"
+            right="21px"
+            opacity={showDeleteButton ? opacity : 0}
+            visibility={showDeleteButton ? "visible" : "hidden"}
+            transition="opacity 0.2s ease-in-out, visibility 0.2s ease-in-out"
+            zIndex="10"
+          >
+            <IconButton
+              aria-label="Delete thought"
+              icon={<X className="lucide lucide-md"/>}
+              size="sm"
+              isRound
+              variant="ghost"
+              color="gray.500"
+              onClick={onDeleteThought}
+              _hover={{
+                bg: "none",
+                color: "gray.600"
+              }}
+            />
+          </Box>
+        </Box>
+
+        {/* Bottom toolbar hover zone */}
+        <Box
+          position="absolute"
+          bottom="-45px"
+          left="50%"
+          transform="translateX(-50%)"
+          width="160px"
+          height="40px"
+          zIndex="16"
+          style={{
+            transform: `translateX(-50%) scale(${1/sizeScale})`,
+          }}
+          onMouseEnter={() => setShowBottomToolbar(true)}
+          onMouseLeave={() => setShowBottomToolbar(false)}
+        >
+          {/* Bottom Toolbar */}
+          <Fade in={showBottomToolbar} unmountOnExit>
+            <Box
+              position="absolute"
+              bottom="5px"
+              left="50%"
+              transform="translateX(-50%)"
+              bg="white"
+              borderRadius="full"
+              boxShadow="0 4px 12px rgba(0,0,0,0.15)"
+              border="1px solid rgba(0,0,0,0.1)"
+              px={2}
+              py={1}
+              display="flex"
+              alignItems="center"
+              gap={1}
+              zIndex="15"
+              transition="all 0.2s ease-in-out"
+            >
+            {/* Like Button */}
+            <IconButton
+              aria-label="Like thought"
+              icon={<Heart className="lucide" style={{width: '14px', height: '14px'}} />}
+              size="xs"
+              variant="ghost"
+              color="gray.500"
+              minW="auto"
+              h="auto"
+              p={1}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleThoughtLike(thoughtId);
+              }}
+              _hover={{
+                bg: "red.50",
+                color: "red.500"
+              }}
+            />
+            
+            {/* Dislike Button */}
+            <IconButton
+              aria-label="Dislike thought"
+              icon={<ThumbsDown className="lucide" style={{width: '14px', height: '14px'}} />}
+              size="xs"
+              variant="ghost"
+              color="gray.500"
+              minW="auto"
+              h="auto"
+              p={1}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleThoughtDislike(thoughtId);
+              }}
+              _hover={{
+                bg: "gray.50",
+                color: "gray.700"
+              }}
+            />
+            
+            {/* Comment Button */}
+            <IconButton
+              aria-label="Comment on thought"
+              icon={<MessageCircle className="lucide" style={{width: '14px', height: '14px'}} />}
+              size="xs"
+              variant="ghost"
+              color="gray.500"
+              minW="auto"
+              h="auto"
+              p={1}
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log(`Commenting on thought: ${thoughtId}`);
+              }}
+              _hover={{
+                bg: "yellow.50",
+                color: "yellow.600"
+              }}
+            />
+            
+            {/* Elaborate Button */}
+            <IconButton
+              aria-label="Elaborate thought"
+              icon={<Brain className="lucide" style={{width: '14px', height: '14px'}} />}
+              size="xs"
+              variant="ghost"
+              color="gray.500"
+              minW="auto"
+              h="auto"
+              p={1}
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log(`Elaborating thought: ${thoughtId}`);
+              }}
+              _hover={{
+                bg: "purple.50",
+                color: "purple.500"
+              }}
+            />
+            
+            {/* Burst Button */}
+            <IconButton
+              aria-label="Burst thought"
+              icon={<Bubbles className="lucide" style={{width: '14px', height: '14px'}} />}
+              size="xs"
+              variant="ghost"
+              color="gray.500"
+              minW="auto"
+              h="auto"
+              p={1}
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log(`Bursting thought: ${thoughtId}`);
+              }}
+              _hover={{
+                bg: "blue.50",
+                color: "blue.500"
+              }}
+                         />
+           </Box>
+         </Fade>
         </Box>
 
         {/* Thought type indicator tag - only visible on hover */}

@@ -60,7 +60,7 @@ class ThoughtGenerator:
         trigger_event = await create_event_from_simple_input(event_input)
                 
         # Generate the thought content
-        thought_content, saliency = await self._generate_content(trigger_event, seed, config, memory, previous_thoughts)
+        thought_content, weight = await self._generate_content(trigger_event, seed, config, memory, previous_thoughts)
         
         # Create the thought object
         cur_timestamp=datetime.now()
@@ -80,8 +80,7 @@ class ThoughtGenerator:
             references=[],
             user_comments=[],
             score=Score(
-                weight=config.weight,
-                saliency=saliency
+                weight=weight
             ),
         )
         
@@ -106,7 +105,7 @@ class ThoughtGenerator:
             previous_thoughts: Optional list of previous thoughts
             
         Returns:
-            Tuple of (thought_content, saliency)
+            Tuple of (thought_content, weight)
         """
         # Extract prompts from thought seed
         system_prompt = seed.prompt.system_prompt
@@ -162,8 +161,8 @@ class ThoughtGenerator:
         
         # Previous thoughts context section
         if previous_thoughts and previous_thoughts:
-            # Sort previous thoughts by saliency + weight
-            sorted_thoughts = sorted(previous_thoughts, key=lambda t: t.score.saliency + t.score.weight, reverse=True)
+            # Sort previous thoughts by weight
+            sorted_thoughts = sorted(previous_thoughts, key=lambda t: t.score.weight, reverse=True)
             top_thoughts = sorted_thoughts[:min(3, len(sorted_thoughts))]
             
             if top_thoughts:
@@ -210,9 +209,9 @@ class ThoughtGenerator:
    - When facing contradictions, follow user prompt requirements
    - Avoid generating thoughts too similar to previous ones
 
-<Saliency Evaluation>
-Rate the saliency of the following thought on a scale from 0 to 10 (where 0 is the lowest and 10 is the highest) based on how much it could improve the interaction between the user and the system.
-Saliency is defined as the thought's potential to either:
+<Weight Evaluation>
+Rate the weight of the following thought on a scale from 0 to 10 (where 0 is the lowest and 10 is the highest) based on how much it could improve the interaction between the user and the system.
+Weight is defined as the thought's potential to either:
 - Enhance shared understanding (aligning with common ground theory), or
 - Introduce useful new directions (e.g., creative ideas, problem-solving insights).
 When rating, use the FULL range of the rating scale from 1-10, DO NOT default to a small range of ratings (like 7-8, 5-6, etc.)
@@ -222,7 +221,7 @@ Be decisive and critical - some thoughts deserve very low ratings (1-2) and othe
 Respond with a JSON object containing:
 {{
   "thought": "Your generated thought here",
-  "saliency":  "number between 0 and 10"
+  "weight":  "number between 0 and 10"
 }}
 """
         
@@ -235,15 +234,15 @@ Respond with a JSON object containing:
             response_format="json_object"
         )
         
-        # Parse the response to extract the thought and saliency
+        # Parse the response to extract the thought and weight
         try:
             response_data = json.loads(response)
             thought_text = response_data.get("thought", "")
-            saliency = float(response_data.get("saliency", 0))/10
+            weight = float(response_data.get("weight", 0))/10
             
-            return thought_text, saliency
+            return thought_text, weight
         except (json.JSONDecodeError, ValueError):
-            # If parsing fails, return the raw response and a default saliency
+            # If parsing fails, return the raw response and a default weight
             return response, 0.0
        
        

@@ -26,8 +26,5 @@ class Prompt(BaseModel):
 class Score(BaseModel):
     """Scoring metrics for ranking and prioritization."""
     weight: float = Field(
-        0.0, description="User-defined weight for the thought", ge=0.0, le=42.0
-    )
-    saliency: float = Field(
-        0.0, description="Saliency score for the thought, evaluated holistically by the system", ge=0.0, le=42.0
+        0.0, description="Weight score for the thought (0-1), automatically evaluated when generated and user-modifiable", ge=0.0, le=1.0
     ) 

@@ -34,8 +34,8 @@ const ThoughtPill: React.FC<{ thought: Thought }> = ({ thought }) => {
                      thought.seed?.type === 'scaffolding' ? 5 : 
                      Math.floor(Math.random() * colors.length);
   
-  // Calculate importance score from weight and saliency
-  const importanceScore = thought.score.weight + thought.score.saliency;
+      // Calculate importance score from weight
+    const importanceScore = thought.score.weight;
   
   // Calculate opacity based on importance score (0.2 to 1.0)
   // If thought is pinned (persistent), use full opacity (1)
@@ -97,8 +97,8 @@ const Message: React.FC<MessageProps> = ({ content, sender, timestamp, relatedTh
   
   // Sort thoughts by importance score (highest first)
   const sortedThoughts = [...relatedThoughts].sort((a, b) => {
-    const scoreA = a.score.weight + a.score.saliency + (a.config.persistent ? 10 : 0);
-    const scoreB = b.score.weight + b.score.saliency + (b.config.persistent ? 10 : 0);
+            const scoreA = a.score.weight + (a.config.persistent ? 10 : 0);
+        const scoreB = b.score.weight + (b.config.persistent ? 10 : 0);
     return scoreB - scoreA; // Descending order (highest first)
   });
   

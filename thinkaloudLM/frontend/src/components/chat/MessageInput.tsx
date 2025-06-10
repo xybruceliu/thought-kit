@@ -6,10 +6,9 @@ import {
   Flex, 
   Kbd,
   Text,
-  keyframes,
-  createIcon
+  keyframes
 } from '@chakra-ui/react';
-import { ArrowUpIcon } from '@chakra-ui/icons';
+import { ArrowUp, Mic } from 'lucide-react';
 import { useInputStore } from '../../store/inputStore';
 import { useAutomaticTriggerDetection } from '../../hooks/useTriggerDetection';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -21,17 +20,7 @@ const pulseAnimation = keyframes`
   100% { background-color: rgba(229, 62, 62, 0.1); }
 `;
 
-// Create custom microphone icon
-const MicrophoneIcon = createIcon({
-  displayName: 'MicrophoneIcon',
-  viewBox: '0 0 24 24',
-  path: (
-    <path
-      fill="currentColor"
-      d="M12,2C10.34,2 9,3.34 9,5V11C9,12.66 10.34,14 12,14C13.66,14 15,12.66 15,11V5C15,3.34 13.66,2 12,2M12,4C12.55,4 13,4.45 13,5V11C13,11.55 12.55,12 12,12C11.45,12 11,11.55 11,11V5C11,4.45 11.45,4 12,4M19,10V12C19,15.87 15.87,19 12,19C8.13,19 5,15.87 5,12V10H3V12C3,16.25 6.09,19.78 10,20.73V23H14V20.73C17.91,19.78 21,16.25 21,12V10H19Z"
-    />
-  ),
-});
+
 
 interface MessageInputProps {
   onSubmit?: (message: string) => void;
@@ -149,7 +138,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         {onMicrophoneClick && (
           <IconButton
             aria-label="Microphone"
-            icon={<MicrophoneIcon />}
+            icon={<Mic className="lucide lucide-sm"/>}
             onClick={onMicrophoneClick}
             size="sm"
             borderRadius="full"
@@ -174,7 +163,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         {/* Submit Button */}
         <IconButton
           aria-label="Submit message"
-          icon={<ArrowUpIcon />}
+          icon={<ArrowUp className="lucide lucide-sm"/>}
           onClick={handleSubmit}
           isDisabled={!message.trim() || disabled}
           size="sm"

@@ -94,8 +94,7 @@ async def main():
                     "duration": -1
                 },
                 "score": {
-                    "weight": 0.8,
-                    "saliency": 0.7
+                    "weight": 0.7
                 }
             }
         ]
@@ -108,7 +107,7 @@ async def main():
     # Or get a Thought object
     thought = await thoughtkit.generate(input_data, return_json_str=False)
     print(f"💭 Thought content: {thought['content']['text']}")
-    print(f"💭 Thought saliency: {thought['score']['saliency']}")
+    print(f"💭 Thought weight: {thought['score']['weight']}")
 
 if __name__ == "__main__":
     asyncio.run(main()) 

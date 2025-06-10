@@ -89,9 +89,9 @@ async def main():
     thought3 = await thoughtkit.generate(thought3_input, return_json_str=False)
     
     print("\nGenerated Thoughts:")
-    print(f"Thought 1 [Saliency: {thought1['score']['saliency']:.2f}]: {thought1['content']['text']}")
-    print(f"Thought 2 [Saliency: {thought2['score']['saliency']:.2f}]: {thought2['content']['text']}")
-    print(f"Thought 3 [Saliency: {thought3['score']['saliency']:.2f}]: {thought3['content']['text']}")
+    print(f"Thought 1 [Weight: {thought1['score']['weight']:.2f}]: {thought1['content']['text']}")
+    print(f"Thought 2 [Weight: {thought2['score']['weight']:.2f}]: {thought2['content']['text']}")
+    print(f"Thought 3 [Weight: {thought3['score']['weight']:.2f}]: {thought3['content']['text']}")
     
     # Set up memory for context (optional)
     memory = {

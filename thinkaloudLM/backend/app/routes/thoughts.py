@@ -79,9 +79,9 @@ async def generate_thought(request: GenerationRequest):
         # Use the single parameter format
         result = await thoughtkit.generate(input_data, return_json_str=False, return_model=True)
 
-        # If saliency is less than 0.6 return None
-        if result.score.saliency < 0.6:
-            print("❌ No thought generated, saliency is less than 0.6")
+        # If weight is less than 0.6 return None
+        if result.score.weight < 0.6:
+            print("❌ No thought generated, weight is less than 0.6")
             return None
 
         log_output_data = {
@@ -102,8 +102,7 @@ async def generate_thought(request: GenerationRequest):
             },
             "seed": result.seed.type if result.seed else "None",
             "score": {
-                "weight": result.score.weight,
-                "saliency": result.score.saliency
+                "weight": result.score.weight
             }
         }
 
@@ -168,9 +167,19 @@ async def articulate_thoughts(request: ArticulationRequest):
         # Specify the model, temperature, and max tokens for the articulation
         request_data["model"] = "gpt-4o"
         request_data["temperature"] = 0.7
+
+        print("--------------------------------")
+        print("🗣️ Articulation Request:")
+        print(request_data)
+        print("--------------------------------")
         
         # Articulate thoughts using ThoughtKit directly
         result = await thoughtkit.articulate(request_data)
+
+        print("--------------------------------")
+        print("🗣️ Articulation Response:")
+        print(result)
+        print("--------------------------------")
         
         # Collect thought IDs from the request
         thought_ids = [thought.id for thought in request.thoughts]
@@ -221,9 +230,7 @@ async def update_thought(thought_id: str, update_request: ThoughtUpdateRequest):
             # Ensure weight is between 0 and 1
             thought.score.weight = update_request.weight
         
-        if update_request.saliency is not None:
-            # Ensure saliency is between 0 and 1
-            thought.score.saliency = update_request.saliency
+
         
         # Update config properties if provided
         if update_request.persistent is not None:

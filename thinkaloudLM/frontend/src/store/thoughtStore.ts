@@ -19,7 +19,7 @@ interface ThoughtStoreState {
   
   // Settings
   maxThoughtCount: number; // Maximum number of thoughts to display
-  decay: number; // Time decay for saliency
+  decay: number; // Time decay for weight
   likeAmount: number; // Amount to like a thought
   
   // Actions
@@ -102,7 +102,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
           ...similarThought,
           score: {
             ...similarThought.score,
-            saliency: Math.min(similarThought.score.saliency + 0.2, 2.0 - similarThought.score.weight)
+            weight: Math.min(similarThought.score.weight + 0.2, 1.0)
           }
         };
         
@@ -149,7 +149,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
           // Find and remove the thought with the lowest score
           const thoughtsWithScore = nonPersistentThoughts.map(t => ({
             id: t.id,
-            score: t.score.saliency + t.score.weight
+            score: t.score.weight
           }));
             
           const lowestScoreThought = thoughtsWithScore.reduce((lowest, current) => 
@@ -209,13 +209,13 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
             }
           }
           
-          // If no high similarity found with any thought, reduce saliency by - decay - 0.2
+          // If no high similarity found with any thought, reduce weight by - decay - 0.2
           // Otherwise, apply the standard decay
           if (!hasHighSimilarity) {
             console.log(`🔍 This old thought has no high similarity: ${thought.id}`);
-            thoughtCopy.score.saliency = Math.max(0, thought.score.saliency - get().decay - 0.2);
+            thoughtCopy.score.weight = Math.max(0, thought.score.weight - get().decay - 0.2);
           } else {
-            thoughtCopy.score.saliency = Math.max(0, thought.score.saliency - get().decay);
+            thoughtCopy.score.weight = Math.max(0, thought.score.weight - get().decay);
           }
           
           return thoughtCopy;
@@ -242,7 +242,7 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
     
     // Optimistic update: immediately update UI
     const likeAmount = get().likeAmount;
-    const newWeight = Math.min(thought.score.weight + likeAmount, 2.0 - thought.score.saliency);
+    const newWeight = Math.min(thought.score.weight + likeAmount, 1.0);
     const updatedThought = { 
       ...thought, 
       score: { ...thought.score, weight: Math.round(newWeight * 100) / 100 }

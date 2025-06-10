@@ -22,7 +22,7 @@ import {
   FormLabel,
   keyframes
 } from '@chakra-ui/react';
-import { SettingsIcon, InfoIcon } from '@chakra-ui/icons';
+import { Settings as SettingsIcon, Info } from 'lucide-react';
 import { useSettingsStore } from '../store/settingsStore';
 import { useBoundsStore } from '../store/boundsStore';
 
@@ -82,7 +82,7 @@ const Settings: React.FC<SettingsProps> = () => {
       <Flex direction="column" alignItems="center" gap={2}>
         <IconButton
           aria-label="Information"
-          icon={<InfoIcon />}
+          icon={<Info className="lucide lucide-md"/>}
           size="md"
           variant="ghost"
           onClick={() => {}}
@@ -96,7 +96,7 @@ const Settings: React.FC<SettingsProps> = () => {
           <PopoverTrigger>
             <IconButton
               aria-label="Settings"
-              icon={<SettingsIcon />}
+              icon={<SettingsIcon className="lucide lucide-md"/>}
               size="md"
               variant="ghost"
               colorScheme="gray"

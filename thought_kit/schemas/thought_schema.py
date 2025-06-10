@@ -49,7 +49,7 @@ class ThoughtConfig(BaseModel):
         False, description="Whether or not to anchor this Thought"
     )
     weight: float = Field(
-        0.5, description="User-defined weight (0-1) for the thought", ge=0.0, le=42.0
+        0.5, description="User-defined weight (0-1) for the thought", ge=0.0, le=1.0
     )
 
     class Config:
@@ -144,8 +144,7 @@ class Thought(BaseModel):
                 "references": [],
                 "user_comments": [],
                 "score": {
-                    "weight": 0.75, # Weight is a parameter that can be changed by the user.
-                    "saliency": 0.6 # Saliency is a parameter that is automatically updated by the system.
+                    "weight": 0.75 # Weight is automatically evaluated when generated and can be changed by the user.
                 }
             }
         }
@@ -156,7 +155,7 @@ class SimpleThoughtInput(BaseModel):
     text: str = Field(..., description="Text content of the thought")
     modality: Optional[Literal["TEXT", "EMOJI", "VISUAL"]] = Field("TEXT", description="Modality of the thought content")
     interactivity: Optional[Literal["VIEW", "COMMENT", "EDIT"]] = Field("VIEW", description="Level of interactivity allowed")
-    weight: Optional[float] = Field(0.5, description="Importance weight (0-1)", ge=0.0, le=42.0)
+    weight: Optional[float] = Field(0.5, description="Importance weight (0-1)", ge=0.0, le=1.0)
     
     class Config:
         """Pydantic config"""

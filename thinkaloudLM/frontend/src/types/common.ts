@@ -20,7 +20,6 @@ export interface Prompt {
 // Scoring metrics for thoughts
 export interface Score {
   weight: number; // 0-1
-  saliency: number; // 
 }
 
   

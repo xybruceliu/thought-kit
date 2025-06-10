@@ -85,8 +85,8 @@ The user is currently focused on societal impacts rather than technical aspects.
    - When facing contradictions, follow user prompt requirements
    - Avoid generating thoughts too similar to previous ones
 
-<Saliency Evaluation>
-Evaluate the thought's saliency (0-10) based on how it builds common ground with the user:
+<Weight Evaluation>
+Evaluate the thought's weight (0-10) based on how it builds common ground with the user:
 - 0-3: Low contribution
   • Minimal shared understanding
   • Doesn't acknowledge user's perspective
@@ -103,7 +103,7 @@ Evaluate the thought's saliency (0-10) based on how it builds common ground with
 Respond with a JSON object containing:
 {
   "thought": "Your generated thought here",
-  "saliency": "Number between 0 and 10"
+  "weight": "Number between 0 and 10"
 }
 ```
 
