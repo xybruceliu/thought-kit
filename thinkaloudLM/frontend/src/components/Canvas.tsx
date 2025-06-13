@@ -241,7 +241,7 @@ const CanvasContent: React.FC = () => {
           nodes={nodes}
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
-          onPaneClick={onPaneClick}
+          // onPaneClick={onPaneClick} // Disabled pane click trigger
           panOnScroll={false}
           panOnDrag={false}
           zoomOnScroll={false}
@@ -304,7 +304,7 @@ const CanvasContent: React.FC = () => {
             nodes={nodes}
             nodeTypes={nodeTypes}
             onNodesChange={onNodesChange}
-            onPaneClick={onPaneClick}
+            // onPaneClick={onPaneClick} // Disabled pane click trigger
             panOnScroll={true}
             minZoom={1}
           >
@@ -325,12 +325,13 @@ const CanvasContent: React.FC = () => {
         nodes={nodes}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
-        onPaneClick={onPaneClick}
+        // onPaneClick={onPaneClick} // Disabled pane click trigger
         panOnScroll={false}
         panOnDrag={false}
         zoomOnScroll={false}
         zoomOnPinch={false}
         zoomOnDoubleClick={false}
+        minZoom={1}
       >
         <Controls showInteractive={false} />
         <Background gap={12} size={1} color="none" />

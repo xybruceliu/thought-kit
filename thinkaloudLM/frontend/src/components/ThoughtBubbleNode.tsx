@@ -57,6 +57,8 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
   const [showDeleteButton, setShowDeleteButton] = useState(false);
   const [showPinButton, setShowPinButton] = useState(false);
   const [showBottomToolbar, setShowBottomToolbar] = useState(false);
+  const [isHeartClicked, setIsHeartClicked] = useState(false);
+  const [isThumbsDownClicked, setIsThumbsDownClicked] = useState(false);
   const bubbleRef = useRef<HTMLDivElement>(null);
 
   // Add ref for tracking last mouse position for drag trailing effect
@@ -190,8 +192,8 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
   // Calculate importance score from weight
   const importanceScore = thought.score.weight;
   
-  // Calculate size scale based on importance score (0.5 to 1.5)
-  const sizeScale = 0.7 + (importanceScore * 0.5);
+  // Calculate size scale based on importance score
+  const sizeScale = 0.8 + importanceScore * 0.7
   
   // Calculate hover effect scale modification
   // Shrink by 3% when hovering left side, expand by 3% when hovering right side
@@ -318,7 +320,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
         <Fade in={hoverSide === 'left'} unmountOnExit>
           <Box 
             position="absolute" 
-            left="5px" 
+            left="3px" 
             top="50%" 
             transform="translateY(-50%)"
             zIndex="12"
@@ -334,7 +336,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
         <Fade in={hoverSide === 'right'} unmountOnExit>
           <Box 
             position="absolute" 
-            right="5px" 
+            right="3px" 
             top="50%" 
             transform="translateY(-50%)"
             zIndex="12"
@@ -429,7 +431,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
         {/* Bottom toolbar hover zone */}
         <Box
           position="absolute"
-          bottom="-45px"
+          bottom="-40px"
           left="50%"
           transform="translateX(-50%)"
           width="160px"
@@ -463,16 +465,17 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
             {/* Like Button */}
             <IconButton
               aria-label="Like thought"
-              icon={<Heart className="lucide" style={{width: '14px', height: '14px'}} />}
+              icon={<Heart className="lucide lucide-sm" />}
               size="xs"
               variant="ghost"
-              color="gray.500"
+              color={isHeartClicked ? "red.500" : "gray.500"}
               minW="auto"
               h="auto"
               p={1}
               onClick={(e) => {
                 e.stopPropagation();
-                handleThoughtLike(thoughtId);
+                setIsHeartClicked(!isHeartClicked);
+                if (!isHeartClicked) setIsThumbsDownClicked(false);
               }}
               _hover={{
                 bg: "red.50",
@@ -483,16 +486,17 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
             {/* Dislike Button */}
             <IconButton
               aria-label="Dislike thought"
-              icon={<ThumbsDown className="lucide" style={{width: '14px', height: '14px'}} />}
+              icon={<ThumbsDown className="lucide lucide-sm" />}
               size="xs"
               variant="ghost"
-              color="gray.500"
+              color={isThumbsDownClicked ? "gray.700" : "gray.500"}
               minW="auto"
               h="auto"
               p={1}
               onClick={(e) => {
                 e.stopPropagation();
-                handleThoughtDislike(thoughtId);
+                setIsThumbsDownClicked(!isThumbsDownClicked);
+                if (!isThumbsDownClicked) setIsHeartClicked(false);
               }}
               _hover={{
                 bg: "gray.50",
@@ -503,7 +507,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
             {/* Comment Button */}
             <IconButton
               aria-label="Comment on thought"
-              icon={<MessageCircle className="lucide" style={{width: '14px', height: '14px'}} />}
+              icon={<MessageCircle className="lucide lucide-sm" />}
               size="xs"
               variant="ghost"
               color="gray.500"
@@ -523,7 +527,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
             {/* Elaborate Button */}
             <IconButton
               aria-label="Elaborate thought"
-              icon={<Brain className="lucide" style={{width: '14px', height: '14px'}} />}
+              icon={<Brain className="lucide lucide-sm" />}
               size="xs"
               variant="ghost"
               color="gray.500"
@@ -543,7 +547,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
             {/* Burst Button */}
             <IconButton
               aria-label="Burst thought"
-              icon={<Bubbles className="lucide" style={{width: '14px', height: '14px'}} />}
+              icon={<Bubbles className="lucide lucide-sm" />}
               size="xs"
               variant="ghost"
               color="gray.500"
@@ -585,6 +589,38 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
             transition="transform 0.2s ease-in-out, opacity 0.2s ease-in-out"
           >
             {thought.seed?.type || 'thought'}
+          </Box>
+        </Fade>
+
+                {/* Heart icon in bottom left when clicked */}
+        <Fade in={isHeartClicked} unmountOnExit>
+          <Box
+            position="absolute"
+            bottom="-4px"
+            left="-4px"
+            color="red.500"
+            style={{
+              transform: `scale(${1/sizeScale})`
+            }}
+            transition="transform 0.2s ease-in-out"
+          >
+            <Heart className="lucide lucide-sm" style={{fill: '#fca5a5', stroke: '#ef4444'}} />
+          </Box>
+        </Fade>
+
+        {/* Thumbs down icon in bottom left when clicked */}
+        <Fade in={isThumbsDownClicked} unmountOnExit>
+          <Box
+            position="absolute"
+            bottom="-4px"
+            left="-4px"
+            color="gray.700"
+            style={{
+              transform: `scale(${1/sizeScale})`
+            }}
+            transition="transform 0.2s ease-in-out"
+          >
+            <ThumbsDown className="lucide lucide-sm" />
           </Box>
         </Fade>
       </Box>
