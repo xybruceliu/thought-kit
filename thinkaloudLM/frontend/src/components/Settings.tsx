@@ -20,7 +20,9 @@ import {
   Switch,
   FormControl,
   FormLabel,
-  keyframes
+  keyframes,
+  VStack,
+  Link
 } from '@chakra-ui/react';
 import { Settings as SettingsIcon, Info } from 'lucide-react';
 import { useSettingsStore } from '../store/settingsStore';
@@ -80,17 +82,62 @@ const Settings: React.FC<SettingsProps> = () => {
       p="0"
     >
       <Flex direction="column" alignItems="center" gap={2}>
-        <IconButton
-          aria-label="Information"
-          icon={<Info className="lucide lucide-md"/>}
-          size="md"
-          variant="ghost"
-          onClick={() => {}}
-          colorScheme="gray"
-          _hover={{
-            bg: "gray.200"
-          }}
-        />
+        <Popover placement="right-start" strategy="fixed" gutter={2}>
+          <PopoverTrigger>
+            <IconButton
+              aria-label="Information"
+              icon={<Info className="lucide lucide-md"/>}
+              size="md"
+              variant="ghost"
+              colorScheme="gray"
+              _hover={{
+                bg: "gray.200"
+              }}
+            />
+          </PopoverTrigger>
+          <PopoverContent 
+            width="280px"
+            bg="gray.50"
+            borderRadius="lg"
+          >
+            <PopoverHeader fontWeight="semibold">About</PopoverHeader>
+            <PopoverCloseButton />
+            <PopoverBody>
+              <VStack align="start" spacing={3}>
+                <Box>
+                  <Text fontSize="sm" fontWeight="medium" mb={1}>Overview</Text>
+                  <Text fontSize="xs" color="gray.600">
+                    An augmented LLM chat interface that allows users to see and interact with the "thoughtlets" 💭 of the LLM.
+                  </Text>
+                </Box>
+                
+                <Divider />
+                
+                <Box>
+                  <Text fontSize="sm" fontWeight="medium" mb={1}>Author</Text>
+                  <Text fontSize="xs" color="gray.600">Bruce Liu</Text>
+                </Box>
+                
+                <Box>
+                  <Text fontSize="sm" fontWeight="medium" mb={1}>Contact</Text>
+                  <Link 
+                    href="mailto:xingyuliu@ucla.edu" 
+                    fontSize="xs" 
+                    color="blue.500"
+                    _hover={{ textDecoration: "underline" }}
+                  >
+                    xingyuliu@ucla.edu
+                  </Link>
+                </Box>
+                
+                <Box>
+                  <Text fontSize="sm" fontWeight="medium" mb={1}>Version</Text>
+                  <Text fontSize="xs" color="gray.600">0.1.0</Text>
+                </Box>
+              </VStack>
+            </PopoverBody>
+          </PopoverContent>
+        </Popover>
         
         <Popover placement="right-start" strategy="fixed" gutter={2}>
           <PopoverTrigger>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NodeProps, Handle, Position } from 'reactflow';
-import { Box, Text, keyframes, IconButton, Fade, Icon } from '@chakra-ui/react';
+import { Box, Text, keyframes, IconButton, Fade, Icon, Tooltip } from '@chakra-ui/react';
 import { useThoughtStore } from '../store/thoughtStore';
 import { X, Pin, Heart, ThumbsDown, MessageCircle, Brain, Bubbles, Minus, Plus } from 'lucide-react';
 import { ThoughtBubbleNodeData, useNodeStore } from '../store/nodeStore';
@@ -38,6 +38,7 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
   const handleThoughtPin = useThoughtStore(state => state.handleThoughtPin);
   const handleThoughtLike = useThoughtStore(state => state.handleThoughtLike);
   const handleThoughtDislike = useThoughtStore(state => state.handleThoughtDislike);
+  const handleThoughtComment = useThoughtStore(state => state.handleThoughtComment);
   
   // Get node store functions
   const markNodeAsRemoving = useNodeStore(state => state.markNodeAsRemoving);
@@ -59,6 +60,8 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
   const [showBottomToolbar, setShowBottomToolbar] = useState(false);
   const [isHeartClicked, setIsHeartClicked] = useState(false);
   const [isThumbsDownClicked, setIsThumbsDownClicked] = useState(false);
+  const [showCommentInput, setShowCommentInput] = useState(false);
+  const [commentText, setCommentText] = useState('');
   const bubbleRef = useRef<HTMLDivElement>(null);
 
   // Add ref for tracking last mouse position for drag trailing effect
@@ -163,6 +166,29 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
     
     console.log(`Pinning thought: ${thoughtId}`);
     handleThoughtPin(thoughtId);
+  };
+  
+  // Handle comment functionality
+  const onCommentClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowCommentInput(true);
+  };
+  
+  const onSaveComment = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (commentText.trim() && thoughtId) {
+      console.log(`Saving comment for thought: ${thoughtId}`, commentText);
+      // Add comment to the thought's user_comments array in the store
+      handleThoughtComment(thoughtId, commentText.trim());
+      setCommentText('');
+    }
+    setShowCommentInput(false);
+  };
+  
+  const onCancelComment = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCommentText('');
+    setShowCommentInput(false);
   };
   
   // If thought is not found, show minimal content
@@ -301,7 +327,6 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
           opacity: 1,
           boxShadow: `0 0 ${shadowBlur + 2}px ${shadowSize + 2}px ${colors[colorIndex]}50`,
         }}
-        onClick={handleBubbleClick}
         position="relative"
       >
         <Text
@@ -312,8 +337,27 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
           whiteSpace="pre-wrap"
           wordBreak="break-word"
           maxWidth="120px"
+          onClick={handleBubbleClick}
+          cursor="pointer"
         >
           {content}
+          
+          {/* Comments section */}
+          {thought.user_comments.length > 0 && (
+            <Box mt={1} pt={1} borderTop="1px solid" borderColor="gray.200">
+              {thought.user_comments.map((comment, index) => (
+                <Text
+                  key={index}
+                  fontSize="2xs"
+                  color="gray.400"
+                  fontStyle="italic"
+                  display="block"
+                >
+                  💬 {comment}
+                </Text>
+              ))}
+            </Box>
+          )}
         </Text>
         
         {/* Left shrink icon overlay */}
@@ -460,109 +504,189 @@ const ThoughtBubbleNode: React.FC<ThoughtBubbleNodeProps> = ({ data, selected, i
               alignItems="center"
               gap={1}
               zIndex="15"
-              transition="all 0.2s ease-in-out"
+              transition="all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+              minW={showCommentInput ? "160px" : "auto"}
+              maxW={showCommentInput ? "320px" : "auto"}
+              opacity={showCommentInput ? 0.95 : 1}
+              onClick={(e) => e.stopPropagation()}
             >
             {/* Like Button */}
-            <IconButton
-              aria-label="Like thought"
-              icon={<Heart className="lucide lucide-sm" />}
-              size="xs"
-              variant="ghost"
-              color={isHeartClicked ? "red.500" : "gray.500"}
-              minW="auto"
-              h="auto"
-              p={1}
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsHeartClicked(!isHeartClicked);
-                if (!isHeartClicked) setIsThumbsDownClicked(false);
-              }}
-              _hover={{
-                bg: "red.50",
-                color: "red.500"
-              }}
-            />
+            <Tooltip label="Yesss" placement="bottom" hasArrow openDelay={1000} borderRadius="md">
+              <IconButton
+                aria-label="Like thought"
+                icon={<Heart className="lucide lucide-sm" />}
+                size="xs"
+                variant="ghost"
+                color={isHeartClicked ? "red.500" : "gray.500"}
+                minW="auto"
+                h="auto"
+                p={1}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsHeartClicked(!isHeartClicked);
+                  if (!isHeartClicked) setIsThumbsDownClicked(false);
+                }}
+                _hover={{
+                  bg: "red.50",
+                  color: "red.500"
+                }}
+              />
+            </Tooltip>
             
             {/* Dislike Button */}
-            <IconButton
-              aria-label="Dislike thought"
-              icon={<ThumbsDown className="lucide lucide-sm" />}
-              size="xs"
-              variant="ghost"
-              color={isThumbsDownClicked ? "gray.700" : "gray.500"}
-              minW="auto"
-              h="auto"
-              p={1}
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsThumbsDownClicked(!isThumbsDownClicked);
-                if (!isThumbsDownClicked) setIsHeartClicked(false);
-              }}
-              _hover={{
-                bg: "gray.50",
-                color: "gray.700"
-              }}
-            />
-            
-            {/* Comment Button */}
-            <IconButton
-              aria-label="Comment on thought"
-              icon={<MessageCircle className="lucide lucide-sm" />}
-              size="xs"
-              variant="ghost"
-              color="gray.500"
-              minW="auto"
-              h="auto"
-              p={1}
-              onClick={(e) => {
-                e.stopPropagation();
-                console.log(`Commenting on thought: ${thoughtId}`);
-              }}
-              _hover={{
-                bg: "yellow.50",
-                color: "yellow.600"
-              }}
-            />
+            <Tooltip label="Nooo" placement="bottom" hasArrow openDelay={1000} borderRadius="md">
+              <IconButton
+                aria-label="Dislike thought"
+                icon={<ThumbsDown className="lucide lucide-sm" />}
+                size="xs"
+                variant="ghost"
+                color={isThumbsDownClicked ? "gray.700" : "gray.500"}
+                minW="auto"
+                h="auto"
+                p={1}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsThumbsDownClicked(!isThumbsDownClicked);
+                  if (!isThumbsDownClicked) setIsHeartClicked(false);
+                }}
+                _hover={{
+                  bg: "gray.50",
+                  color: "gray.700"
+                }}
+              />
+            </Tooltip>
             
             {/* Elaborate Button */}
-            <IconButton
-              aria-label="Elaborate thought"
-              icon={<Brain className="lucide lucide-sm" />}
-              size="xs"
-              variant="ghost"
-              color="gray.500"
-              minW="auto"
-              h="auto"
-              p={1}
-              onClick={(e) => {
-                e.stopPropagation();
-                console.log(`Elaborating thought: ${thoughtId}`);
-              }}
-              _hover={{
-                bg: "purple.50",
-                color: "purple.500"
-              }}
-            />
+            <Tooltip label="Elaborate" placement="bottom" hasArrow openDelay={1000} borderRadius="md">
+              <IconButton
+                aria-label="Elaborate thought"
+                icon={<Brain className="lucide lucide-sm" />}
+                size="xs"
+                variant="ghost"
+                color="gray.500"
+                minW="auto"
+                h="auto"
+                p={1}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  console.log(`Elaborating thought: ${thoughtId}`);
+                }}
+                _hover={{
+                  bg: "purple.50",
+                  color: "purple.500"
+                }}
+              />
+            </Tooltip>
             
             {/* Burst Button */}
-            <IconButton
-              aria-label="Burst thought"
-              icon={<Bubbles className="lucide lucide-sm" />}
-              size="xs"
-              variant="ghost"
-              color="gray.500"
-              minW="auto"
-              h="auto"
-              p={1}
-              onClick={(e) => {
-                e.stopPropagation();
-                console.log(`Bursting thought: ${thoughtId}`);
-              }}
-              _hover={{
-                bg: "blue.50",
-                color: "blue.500"
-              }}
-                         />
+            <Tooltip label="Burst" placement="bottom" hasArrow openDelay={1000} borderRadius="md">
+              <IconButton
+                aria-label="Burst thought"
+                icon={<Bubbles className="lucide lucide-sm" />}
+                size="xs"
+                variant="ghost"
+                color="gray.500"
+                minW="auto"
+                h="auto"
+                p={1}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  console.log(`Bursting thought: ${thoughtId}`);
+                }}
+                _hover={{
+                  bg: "blue.50",
+                  color: "blue.500"
+                }}
+              />
+            </Tooltip>
+
+            {/* Comment Button */}
+            <Tooltip label="Comment" placement="bottom" hasArrow openDelay={1000} borderRadius="md">
+              <IconButton
+                aria-label="Comment on thought"
+                icon={<MessageCircle className="lucide lucide-sm" />}
+                size="xs"
+                variant="ghost"
+                color={showCommentInput ? "yellow.600" : "gray.500"}
+                minW="auto"
+                h="auto"
+                p={1}
+                onClick={onCommentClick}
+                _hover={{
+                  bg: "yellow.50",
+                  color: "yellow.600"
+                }}
+              />
+            </Tooltip>
+            
+            {/* Comment Input - appears when showCommentInput is true */}
+            <Fade in={showCommentInput} unmountOnExit transition={{ enter: { duration: 0.35 }, exit: { duration: 0.2 } }}>
+              <Box
+                display="flex"
+                alignItems="center"
+                gap={1}
+                ml={1}
+                flex={1}
+                minW="0"
+                opacity={showCommentInput ? 1 : 0}
+                transition="opacity 0.3s ease-in-out"
+              >
+                <input
+                  type="text"
+                  placeholder="Add a note..."
+                  value={commentText}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCommentText(e.target.value)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    fontSize: '12px',
+                    color: '#374151',
+                    flex: 1,
+                    minWidth: 0,
+                    maxWidth: '70px'
+                  }}
+                  onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                    if (e.key === 'Enter') {
+                      onSaveComment(e as any);
+                    } else if (e.key === 'Escape') {
+                      onCancelComment(e as any);
+                    }
+                  }}
+                  onFocus={(e) => e.target.style.outline = 'none'}
+                />
+                <IconButton
+                  aria-label="Save comment"
+                  icon={<Box as="span" fontSize="xs">✓</Box>}
+                  size="xs"
+                  variant="ghost"
+                  color="green.500"
+                  minW="auto"
+                  h="auto"
+                  p={1}
+                  onClick={onSaveComment}
+                  _hover={{
+                    bg: "green.50",
+                    color: "green.600"
+                  }}
+                />
+                <IconButton
+                  aria-label="Cancel comment"
+                  icon={<Box as="span" fontSize="xs">✕</Box>}
+                  size="xs"
+                  variant="ghost"
+                  color="red.500"
+                  minW="auto"
+                  h="auto"
+                  p={1}
+                  onClick={onCancelComment}
+                  _hover={{
+                    bg: "red.50",
+                    color: "red.600"
+                  }}
+                />
+              </Box>
+            </Fade>
            </Box>
          </Fade>
         </Box>

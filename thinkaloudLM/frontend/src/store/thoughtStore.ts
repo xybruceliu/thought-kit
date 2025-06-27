@@ -39,6 +39,7 @@ interface ThoughtStoreState {
   handleThoughtDislike: (thoughtId: string) => Promise<void>;
   handleThoughtPin: (thoughtId: string) => Promise<void>;
   handleThoughtDelete: (thoughtId: string) => Promise<void>;
+  handleThoughtComment: (thoughtId: string, comment: string) => void;
   handleThoughtsSubmit: () => Promise<string | null>;
   
   // Get thoughts by IDs
@@ -283,6 +284,17 @@ export const useThoughtStore = create<ThoughtStoreState>((set, get) => ({
     } catch (error) {
       console.error(`Error handling thought deletion for ${thoughtId}:`, error);
     }
+  },
+  
+  handleThoughtComment: (thoughtId: string, comment: string) => {
+    const thought = get().thoughts.find(t => t.id === thoughtId);
+    if (!thought) return;
+    
+    const updatedThought = { 
+      ...thought, 
+      user_comments: [...thought.user_comments, comment]
+    };
+    get().updateThought(thoughtId, updatedThought);
   },
   
   // Handle submitting thoughts for articulation
